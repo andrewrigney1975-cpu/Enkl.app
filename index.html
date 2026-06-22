@@ -607,6 +607,12 @@
     flex-shrink:0;
   }
   .kf-tasklist-count{color:var(--kf-text-faint);font-size:12px;margin-left:auto;}
+  .kf-tasklist-toolbar-link{
+    background:none;border:none;
+    color:var(--kf-blue);font-size:12px;font-weight:500;
+    cursor:pointer;padding:2px 4px;white-space:nowrap;
+  }
+  .kf-tasklist-toolbar-link:hover{text-decoration:underline;}
   .kf-tasklist-grid-cols{grid-template-columns:32px 92px minmax(160px,1fr) 160px 116px 100px 100px 110px;}
   .kf-tasklist-header{
     display:grid;
@@ -659,12 +665,15 @@
     background:var(--kf-column-bg);
     border-bottom:1px solid var(--kf-border);
     border-top:1px solid var(--kf-border);
+    cursor:pointer;
   }
+  .kf-tasklist-group-header:hover{background:var(--kf-hover-tint);}
   .kf-tasklist-group-header:first-child{border-top:none;}
   .kf-tasklist-group-name{font-size:12px;font-weight:500;color:var(--kf-text);}
   .kf-tasklist-group-name-none{color:var(--kf-text-faint);font-style:italic;}
   .kf-tasklist-group-dates{font-size:11px;color:var(--kf-text-faint);}
-  .kf-tasklist-group-count{margin-left:auto;font-size:11px;color:var(--kf-text-faint);flex-shrink:0;}
+  .kf-tasklist-group-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .kf-tasklist-group-count{font-size:11px;color:var(--kf-text-faint);flex-shrink:0;}
 
   /* Bulk Edit */
   .kf-bulkedit-grid-cols{grid-template-columns:80px minmax(140px,1fr) 130px 130px 120px 140px 125px 125px 85px 85px 84px;}
@@ -1163,6 +1172,8 @@
         <span class="kf-icon" data-icon="search" data-size="14"></span>
         <input type="text" id="taskListSearchInput" placeholder="Search tasks...">
       </div>
+      <button type="button" class="kf-tasklist-toolbar-link" id="taskListCollapseAllBtn">Collapse all</button>
+      <button type="button" class="kf-tasklist-toolbar-link" id="taskListExpandAllBtn">Expand all</button>
       <span id="taskListCount" class="kf-tasklist-count"></span>
     </div>
     <div class="kf-tasklist-header" id="taskListHeader"></div>
@@ -3525,6 +3536,18 @@ function valuePropClass(v){
 function formatValueProp(v){
   return v.toFixed(2);
 }
+/* Aggregate Value Proposition for a release: sum of Business Value
+   across its tasks divided by the sum of Task Cost — a weighted
+   ratio, not an average of each task's individual ratio. */
+function computeReleaseValueProposition(tasks){
+  var totalValue = 0, totalCost = 0;
+  tasks.forEach(function(t){
+    totalValue += clampTaskScore(t.businessValue);
+    totalCost += clampTaskScore(t.taskCost);
+  });
+  if(totalCost === 0) return 0;
+  return totalValue / totalCost;
+}
 
 var TASKLIST_COLUMNS = [
   {field:'key', label:'Key'},
@@ -3535,12 +3558,14 @@ var TASKLIST_COLUMNS = [
   {field:'endDate', label:'End'},
   {field:'valueProp', label:'Value Prop.'}
 ];
+var NO_RELEASE_GROUP_KEY = '__no_release__';
 
 function openTaskListOverlay(){
   var project = getCurrentProject();
   if(!project){ toast('No project selected.'); return; }
   ui.taskListSearch = '';
   ui.taskListExpanded = new Set();
+  ui.taskListCollapsedGroups = new Set();
   document.getElementById('taskListSearchInput').value = '';
   document.getElementById('taskListTitle').textContent = 'Task List — ' + project.name;
   renderTaskListHeader();
@@ -3644,12 +3669,12 @@ function renderTaskListBody(){
      tasks with no release at all form their own group at the very end. */
   var groups = {};
   rows.forEach(function(t){
-    var key = t.releaseId || '';
+    var key = t.releaseId || NO_RELEASE_GROUP_KEY;
     if(!groups[key]) groups[key] = [];
     groups[key].push(t);
   });
 
-  var releaseGroupKeys = Object.keys(groups).filter(function(k){ return k !== ''; });
+  var releaseGroupKeys = Object.keys(groups).filter(function(k){ return k !== NO_RELEASE_GROUP_KEY; });
   releaseGroupKeys.sort(function(aId, bId){
     var ra = getReleaseById(project, aId);
     var rb = getReleaseById(project, bId);
@@ -3662,12 +3687,14 @@ function renderTaskListBody(){
     var bn = rb ? rb.name.toLowerCase() : '';
     return an.localeCompare(bn);
   });
-  var orderedGroupKeys = releaseGroupKeys.concat(groups.hasOwnProperty('') ? [''] : []);
+  var orderedGroupKeys = releaseGroupKeys.concat(groups.hasOwnProperty(NO_RELEASE_GROUP_KEY) ? [NO_RELEASE_GROUP_KEY] : []);
 
   orderedGroupKeys.forEach(function(groupKey){
     var groupTasks = groups[groupKey];
     sortTaskListRows(project, groupTasks);
-    body.appendChild(buildTaskListGroupHeader(project, groupKey, groupTasks.length));
+    var collapsed = ui.taskListCollapsedGroups.has(groupKey);
+    body.appendChild(buildTaskListGroupHeader(project, groupKey, groupTasks, collapsed));
+    if(collapsed) return;
     groupTasks.forEach(function(t){
       body.appendChild(buildTaskListRow(project, t));
       if(ui.taskListExpanded.has(t.id)){
@@ -3677,35 +3704,82 @@ function renderTaskListBody(){
   });
 
   body.querySelectorAll('[data-toggle-id]').forEach(function(btn){
-    btn.addEventListener('click', function(){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
       var id = btn.getAttribute('data-toggle-id');
       if(ui.taskListExpanded.has(id)) ui.taskListExpanded.delete(id);
       else ui.taskListExpanded.add(id);
       renderTaskListBody();
     });
   });
+
+  body.querySelectorAll('[data-group-key]').forEach(function(header){
+    header.addEventListener('click', function(){
+      var key = header.getAttribute('data-group-key');
+      if(ui.taskListCollapsedGroups.has(key)) ui.taskListCollapsedGroups.delete(key);
+      else ui.taskListCollapsedGroups.add(key);
+      renderTaskListBody();
+    });
+  });
 }
 
-function buildTaskListGroupHeader(project, releaseId, count){
+function buildTaskListGroupHeader(project, groupKey, groupTasks, collapsed){
   var header = document.createElement('div');
   header.className = 'kf-tasklist-group-header';
-  var release = releaseId ? getReleaseById(project, releaseId) : null;
+  header.setAttribute('data-group-key', groupKey);
+  header.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  var count = groupTasks.length;
+  var chevronHTML = '<span class="kf-tasklist-chevron' + (collapsed ? '' : ' expanded') + '" aria-hidden="true">' + iconSvg('chevronDown', 14) + '</span>';
+
+  var release = (groupKey !== NO_RELEASE_GROUP_KEY) ? getReleaseById(project, groupKey) : null;
   if(release){
     var statusMeta = getReleaseStatusMeta(release.status);
     var dateRangeText = (release.startDate || release.endDate)
       ? (release.startDate ? utcISOToLocalDisplayDate(release.startDate) : '\u2014') + ' \u2013 ' + (release.endDate ? utcISOToLocalDisplayDate(release.endDate) : '\u2014')
       : '';
+    var vp = computeReleaseValueProposition(groupTasks);
+    var vpClass = valuePropClass(vp);
     header.innerHTML =
+      chevronHTML +
       '<span class="kf-tasklist-group-name">' + escapeHTML(release.name) + '</span>' +
       '<span class="kf-release-status-pill ' + normalizeReleaseStatus(release.status) + '">' + escapeHTML(statusMeta.label) + '</span>' +
       (dateRangeText ? '<span class="kf-tasklist-group-dates">' + escapeHTML(dateRangeText) + '</span>' : '') +
-      '<span class="kf-tasklist-group-count">' + count + ' task' + (count === 1 ? '' : 's') + '</span>';
+      '<span class="kf-tasklist-group-right">' +
+        '<span class="kf-valueprop-pill ' + vpClass + '" title="Aggregate Value Proposition: total Business Value \u00f7 total Task Cost across this release\u2019s tasks">' + formatValueProp(vp) + '</span>' +
+        '<span class="kf-tasklist-group-count">' + count + ' task' + (count === 1 ? '' : 's') + '</span>' +
+      '</span>';
   } else {
     header.innerHTML =
+      chevronHTML +
       '<span class="kf-tasklist-group-name kf-tasklist-group-name-none">No Release</span>' +
-      '<span class="kf-tasklist-group-count">' + count + ' task' + (count === 1 ? '' : 's') + '</span>';
+      '<span class="kf-tasklist-group-right">' +
+        '<span class="kf-tasklist-group-count">' + count + ' task' + (count === 1 ? '' : 's') + '</span>' +
+      '</span>';
   }
   return header;
+}
+
+/* "Collapse all" only collapses groups that currently have at least
+   one matching task under the active search term — groups already
+   hidden by the filter are left alone rather than silently affected. */
+function collapseAllTaskListGroups(){
+  var project = getCurrentProject();
+  if(!project) return;
+  var term = ui.taskListSearch.trim().toLowerCase();
+  var rows = getTasksArray(project).filter(function(t){
+    if(t.archived) return false;
+    if(!term) return true;
+    var hay = (t.key + ' ' + t.title + ' ' + (t.description||'')).toLowerCase();
+    return hay.indexOf(term) !== -1;
+  });
+  rows.forEach(function(t){
+    ui.taskListCollapsedGroups.add(t.releaseId || NO_RELEASE_GROUP_KEY);
+  });
+  renderTaskListBody();
+}
+function expandAllTaskListGroups(){
+  ui.taskListCollapsedGroups = new Set();
+  renderTaskListBody();
 }
 
 function buildTaskListRow(project, t){
@@ -4193,7 +4267,8 @@ var ui = {
   bulkEdits: {},
   timelineScale: 'week',
   timelineShowArchived: false,
-  editingReleaseId: null
+  editingReleaseId: null,
+  taskListCollapsedGroups: new Set()
 };
 
 function resetFilters(){
@@ -5259,6 +5334,8 @@ function wireEvents(){
     ui.taskListSearch = e.target.value;
     renderTaskListBody();
   });
+  document.getElementById('taskListCollapseAllBtn').addEventListener('click', collapseAllTaskListGroups);
+  document.getElementById('taskListExpandAllBtn').addEventListener('click', expandAllTaskListGroups);
 
   document.getElementById('bulkEditBtn').addEventListener('click', openBulkEditOverlay);
   document.getElementById('bulkEditClose').addEventListener('click', closeBulkEditOverlay);
