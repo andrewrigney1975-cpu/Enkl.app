@@ -113,6 +113,54 @@
 
   /* ===== Layout ===== */
   #app{display:flex;flex-direction:column;height:100vh;}
+  .kf-app-body{display:flex;flex:1;min-height:0;}
+  .kf-main-content{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;}
+
+  /* Side nav (desktop only — hidden below the mobile/tablet breakpoint,
+     where the existing header drawer is used instead). */
+  .kf-side-nav{
+    width:56px;flex-shrink:0;
+    background:var(--kf-surface);
+    border-right:1px solid var(--kf-border);
+    display:flex;flex-direction:column;
+    overflow-y:auto;
+    transition:width .18s ease;
+  }
+  .kf-side-nav.expanded{width:220px;}
+  .kf-side-nav-toggle{
+    display:flex;align-items:center;justify-content:center;
+    width:100%;height:40px;flex-shrink:0;
+    background:none;border:none;border-bottom:1px solid var(--kf-border);
+    color:var(--kf-text-secondary);cursor:pointer;
+  }
+  .kf-side-nav-toggle:hover{background:var(--kf-hover-tint);color:var(--kf-text);}
+  .kf-side-nav.expanded .kf-side-nav-toggle{justify-content:flex-end;padding-right:14px;}
+  .kf-side-nav-section{padding:8px 0;border-bottom:1px solid var(--kf-border);}
+  .kf-side-nav-section:last-child{border-bottom:none;}
+  .kf-side-nav-label{
+    font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+    color:var(--kf-text-faint);padding:6px 16px;white-space:nowrap;overflow:hidden;
+  }
+  .kf-side-nav:not(.expanded) .kf-side-nav-label{text-align:center;padding:6px 4px;}
+  .kf-side-nav-item{
+    display:flex;align-items:center;gap:10px;
+    width:100%;padding:9px 16px;
+    background:none;border:none;
+    color:var(--kf-text-secondary);
+    font-size:13px;font-weight:500;
+    cursor:pointer;white-space:nowrap;overflow:hidden;
+    position:relative;
+  }
+  .kf-side-nav-item:hover{background:var(--kf-hover-tint);color:var(--kf-text);}
+  .kf-side-nav-item .kf-icon{flex-shrink:0;}
+  .kf-side-nav-text{overflow:hidden;text-overflow:ellipsis;}
+  .kf-side-nav-item .kf-count-badge{flex-shrink:0;margin-left:auto;}
+  .kf-side-nav:not(.expanded) .kf-side-nav-item{justify-content:center;padding:9px 0;}
+  .kf-side-nav:not(.expanded) .kf-side-nav-text{display:none;}
+  .kf-side-nav:not(.expanded) .kf-side-nav-item .kf-count-badge{
+    position:absolute;top:2px;right:8px;margin-left:0;
+    font-size:9px;min-width:14px;height:14px;line-height:14px;padding:0 3px;
+  }
 
   /* Top navy header */
   .kf-header{
@@ -222,6 +270,9 @@
       transition:opacity .2s ease;
     }
     .kf-drawer-backdrop.open{opacity:1;pointer-events:auto;}
+    .kf-side-nav{display:none;}
+    #toolbarViewButtons,#toolbarRow2Buttons{display:flex;}
+    #toolbarRow2{display:flex;}
   }
   .kf-header-spacer{flex:1;}
 
@@ -238,6 +289,13 @@
   }
   .kf-toolbar-view-buttons{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .kf-toolbar-view-buttons:empty{display:none;}
+  /* On desktop, Views/Tools live in the side nav instead — the
+     toolbar wrappers stay fully intact in the DOM (still used by
+     mobile/tablet's relocation into the header drawer) but are
+     visually hidden here. Row 2 becomes empty once Column moves out
+     and Views/Tools are hidden, so it's hidden too. */
+  #toolbarViewButtons,#toolbarRow2Buttons{display:none;}
+  #toolbarRow2{display:none;}
   .kf-board-title{font-size:18px;font-weight:600;margin-right:8px;white-space:nowrap;}
   .kf-board-key{
     font-size:11px;font-weight:700;color:var(--kf-text-secondary);
@@ -917,6 +975,28 @@
   </header>
   <div class="kf-drawer-backdrop" id="drawerBackdrop"></div>
 
+  <div class="kf-app-body" id="appBody">
+    <nav class="kf-side-nav" id="sideNav">
+      <button type="button" class="kf-side-nav-toggle" id="sideNavToggle" title="Expand navigation" aria-label="Expand navigation" aria-expanded="false">
+        <span class="kf-icon" data-icon="chevronRight" data-size="16"></span>
+      </button>
+      <div class="kf-side-nav-section">
+        <div class="kf-side-nav-label">Views</div>
+        <button type="button" class="kf-side-nav-item" id="navTaskListBtn" title="List View"><span class="kf-icon" data-icon="list" data-size="18"></span><span class="kf-side-nav-text">List View</span></button>
+        <button type="button" class="kf-side-nav-item" id="navTimelineBtn" title="Timeline"><span class="kf-icon" data-icon="timeline" data-size="18"></span><span class="kf-side-nav-text">Timeline</span></button>
+        <button type="button" class="kf-side-nav-item" id="navDepMapBtn" title="Dependency Map"><span class="kf-icon" data-icon="graph" data-size="18"></span><span class="kf-side-nav-text">Dependency Map</span></button>
+        <button type="button" class="kf-side-nav-item" id="navCostBenefitBtn" title="Cost/Benefit Chart"><span class="kf-icon" data-icon="quadrant" data-size="18"></span><span class="kf-side-nav-text">Cost/Benefit Chart</span></button>
+      </div>
+      <div class="kf-side-nav-section">
+        <div class="kf-side-nav-label">Tools</div>
+        <button type="button" class="kf-side-nav-item" id="navBulkEditBtn" title="Bulk Edit"><span class="kf-icon" data-icon="grid" data-size="18"></span><span class="kf-side-nav-text">Bulk Edit</span></button>
+        <button type="button" class="kf-side-nav-item" id="navArchivedBtn" title="Archived"><span class="kf-icon" data-icon="archive" data-size="18"></span><span class="kf-side-nav-text">Archived</span><span id="navArchivedCountBadge" class="kf-count-badge kf-archived-count-badge kf-vis-hidden"></span></button>
+        <button type="button" class="kf-side-nav-item" id="navTaskTypesBtn" title="Task Types"><span class="kf-icon" data-icon="tag" data-size="18"></span><span class="kf-side-nav-text">Task Types</span></button>
+        <button type="button" class="kf-side-nav-item" id="navReleasesBtn" title="Releases"><span class="kf-icon" data-icon="rocket" data-size="18"></span><span class="kf-side-nav-text">Releases</span></button>
+      </div>
+    </nav>
+
+    <div class="kf-main-content" id="mainContent">
   <!-- Toolbar -->
   <div class="kf-toolbar" id="toolbarRow1">
     <span class="kf-board-key" id="toolbarKey">—</span>
@@ -956,6 +1036,8 @@
   <!-- Board -->
   <div class="kf-board-wrap">
     <div class="kf-board" id="board"></div>
+  </div>
+    </div>
   </div>
 </div>
 
@@ -1486,6 +1568,8 @@ var ICON_PATHS = {
   upload:      '<path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M5 21h14"/>',
   grip:        '<circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/>',
   chevronDown: '<path d="M6 9l6 6 6-6"/>',
+  chevronLeft: '<path d="M15 6l-6 6 6 6"/>',
+  chevronRight: '<path d="M9 6l6 6-6 6"/>',
   warning:     '<path d="M10.29 3.86l-8.18 14.18A1.5 1.5 0 0 0 3.4 20h17.2a1.5 1.5 0 0 0 1.29-2.26L13.71 3.86a1.5 1.5 0 0 0-2.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
   clock:       '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
   search:      '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>',
@@ -1674,6 +1758,31 @@ function relocateViewButtonsForViewport(){
       toolbar.appendChild(wrapper2);
     }
   }
+
+  /* Column button: stays in row 2 (its normal position) on mobile/
+     tablet, where the two-row toolbar still looks as it always has.
+     On desktop, where Views/Tools have moved into the side nav and
+     row 2 is hidden entirely, Column moves to the end of the now
+     single, tightened toolbar row. */
+  var columnBtn = document.getElementById('addColumnTopBtn');
+  if(columnBtn && toolbar && toolbar2){
+    if(isMobile){
+      if(columnBtn.parentElement !== toolbar2) toolbar2.appendChild(columnBtn);
+    } else if(columnBtn.parentElement !== toolbar){
+      toolbar.appendChild(columnBtn);
+    }
+  }
+}
+
+function toggleSideNav(){
+  ui.sideNavExpanded = !ui.sideNavExpanded;
+  var nav = document.getElementById('sideNav');
+  var toggleBtn = document.getElementById('sideNavToggle');
+  nav.classList.toggle('expanded', ui.sideNavExpanded);
+  toggleBtn.innerHTML = '<span class="kf-icon" data-icon="' + (ui.sideNavExpanded ? 'chevronLeft' : 'chevronRight') + '" data-size="16"></span>';
+  toggleBtn.title = ui.sideNavExpanded ? 'Collapse navigation' : 'Expand navigation';
+  toggleBtn.setAttribute('aria-expanded', ui.sideNavExpanded ? 'true' : 'false');
+  hydrateIcons(toggleBtn);
 }
 
 var MEMBER_PALETTE = ['#0052CC','#00875A','#FF8B00','#974DE2','#DE350B','#006644','#5243AA','#B04632','#1B5E20','#8777D9'];
@@ -4404,14 +4513,20 @@ function getArchivedTasks(project){
 
 function refreshArchivedCountBadge(){
   var badge = document.getElementById('archivedCountBadge');
+  var navBadge = document.getElementById('navArchivedCountBadge');
   if(!badge) return;
   var project = getCurrentProject();
   var count = project ? getArchivedTasks(project).length : 0;
   if(count > 0){
     badge.textContent = count;
     badge.classList.remove('kf-vis-hidden');
+    if(navBadge){
+      navBadge.textContent = count;
+      navBadge.classList.remove('kf-vis-hidden');
+    }
   } else {
     badge.classList.add('kf-vis-hidden');
+    if(navBadge) navBadge.classList.add('kf-vis-hidden');
   }
 }
 
@@ -4508,7 +4623,8 @@ var ui = {
   timelineScale: 'week',
   timelineShowArchived: false,
   editingReleaseId: null,
-  taskListCollapsedGroups: new Set()
+  taskListCollapsedGroups: new Set(),
+  sideNavExpanded: false
 };
 
 function resetFilters(){
@@ -5583,6 +5699,16 @@ function wireEvents(){
   hydrateIcons(document);
   document.getElementById('kfLogoIcon').innerHTML = iconSvg('board', 20);
   renderThemeToggleIcon();
+
+  document.getElementById('sideNavToggle').addEventListener('click', toggleSideNav);
+  document.getElementById('navTaskListBtn').addEventListener('click', openTaskListOverlay);
+  document.getElementById('navTimelineBtn').addEventListener('click', openTimelineOverlay);
+  document.getElementById('navDepMapBtn').addEventListener('click', openDepMapOverlay);
+  document.getElementById('navCostBenefitBtn').addEventListener('click', openCostBenefitOverlay);
+  document.getElementById('navBulkEditBtn').addEventListener('click', openBulkEditOverlay);
+  document.getElementById('navArchivedBtn').addEventListener('click', openArchivedTasksOverlay);
+  document.getElementById('navTaskTypesBtn').addEventListener('click', openTaskTypesModal);
+  document.getElementById('navReleasesBtn').addEventListener('click', openReleasesOverlay);
 
   document.getElementById('projectSelect').addEventListener('change', function(e){
     db.currentProjectId = e.target.value;
