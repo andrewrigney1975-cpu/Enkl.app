@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kanba</title>
+<title>Enkl</title>
 <script>
   /* Applied before CSS paints so there's no flash of the wrong theme. */
   (function(){
@@ -14,6 +14,9 @@
   })();
 </script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='3' width='20' height='18' rx='3' fill='%230c66e4'/%3E%3Crect x='5' y='6' width='4' height='12' rx='1' fill='white'/%3E%3Crect x='10.5' y='6' width='4' height='7' rx='1' fill='white' opacity='.85'/%3E%3Crect x='16' y='6' width='4' height='10' rx='1' fill='white' opacity='.7'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
 <style>
   :root{
     --kf-blue:#0c66e4;
@@ -33,7 +36,7 @@
     --kf-shadow:0 1px 2px rgba(9,30,66,.15), 0 0 1px rgba(9,30,66,.20);
     --kf-shadow-hover:0 4px 10px -2px rgba(9,30,66,.30), 0 0 1px rgba(9,30,66,.25);
     --kf-modal-shadow:0 8px 24px rgba(9,30,66,.35);
-    --kf-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --kf-font:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 
     --kf-chip-bg:var(--kf-surface);
     --kf-chip-active-bg:var(--kf-text);
@@ -856,7 +859,7 @@
     </button>
     <div class="kf-logo">
       <span class="kf-icon" id="kfLogoIcon"></span>
-      <span>Kanba</span>
+      <span>Enkl</span>
     </div>
     <div class="kf-header-controls" id="headerControls">
       <div class="kf-drawer-header">
@@ -878,7 +881,7 @@
       <div class="kf-header-spacer"></div>
       <div class="kf-drawer-action-group">
         <button class="kf-header-btn" id="newProjectBtn" title="New Project"><span class="kf-icon" data-icon="plus" data-size="14"></span>New Project</button>
-        <button class="kf-header-btn" id="importProjectBtn" title="Import a project from a Kanba export file"><span class="kf-icon" data-icon="upload" data-size="14"></span>Import Project</button>
+        <button class="kf-header-btn" id="importProjectBtn" title="Import a project from an Enkl export file"><span class="kf-icon" data-icon="upload" data-size="14"></span>Import Project</button>
         <button class="kf-header-btn" id="exportBtn" title="Export the current project"><span class="kf-icon" data-icon="download" data-size="14"></span>Export Project</button>
       </div>
       <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
@@ -1712,7 +1715,7 @@ function saveDB(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
   }catch(e){
-    console.error('Kanba: failed to save to localStorage', e);
+    console.error('Enkl: failed to save to localStorage', e);
     toast('Could not save — local storage may be full or unavailable.');
   }
 }
@@ -1722,7 +1725,7 @@ function loadDB(){
   try{
     raw = localStorage.getItem(STORAGE_KEY);
   }catch(e){
-    console.error('Kanba: failed to read localStorage', e);
+    console.error('Enkl: failed to read localStorage', e);
   }
   if(raw){
     try{
@@ -1732,7 +1735,7 @@ function loadDB(){
         return;
       }
     }catch(e){
-      console.error('Kanba: corrupted data, resetting', e);
+      console.error('Enkl: corrupted data, resetting', e);
     }
   }
   db = createSeedDB();
@@ -2470,7 +2473,7 @@ function buildProjectFromExportDoc(doc){
     throw new Error('That file is not valid JSON.');
   }
   if(!Array.isArray(doc.hierarchy)){
-    throw new Error('That file doesn\'t look like a Kanba export — it\'s missing the "hierarchy" list.');
+    throw new Error('That file doesn\'t look like an Enkl export — it\'s missing the "hierarchy" list.');
   }
 
   var flat = {};
