@@ -447,6 +447,7 @@
   .kf-card-title{font-size:14px;line-height:1.35;color:var(--kf-text);margin-bottom:8px;word-break:break-word;}
   .kf-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .kf-card-key{font-size:11px;color:var(--kf-text-faint);font-weight:700;letter-spacing:.2px;margin-right:auto;}
+  .kf-card-type-icon{display:flex;align-items:center;color:var(--kf-text-secondary);flex-shrink:0;}
   .kf-priority-pill{
     display:flex;align-items:center;gap:4px;
     font-size:11px;font-weight:500;
@@ -653,7 +654,8 @@
     padding:9px 16px;border-bottom:1px solid var(--kf-border);
   }
   .kf-tasklist-row:hover{background:var(--kf-hover-tint);}
-  .kf-tasklist-key{font-size:12px;font-weight:700;color:var(--kf-text-faint);}
+  .kf-tasklist-key{font-size:12px;font-weight:700;color:var(--kf-text-faint);display:flex;align-items:center;gap:4px;overflow:hidden;}
+  .kf-tasklist-type-icon{display:flex;align-items:center;color:var(--kf-text-secondary);flex-shrink:0;}
   .kf-tasklist-title{font-size:13px;color:var(--kf-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .kf-tasklist-chevron{
     background:none;border:none;color:var(--kf-text-faint);
@@ -1480,6 +1482,8 @@ var ICON_PATHS = {
   timeline:    '<circle cx="4" cy="6" r="1.6"/><path d="M8 6h12"/><circle cx="9" cy="12" r="1.6"/><path d="M13 12h7"/><circle cx="6" cy="18" r="1.6"/><path d="M10 18h10"/>',
   rocket:      '<path d="M12 2c2.5 2 4 5.5 4 9 0 2-.5 4-1.5 5.5L12 19l-2.5-2.5C8.5 15 8 13 8 11c0-3.5 1.5-7 4-9Z"/><path d="M9.5 14.5 6 16l1.5-3.5"/><path d="M14.5 14.5 18 16l-1.5-3.5"/><circle cx="12" cy="9" r="1.5"/><path d="M10 19l-1 3"/><path d="M14 19l1 3"/>',
   tag:         '<path d="M12.59 2.41 21 10.83a2 2 0 0 1 0 2.83l-7.34 7.34a2 2 0 0 1-2.83 0L2.41 12.59a2 2 0 0 1-.41-2.18L4.5 4.5a2 2 0 0 1 1.79-1.21L10.41 3a2 2 0 0 1 2.18.41Z"/><circle cx="8.5" cy="8.5" r="1.5"/>',
+  sparkle:     '<path d="M12 2.5 13.8 8.7 20 10.5 13.8 12.3 12 18.5 10.2 12.3 4 10.5 10.2 8.7Z"/><path d="M19 15.5l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9Z"/>',
+  bug:         '<path d="M9 9h6"/><path d="M8 13a4 4 0 0 1 8 0v3a4 4 0 0 1-8 0Z"/><path d="M5 12H3"/><path d="M21 12h-2"/><path d="M5 19l2.5-2"/><path d="M19 19l-2.5-2"/><path d="M5 6l2.5 2.5"/><path d="M19 6l-2.5 2.5"/><path d="M12 6V4"/>',
   archive:     '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/><path d="M10 13h4"/>',
   quadrant:    '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/><path d="M3 12h18"/><circle cx="7.5" cy="7.5" r="1.4"/><circle cx="16" cy="8.5" r="1.4"/><circle cx="8.5" cy="16" r="1.4"/><circle cx="16.5" cy="16.5" r="1.4"/>',
   menu:        '<path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/>',
@@ -2082,6 +2086,18 @@ function removeMember(project, memberId){
 function getTaskTypeById(project, typeId){
   if(!project || !typeId) return null;
   return (project.taskTypes || []).filter(function(tt){ return tt.id === typeId; })[0] || null;
+}
+/* Dedicated icons for the well-known default type names; any other
+   (renamed or custom) type still gets a sensible generic icon, so a
+   task with a type set always shows *something* appropriate. */
+var TASK_TYPE_ICON_BY_NAME = {
+  feature: 'sparkle',
+  bug: 'bug'
+};
+function getTaskTypeIconName(taskType){
+  if(!taskType) return null;
+  var key = taskType.name.trim().toLowerCase();
+  return TASK_TYPE_ICON_BY_NAME.hasOwnProperty(key) ? TASK_TYPE_ICON_BY_NAME[key] : 'tag';
 }
 function addTaskType(project, name){
   var trimmed = (name || '').trim().slice(0, 40);
@@ -3008,6 +3024,7 @@ function renderDependencyMap(){
     var blocked = isTaskBlocked(project, t);
     var overdue = isTaskOverdue(project, t);
     var assignee = getMemberById(project, t.assigneeId);
+    var taskType = getTaskTypeById(project, t.typeId);
     var title = t.title.length > 26 ? t.title.slice(0,25) + '\u2026' : t.title;
     var warningBadge = blocked
       ? '<g transform="translate(' + (n.w - 24) + ',8)" style="color:#de350b;"><title>Blocked by unfinished dependencies</title>' + iconSvg('warning',16) + '</g>'
@@ -3015,6 +3032,12 @@ function renderDependencyMap(){
     var overdueBadge = overdue
       ? '<g transform="translate(' + (blocked ? n.w - 46 : n.w - 24) + ',8)" style="color:var(--kf-overdue-fg);"><title>Overdue — end date was ' + escapeHTML(utcISOToLocalDisplayDate(t.endDate)) + '</title>' + iconSvg('clock',16) + '</g>'
       : '';
+    var typeBadge = '';
+    if(taskType){
+      var typeIconName = getTaskTypeIconName(taskType);
+      var precedingBadgeCount = (blocked ? 1 : 0) + (overdue ? 1 : 0);
+      typeBadge = '<g transform="translate(' + (n.w - 24 - precedingBadgeCount * 22) + ',8)" style="color:var(--kf-text-secondary);"><title>' + escapeHTML(taskType.name) + '</title>' + iconSvg(typeIconName,16) + '</g>';
+    }
     var avatarBadge = assignee
       ? '<g><title>' + escapeHTML(assignee.name) + '</title><circle cx="' + (n.w - 18) + '" cy="' + (n.h - 16) + '" r="10" fill="' + assignee.color + '"></circle>' +
         '<text x="' + (n.w - 18) + '" y="' + (n.h - 12.5) + '" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">' + escapeHTML(memberInitials(assignee.name)) + '</text></g>'
@@ -3034,6 +3057,7 @@ function renderDependencyMap(){
         '<text x="30" y="57.5" font-size="10" font-weight="700" fill="' + prio.accent + '">' + escapeHTML(prio.label) + '</text>' +
         warningBadge +
         overdueBadge +
+        typeBadge +
         avatarBadge +
       '</g>'
     );
@@ -3963,11 +3987,18 @@ function buildTaskListRow(project, t){
     ? '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';">' + escapeHTML(memberInitials(assignee.name)) + '</span><span>' + escapeHTML(assignee.name) + '</span>'
     : '<span style="color:var(--kf-text-faint);">Unassigned</span>';
 
+  var taskType = getTaskTypeById(project, t.typeId);
+  var typeIconHTML = '';
+  if(taskType){
+    var typeIconName = getTaskTypeIconName(taskType);
+    typeIconHTML = '<span class="kf-tasklist-type-icon" title="' + escapeHTML(taskType.name) + '">' + iconSvg(typeIconName, 13) + '</span>';
+  }
+
   var row = document.createElement('div');
   row.className = 'kf-tasklist-row';
   row.innerHTML =
     '<button type="button" class="kf-tasklist-chevron' + (expanded ? ' expanded' : '') + '" data-toggle-id="' + t.id + '" aria-label="Toggle details">' + iconSvg('chevronDown',14) + '</button>' +
-    '<span class="kf-tasklist-key">' + escapeHTML(t.key) + '</span>' +
+    '<span class="kf-tasklist-key">' + typeIconHTML + escapeHTML(t.key) + '</span>' +
     '<span class="kf-tasklist-title" title="' + escapeHTML(t.title) + '">' + escapeHTML(t.title) + '</span>' +
     '<span class="kf-tasklist-assignee">' + assigneeHTML + '</span>' +
     '<span class="kf-priority-pill" style="color:' + prio.color + ';background:' + prio.bg + ';">' + iconSvg(prio.icon,12) + escapeHTML(prio.label) + '</span>' +
@@ -4810,6 +4841,11 @@ function renderCard(project, task){
   var assignee = getMemberById(project, task.assigneeId);
 
   var metaHTML = '<span class="kf-card-key">' + escapeHTML(task.key) + '</span>';
+  var taskType = getTaskTypeById(project, task.typeId);
+  if(taskType){
+    var typeIconName = getTaskTypeIconName(taskType);
+    metaHTML += '<span class="kf-card-type-icon" title="' + escapeHTML(taskType.name) + '">' + iconSvg(typeIconName, 13) + '</span>';
+  }
   metaHTML += '<span class="kf-priority-pill" style="color:' + prio.color + ';background:' + prio.bg + ';">' + iconSvg(prio.icon,12) + escapeHTML(prio.label) + '</span>';
   if(depCount > 0){
     metaHTML += '<span class="kf-dep-chip" title="Depends on ' + depCount + ' task(s)">' + iconSvg('link',12) + depCount + '</span>';
