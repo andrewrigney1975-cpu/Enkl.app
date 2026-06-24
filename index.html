@@ -129,7 +129,7 @@
   .kf-side-nav.expanded{width:220px;}
   .kf-side-nav-toggle{
     display:flex;align-items:center;justify-content:center;
-    width:100%;height:40px;flex-shrink:0;
+    width:100%;height:52px;flex-shrink:0;
     background:none;border:none;border-bottom:1px solid var(--kf-border);
     color:var(--kf-text-secondary);cursor:pointer;
   }
@@ -217,6 +217,18 @@
   .kf-drawer-views-section{display:none;}
   .kf-drawer-section-label{display:none;}
   .kf-drawer-view-slot{display:none;}
+  /* On desktop, Views/Tools live in the side nav instead — the
+     toolbar wrappers stay fully intact in the DOM (still used by
+     mobile/tablet's relocation into the header drawer) but are
+     visually hidden here. Row 2 becomes empty once Column moves out
+     and Views/Tools are hidden, so it's hidden too. This must appear
+     BEFORE the @media block below: the mobile override further down
+     restores display:flex, and since both rules share the same
+     selector specificity, later source order wins — so this base
+     rule has to come first, or it would unconditionally beat the
+     mobile override regardless of viewport width. */
+  #toolbarViewButtons,#toolbarRow2Buttons{display:none;}
+  #toolbarRow2{display:none;}
 
   @media (max-width: 1024px){
     .kf-header-hamburger{display:flex;}
@@ -289,13 +301,6 @@
   }
   .kf-toolbar-view-buttons{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .kf-toolbar-view-buttons:empty{display:none;}
-  /* On desktop, Views/Tools live in the side nav instead — the
-     toolbar wrappers stay fully intact in the DOM (still used by
-     mobile/tablet's relocation into the header drawer) but are
-     visually hidden here. Row 2 becomes empty once Column moves out
-     and Views/Tools are hidden, so it's hidden too. */
-  #toolbarViewButtons,#toolbarRow2Buttons{display:none;}
-  #toolbarRow2{display:none;}
   .kf-board-title{font-size:18px;font-weight:600;margin-right:8px;white-space:nowrap;}
   .kf-board-key{
     font-size:11px;font-weight:700;color:var(--kf-text-secondary);
