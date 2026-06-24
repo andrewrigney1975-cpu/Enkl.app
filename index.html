@@ -519,6 +519,21 @@
   .kf-overdue-alert-row .kf-overdue-alert-date{flex-shrink:0;color:var(--kf-overdue-fg);font-size:11px;font-weight:500;}
   .kf-overdue-alert-more{padding:8px 10px;font-size:12px;color:var(--kf-text-faint);text-align:center;}
 
+  .kf-defaultscore-alert-list{
+    max-height:200px;overflow-y:auto;
+    border:1px solid var(--kf-border);border-radius:var(--kf-radius);
+  }
+  .kf-defaultscore-alert-row{
+    display:flex;align-items:center;gap:8px;
+    padding:8px 10px;border-bottom:1px solid var(--kf-border);
+    font-size:13px;color:var(--kf-text);
+  }
+  .kf-defaultscore-alert-row:last-child{border-bottom:none;}
+  .kf-defaultscore-alert-row .kf-dep-key{flex-shrink:0;}
+  .kf-defaultscore-alert-row .kf-defaultscore-alert-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .kf-defaultscore-alert-row .kf-defaultscore-alert-scores{flex-shrink:0;color:var(--kf-overdue-fg);font-size:11px;font-weight:500;}
+  .kf-defaultscore-alert-more{padding:8px 10px;font-size:12px;color:var(--kf-text-faint);text-align:center;}
+
   /* ===== Modal ===== */
   .kf-overlay{
     position:fixed;inset:0;
@@ -1379,6 +1394,23 @@
     </div>
     <div class="kf-modal-footer">
       <button class="kf-btn kf-btn-primary" id="overdueAlertOkBtn">Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- Default Value/Cost Alert Modal -->
+<div class="kf-overlay hidden" id="defaultScoreAlertOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2><span class="kf-icon" data-icon="warning" data-size="18" style="color:var(--kf-overdue-fg);margin-right:6px;vertical-align:middle;"></span>Unscored tasks</h2>
+      <button class="kf-btn kf-btn-ghost" id="defaultScoreAlertClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <p id="defaultScoreAlertMessage" style="margin:0 0 12px;color:var(--kf-text);line-height:1.6;"></p>
+      <div id="defaultScoreAlertList" class="kf-defaultscore-alert-list"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-primary" id="defaultScoreAlertOkBtn">Got it</button>
     </div>
   </div>
 </div>
@@ -5765,6 +5797,12 @@ function wireEvents(){
     if(e.target.id === 'overdueAlertOverlay') closeOverdueAlert();
   });
 
+  document.getElementById('defaultScoreAlertClose').addEventListener('click', closeDefaultScoreAlert);
+  document.getElementById('defaultScoreAlertOkBtn').addEventListener('click', closeDefaultScoreAlert);
+  document.getElementById('defaultScoreAlertOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'defaultScoreAlertOverlay') closeDefaultScoreAlert();
+  });
+
   document.getElementById('backupReminderClose').addEventListener('click', dismissBackupReminder);
   document.getElementById('backupNowBtn').addEventListener('click', runBackupForReminder);
   document.getElementById('backupLaterBtn').addEventListener('click', dismissBackupReminder);
@@ -5783,6 +5821,7 @@ function wireEvents(){
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
     else if(!document.getElementById('importConflictOverlay').classList.contains('hidden')) closeImportConflictModal();
     else if(!document.getElementById('overdueAlertOverlay').classList.contains('hidden')) closeOverdueAlert();
+    else if(!document.getElementById('defaultScoreAlertOverlay').classList.contains('hidden')) closeDefaultScoreAlert();
     else if(!document.getElementById('backupReminderOverlay').classList.contains('hidden')) dismissBackupReminder();
     else if(isDepMapOpen()) closeDepMapOverlay();
     else if(isTimelineOverlayOpen()) closeTimelineOverlay();
@@ -5817,10 +5856,10 @@ var backupQueue = [];   // array of project ids awaiting a reminder this session
    ========================================================= */
 function checkOverdueAlert(){
   var project = getCurrentProject();
-  if(!project){ checkBackupReminders(); return; }
+  if(!project){ checkDefaultScoreAlert(); return; }
 
   var overdueTasks = getTasksArray(project).filter(function(t){ return isTaskOverdue(project, t); });
-  if(overdueTasks.length === 0){ checkBackupReminders(); return; }
+  if(overdueTasks.length === 0){ checkDefaultScoreAlert(); return; }
 
   overdueTasks.sort(function(a, b){ return new Date(a.endDate).getTime() - new Date(b.endDate).getTime(); });
 
@@ -5853,6 +5892,60 @@ function checkOverdueAlert(){
 
 function closeOverdueAlert(){
   document.getElementById('overdueAlertOverlay').classList.add('hidden');
+  checkDefaultScoreAlert();
+}
+
+/* A task is "unscored" if either metric is missing outright (defensive —
+   shouldn't normally happen, since both are always clamped to a number),
+   or if BOTH are still sitting at the untouched default of 1, meaning the
+   user has never actually set either one. A task deliberately scored at
+   1 for just ONE of the two metrics is not flagged. */
+function isTaskUnscored(t){
+  if(t.businessValue == null || t.taskCost == null) return true;
+  return t.businessValue === 1 && t.taskCost === 1;
+}
+
+function checkDefaultScoreAlert(){
+  var project = getCurrentProject();
+  if(!project){ checkBackupReminders(); return; }
+
+  var unscoredTasks = getTasksArray(project).filter(function(t){
+    return !t.archived && isTaskUnscored(t);
+  });
+  if(unscoredTasks.length === 0){ checkBackupReminders(); return; }
+
+  unscoredTasks.sort(function(a, b){ return a.key.localeCompare(b.key, undefined, {numeric: true}); });
+
+  var msg = '\u201c' + project.name + '\u201d has ' + unscoredTasks.length + ' task' +
+            (unscoredTasks.length === 1 ? '' : 's') + ' that ' + (unscoredTasks.length === 1 ? 'hasn\u2019t' : 'haven\u2019t') + ' been scored \u2014 ' +
+            'Business Value and Task Cost are still at the default of 1.';
+  document.getElementById('defaultScoreAlertMessage').textContent = msg;
+
+  var listEl = document.getElementById('defaultScoreAlertList');
+  listEl.innerHTML = '';
+  var maxShown = 6;
+  unscoredTasks.slice(0, maxShown).forEach(function(t){
+    var row = document.createElement('div');
+    row.className = 'kf-defaultscore-alert-row';
+    row.innerHTML =
+      '<span class="kf-dep-key">' + escapeHTML(t.key) + '</span>' +
+      '<span class="kf-defaultscore-alert-title">' + escapeHTML(t.title) + '</span>' +
+      '<span class="kf-defaultscore-alert-scores">BV ' + clampTaskScore(t.businessValue) + ' \u00b7 Cost ' + clampTaskScore(t.taskCost) + '</span>';
+    listEl.appendChild(row);
+  });
+  if(unscoredTasks.length > maxShown){
+    var more = document.createElement('div');
+    more.className = 'kf-defaultscore-alert-more';
+    more.textContent = '+ ' + (unscoredTasks.length - maxShown) + ' more';
+    listEl.appendChild(more);
+  }
+
+  document.getElementById('defaultScoreAlertOverlay').classList.remove('hidden');
+  hydrateIcons(document.getElementById('defaultScoreAlertOverlay'));
+}
+
+function closeDefaultScoreAlert(){
+  document.getElementById('defaultScoreAlertOverlay').classList.add('hidden');
   checkBackupReminders();
 }
 
