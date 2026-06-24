@@ -895,6 +895,11 @@
         <div class="kf-drawer-section-label">Views</div>
         <div id="drawerViewButtonsSlot" class="kf-drawer-view-slot"></div>
       </div>
+      <div class="kf-drawer-views-section" id="drawerToolsSection">
+        <div class="kf-header-divider"></div>
+        <div class="kf-drawer-section-label">Tools</div>
+        <div id="drawerToolsButtonsSlot" class="kf-drawer-view-slot"></div>
+      </div>
       <div class="kf-header-spacer"></div>
       <div class="kf-drawer-action-group">
         <button class="kf-header-btn" id="newProjectBtn" title="New Project"><span class="kf-icon" data-icon="plus" data-size="14"></span>New Project</button>
@@ -926,19 +931,19 @@
       <div class="kf-dropdown-filter-panel hidden" id="assigneeFilterPanel"></div>
     </div>
     <div class="kf-toolbar-spacer"></div>
-    <div class="kf-toolbar-view-buttons" id="toolbarViewButtons">
-      <button class="kf-btn kf-btn-secondary" id="taskListBtn"><span class="kf-icon" data-icon="list" data-size="14"></span>List View</button>
-      <button class="kf-btn kf-btn-secondary" id="timelineBtn"><span class="kf-icon" data-icon="timeline" data-size="14"></span>Timeline</button>
-      <button class="kf-btn kf-btn-secondary" id="depMapBtn"><span class="kf-icon" data-icon="graph" data-size="14"></span>Dependency Map</button>
-      <button class="kf-btn kf-btn-secondary" id="costBenefitBtn"><span class="kf-icon" data-icon="quadrant" data-size="14"></span>Cost/Benefit Chart</button>
-    </div>
-  </div>
-  <div class="kf-toolbar kf-toolbar-row2" id="toolbarRow2">
     <div class="kf-toolbar-view-buttons" id="toolbarRow2Buttons">
       <button class="kf-btn kf-btn-secondary" id="bulkEditBtn"><span class="kf-icon" data-icon="grid" data-size="14"></span>Bulk Edit</button>
       <button class="kf-btn kf-btn-secondary" id="archivedTasksBtn"><span class="kf-icon" data-icon="archive" data-size="14"></span>Archived<span id="archivedCountBadge" class="kf-count-badge kf-archived-count-badge kf-vis-hidden"></span></button>
       <button class="kf-btn kf-btn-secondary" id="taskTypesBtn"><span class="kf-icon" data-icon="tag" data-size="14"></span>Task Types</button>
       <button class="kf-btn kf-btn-secondary" id="releasesBtn"><span class="kf-icon" data-icon="rocket" data-size="14"></span>Releases</button>
+    </div>
+  </div>
+  <div class="kf-toolbar kf-toolbar-row2" id="toolbarRow2">
+    <div class="kf-toolbar-view-buttons" id="toolbarViewButtons">
+      <button class="kf-btn kf-btn-secondary" id="taskListBtn"><span class="kf-icon" data-icon="list" data-size="14"></span>List View</button>
+      <button class="kf-btn kf-btn-secondary" id="timelineBtn"><span class="kf-icon" data-icon="timeline" data-size="14"></span>Timeline</button>
+      <button class="kf-btn kf-btn-secondary" id="depMapBtn"><span class="kf-icon" data-icon="graph" data-size="14"></span>Dependency Map</button>
+      <button class="kf-btn kf-btn-secondary" id="costBenefitBtn"><span class="kf-icon" data-icon="quadrant" data-size="14"></span>Cost/Benefit Chart</button>
     </div>
     <div class="kf-toolbar-spacer"></div>
     <button class="kf-btn kf-btn-secondary" id="addColumnTopBtn"><span class="kf-icon" data-icon="plus" data-size="14"></span>Column</button>
@@ -1622,34 +1627,37 @@ function isMobileDrawerOpen(){
   return document.getElementById('headerControls').classList.contains('open');
 }
 
-/* Below the 1024px breakpoint, the List View / Dependency Map /
-   Cost-Benefit Chart / Archived buttons move from the toolbar into
-   the header drawer's "Views" section — same elements, just
-   reparented, so their ids/listeners/state are untouched either way. */
+/* Below the 1024px breakpoint, the "Views" group (List View /
+   Timeline / Dependency Map / Cost-Benefit Chart) and the "Tools"
+   group (Bulk Edit / Archived / Task Types / Releases) each move into
+   their own labeled section in the header drawer — same elements,
+   just reparented, so their ids/listeners/state are untouched either
+   way. On desktop, the two groups swap rows: Tools sits in row 1
+   (alongside search/filters) and Views sits in row 2 (alongside the
+   Column button, which never relocates at all). */
 var MOBILE_BREAKPOINT = 1024;
 function relocateViewButtonsForViewport(){
-  var wrapper = document.getElementById('toolbarViewButtons');
-  var wrapper2 = document.getElementById('toolbarRow2Buttons');
-  var drawerSlot = document.getElementById('drawerViewButtonsSlot');
+  var wrapper = document.getElementById('toolbarViewButtons');   // "Views" group
+  var wrapper2 = document.getElementById('toolbarRow2Buttons');  // "Tools" group
+  var viewsSlot = document.getElementById('drawerViewButtonsSlot');
+  var toolsSlot = document.getElementById('drawerToolsButtonsSlot');
   var toolbar = document.getElementById('toolbarRow1');
   var toolbar2 = document.getElementById('toolbarRow2');
-  if(!wrapper || !drawerSlot || !toolbar) return;
+  if(!wrapper || !viewsSlot || !toolbar) return;
 
   var isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
   if(isMobile){
-    if(wrapper.parentElement !== drawerSlot) drawerSlot.appendChild(wrapper);
-    /* Appended after wrapper above, so the second row's buttons land
-       directly under the first row's in the drawer, in document order. */
-    if(wrapper2 && wrapper2.parentElement !== drawerSlot) drawerSlot.appendChild(wrapper2);
+    if(wrapper.parentElement !== viewsSlot) viewsSlot.appendChild(wrapper);
+    if(wrapper2 && toolsSlot && wrapper2.parentElement !== toolsSlot) toolsSlot.appendChild(wrapper2);
   } else {
-    if(wrapper.parentElement !== toolbar){
-      toolbar.appendChild(wrapper);
+    /* Views now lives in row 2, restored to the front, ahead of the
+       spacer + Column button. Tools now lives in row 1, appended
+       after the search/filter controls. */
+    if(toolbar2 && wrapper.parentElement !== toolbar2){
+      toolbar2.insertBefore(wrapper, toolbar2.firstChild);
     }
-    /* Restored to the FRONT of row 2, ahead of its spacer + the Column
-       button — Column never relocates to the drawer and always stays
-       pinned to the right-hand end of this row. */
-    if(wrapper2 && toolbar2 && wrapper2.parentElement !== toolbar2){
-      toolbar2.insertBefore(wrapper2, toolbar2.firstChild);
+    if(wrapper2 && wrapper2.parentElement !== toolbar){
+      toolbar.appendChild(wrapper2);
     }
   }
 }
