@@ -548,6 +548,42 @@
   }
   .kf-member-row input[type=text]:focus{outline:none;background:var(--kf-bg);border-radius:3px;}
 
+  /* Task Type icon picker */
+  .kf-tasktype-icon-wrap{position:relative;flex-shrink:0;}
+  .kf-tasktype-icon-trigger{
+    display:flex;align-items:center;justify-content:center;
+    width:30px;height:30px;flex-shrink:0;
+    background:var(--kf-column-bg);border:1px solid var(--kf-border);border-radius:var(--kf-radius);
+    color:var(--kf-text-secondary);cursor:pointer;
+  }
+  .kf-tasktype-icon-trigger:hover{background:var(--kf-hover-tint);border-color:var(--kf-border-strong);}
+  .kf-tasktype-icon-trigger.kf-tasktype-icon-unset{color:var(--kf-text-faint);opacity:0.6;}
+  .kf-tasktype-icon-panel{
+    position:fixed;z-index:50;
+    width:220px;
+    background:var(--kf-surface);border:1px solid var(--kf-border);border-radius:var(--kf-radius);
+    box-shadow:var(--kf-modal-shadow);
+    padding:8px;
+  }
+  .kf-tasktype-icon-panel.hidden{display:none;}
+  #releasesFormView.hidden{display:none;}
+  #releasesListView.hidden{display:none;}
+  #deleteReleaseBtn.hidden{display:none;}
+  .kf-modal-footer.hidden{display:none;}
+  .kf-tasktype-icon-grid{
+    display:grid;grid-template-columns:repeat(6, 1fr);gap:4px;
+    max-height:220px;overflow-y:auto;
+  }
+  .kf-tasktype-icon-option{
+    display:flex;align-items:center;justify-content:center;
+    width:32px;height:32px;
+    background:none;border:1px solid transparent;border-radius:var(--kf-radius);
+    color:var(--kf-text-secondary);cursor:pointer;
+  }
+  .kf-tasktype-icon-option:hover{background:var(--kf-hover-tint);color:var(--kf-text);}
+  .kf-tasktype-icon-option.selected{background:var(--kf-chip-active-bg);color:#fff;border-color:var(--kf-chip-active-bg);}
+  .kf-tasktype-icon-clear{width:100%;margin-top:8px;}
+
   /* Releases */
   .kf-toolbar-row2{border-top:1px solid var(--kf-border);}
   .kf-releases-list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;}
@@ -1573,7 +1609,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.08.20260625.0907';
+var APP_VERSION = '1.11.20260625.1737';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -1617,7 +1653,34 @@ var ICON_PATHS = {
   fit:         '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
   team:        '<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22.5 21v-2a4 4 0 0 0-3-3.87"/><path d="M16.5 3.13a4 4 0 0 1 0 7.75"/>',
   sun:         '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/>',
-  moon:        '<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/>'
+  moon:        '<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/>',
+
+  /* Task Type icon library — 24 icons covering common project
+     activities, selectable per Task Type in the Task Types modal. */
+  ty_investigate: '<path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><path d="M5 8h6"/><path d="M5 12h4"/><circle cx="16" cy="16" r="4"/><path d="M19.5 19.5 22 22"/>',
+  ty_document:    '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h3"/>',
+  ty_analyse:     '<path d="M3 3v18h18"/><rect x="6" y="13" width="3" height="5"/><rect x="11" y="9" width="3" height="9"/><rect x="16" y="6" width="3" height="12"/>',
+  ty_procure:     '<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21 7H6"/>',
+  ty_audit:       '<path d="M9 4h6a1 1 0 0 1 1 1v1h2a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h2V5a1 1 0 0 1 1-1Z"/><path d="M9 4h6v2H9z"/><path d="M9 12l2 2 4-4"/>',
+  ty_report:      '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8"/><path d="M12 16v4"/><path d="M7 13l3-3 2.5 2.5L17 8"/>',
+  ty_communicate: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/>',
+  ty_design:      '<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75Z"/><path d="M14.06 6.19l2.5-2.5a1.5 1.5 0 0 1 2.12 0l1.63 1.63a1.5 1.5 0 0 1 0 2.12l-2.5 2.5"/>',
+  ty_develop:     '<path d="M8 17l-5-5 5-5"/><path d="M16 7l5 5-5 5"/>',
+  ty_test:        '<path d="M9 2h6"/><path d="M10 2v6.5L4.5 18a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 8.5V2"/><path d="M8.5 14h7"/>',
+  ty_review:      '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/>',
+  ty_plan:        '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M7 14l2 2 4-5"/>',
+  ty_research:    '<path d="M2 5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v15a1.5 1.5 0 0 0-1.5-1.5H2Z"/><path d="M22 5a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2v15a1.5 1.5 0 0 1 1.5-1.5H22Z"/>',
+  ty_train:       '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12.5V17c0 1.5 2.5 3 6 3s6-1.5 6-3v-4.5"/>',
+  ty_support:     '<path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="2" y="13" width="4" height="6" rx="1.5"/><rect x="18" y="13" width="4" height="6" rx="1.5"/><path d="M20 19v1a3 3 0 0 1-3 3h-3"/>',
+  ty_deploy:      '<path d="M7 18a4.5 4.5 0 0 1-1-8.9 5 5 0 0 1 9.6-1.9A4 4 0 0 1 18 15.5"/><path d="M12 12v8"/><path d="M9 15l3-3 3 3"/>',
+  ty_migrate:     '<path d="M16 3l4 4-4 4"/><path d="M20 7H6a3 3 0 0 0-3 3"/><path d="M8 21l-4-4 4-4"/><path d="M4 17h14a3 3 0 0 0 3-3"/>',
+  ty_configure:   '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
+  ty_monitor:     '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  ty_approve:     '<path d="M12 2l2.4 1.4 2.7-.4 1.3 2.4 2.4 1.3-.4 2.7L22 12l-1.6 2.4.4 2.7-2.4 1.3-1.3 2.4-2.7-.4L12 22l-2.4-1.6-2.7.4-1.3-2.4-2.4-1.3.4-2.7L2 12l1.6-2.4-.4-2.7 2.4-1.3 1.3-2.4 2.7.4Z"/><path d="M9 12l2 2 4-4"/>',
+  ty_negotiate:   '<path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0Z"/><path d="M19 7l-3 7a3 3 0 0 0 6 0Z"/>',
+  ty_schedule:    '<rect x="3" y="5" width="14" height="16" rx="2"/><path d="M7 3v4"/><path d="M13 3v4"/><path d="M3 10h10"/><circle cx="18" cy="17" r="4"/><path d="M18 15.5V17l1 1"/>',
+  ty_maintain:    '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94Z"/>',
+  ty_coordinate:  '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5 16 7.5"/><path d="M7 8l4 8"/><path d="M17 8l-4 8"/>'
 };
 function iconSvg(name, size){
   size = size || 16;
@@ -1948,7 +2011,11 @@ function migrateDB(){
     var validReleaseIds = {};
     p.releases.forEach(function(r){ validReleaseIds[r.id] = true; });
     var validTaskTypeIds = {};
-    p.taskTypes.forEach(function(tt){ validTaskTypeIds[tt.id] = true; });
+    p.taskTypes.forEach(function(tt){
+      validTaskTypeIds[tt.id] = true;
+      if(tt.iconName === undefined){ tt.iconName = null; changed = true; }
+      else if(tt.iconName && !isValidTaskTypeIconName(tt.iconName)){ tt.iconName = null; changed = true; }
+    });
     getTasksArray(p).forEach(function(t){
       if(t.assigneeId === undefined){ t.assigneeId = null; changed = true; }
       if(t.releaseId === undefined){ t.releaseId = null; changed = true; }
@@ -1978,8 +2045,8 @@ function makeColumn(name, done){
 
 function defaultTaskTypes(){
   return [
-    {id: uid('type'), name: 'Feature'},
-    {id: uid('type'), name: 'Bug'}
+    {id: uid('type'), name: 'Feature', iconName: null},
+    {id: uid('type'), name: 'Bug', iconName: null}
   ];
 }
 
@@ -2241,22 +2308,84 @@ function getTaskTypeById(project, typeId){
   if(!project || !typeId) return null;
   return (project.taskTypes || []).filter(function(tt){ return tt.id === typeId; })[0] || null;
 }
-/* Dedicated icons for the well-known default type names; any other
-   (renamed or custom) type still gets a sensible generic icon, so a
-   task with a type set always shows *something* appropriate. */
-var TASK_TYPE_ICON_BY_NAME = {
-  feature: 'sparkle',
-  bug: 'bug'
-};
-function getTaskTypeIconName(taskType){
-  if(!taskType) return null;
-  var key = taskType.name.trim().toLowerCase();
-  return TASK_TYPE_ICON_BY_NAME.hasOwnProperty(key) ? TASK_TYPE_ICON_BY_NAME[key] : 'tag';
+/* Library of selectable icons for Task Types — shown in the icon
+   picker in the order listed here. A type's icon is only ever what
+   the user explicitly assigns (default: none); there is no automatic
+   fallback icon, so an unassigned type shows nothing on a task. */
+var TASK_TYPE_ICON_LIBRARY = [
+  {name: 'sparkle', label: 'Feature'},
+  {name: 'bug', label: 'Bug'},
+  {name: 'ty_investigate', label: 'Investigate'},
+  {name: 'ty_document', label: 'Document'},
+  {name: 'ty_analyse', label: 'Analyse'},
+  {name: 'ty_procure', label: 'Procure'},
+  {name: 'ty_audit', label: 'Audit'},
+  {name: 'ty_report', label: 'Report'},
+  {name: 'ty_communicate', label: 'Communicate'},
+  {name: 'ty_design', label: 'Design'},
+  {name: 'ty_develop', label: 'Develop'},
+  {name: 'ty_test', label: 'Test'},
+  {name: 'ty_review', label: 'Review'},
+  {name: 'ty_plan', label: 'Plan'},
+  {name: 'ty_research', label: 'Research'},
+  {name: 'ty_train', label: 'Train'},
+  {name: 'ty_support', label: 'Support'},
+  {name: 'ty_deploy', label: 'Deploy'},
+  {name: 'ty_migrate', label: 'Migrate'},
+  {name: 'ty_configure', label: 'Configure'},
+  {name: 'ty_monitor', label: 'Monitor'},
+  {name: 'ty_approve', label: 'Approve'},
+  {name: 'ty_negotiate', label: 'Negotiate'},
+  {name: 'ty_schedule', label: 'Schedule'},
+  {name: 'ty_maintain', label: 'Maintain'},
+  {name: 'ty_coordinate', label: 'Coordinate'}
+];
+function isValidTaskTypeIconName(name){
+  return TASK_TYPE_ICON_LIBRARY.some(function(i){ return i.name === name; });
+}
+function getTaskTypeIconLabel(iconName){
+  var entry = TASK_TYPE_ICON_LIBRARY.filter(function(i){ return i.name === iconName; })[0];
+  return entry ? entry.label : '';
+}
+function setTaskTypeIcon(project, typeId, iconName){
+  var type = getTaskTypeById(project, typeId);
+  if(!type) return;
+  type.iconName = (iconName && isValidTaskTypeIconName(iconName)) ? iconName : null;
+  saveDB();
+}
+function buildTaskTypeIconGridHTML(selectedIconName){
+  return TASK_TYPE_ICON_LIBRARY.map(function(icon){
+    var selected = icon.name === selectedIconName;
+    return '<button type="button" class="kf-tasktype-icon-option' + (selected ? ' selected' : '') + '" data-icon-name="' + icon.name + '" title="' + escapeHTML(icon.label) + '">' + iconSvg(icon.name, 18) + '</button>';
+  }).join('');
+}
+function closeAllTaskTypeIconPanels(){
+  document.querySelectorAll('.kf-tasktype-icon-panel').forEach(function(panel){
+    panel.classList.add('hidden');
+  });
+}
+/* The panel is position:fixed (so it floats above the scrollable type
+   list instead of being clipped by it), so its coordinates have to be
+   computed relative to the viewport each time it opens — it doesn't
+   automatically follow its trigger the way an absolutely-positioned
+   popover nested inside it would. */
+function positionTaskTypeIconPanel(triggerBtn, panel){
+  var rect = triggerBtn.getBoundingClientRect();
+  var panelWidth = 220;
+  var left = Math.max(8, Math.min(rect.left, window.innerWidth - panelWidth - 8));
+  panel.style.left = left + 'px';
+  var panelHeight = panel.getBoundingClientRect().height || 260;
+  var spaceBelow = window.innerHeight - rect.bottom;
+  if(spaceBelow < panelHeight + 8 && rect.top > panelHeight + 8){
+    panel.style.top = Math.max(8, rect.top - panelHeight - 4) + 'px';
+  } else {
+    panel.style.top = (rect.bottom + 4) + 'px';
+  }
 }
 function addTaskType(project, name){
   var trimmed = (name || '').trim().slice(0, 40);
   if(!trimmed) return null;
-  var type = {id: uid('type'), name: trimmed};
+  var type = {id: uid('type'), name: trimmed, iconName: null};
   project.taskTypes.push(type);
   saveDB();
   return type;
@@ -2578,7 +2707,7 @@ function exportProjectJSON(project){
       };
     }),
     columns: project.columns.map(function(c, idx){ return {name: c.name, done: c.done, order: idx}; }),
-    taskTypes: (project.taskTypes || []).map(function(tt){ return {id: tt.id, name: tt.name}; }),
+    taskTypes: (project.taskTypes || []).map(function(tt){ return {id: tt.id, name: tt.name, iconName: tt.iconName || null}; }),
     hierarchy: hierarchy
   };
   var blob = new Blob([JSON.stringify(doc, null, 2)], {type:'application/json'});
@@ -2846,7 +2975,10 @@ function buildProjectFromExportDoc(doc){
       if(!tt || typeof tt !== 'object') return;
       var name = (typeof tt.name === 'string' && tt.name.trim()) ? tt.name.trim().slice(0,40) : null;
       if(!name) return;
-      var newType = {id: uid('type'), name: name};
+      var newType = {
+        id: uid('type'), name: name,
+        iconName: (typeof tt.iconName === 'string' && isValidTaskTypeIconName(tt.iconName)) ? tt.iconName : null
+      };
       project.taskTypes.push(newType);
       if(typeof tt.id === 'string') taskTypeOldIdToNewId[tt.id] = newType.id;
       if(!taskTypeNameToNewId.hasOwnProperty(name)) taskTypeNameToNewId[name] = newType.id;
@@ -3203,10 +3335,9 @@ function renderDependencyMap(){
       ? '<g transform="translate(' + (blocked ? n.w - 46 : n.w - 24) + ',8)" style="color:var(--kf-overdue-fg);"><title>Overdue — end date was ' + escapeHTML(utcISOToLocalDisplayDate(t.endDate)) + '</title>' + iconSvg('clock',16) + '</g>'
       : '';
     var typeBadge = '';
-    if(taskType){
-      var typeIconName = getTaskTypeIconName(taskType);
+    if(taskType && taskType.iconName){
       var precedingBadgeCount = (blocked ? 1 : 0) + (overdue ? 1 : 0);
-      typeBadge = '<g transform="translate(' + (n.w - 24 - precedingBadgeCount * 22) + ',8)" style="color:var(--kf-text-secondary);"><title>' + escapeHTML(taskType.name) + '</title>' + iconSvg(typeIconName,16) + '</g>';
+      typeBadge = '<g transform="translate(' + (n.w - 24 - precedingBadgeCount * 22) + ',8)" style="color:var(--kf-text-secondary);"><title>' + escapeHTML(taskType.name) + '</title>' + iconSvg(taskType.iconName,16) + '</g>';
     }
     var avatarBadge = assignee
       ? '<g><title>' + escapeHTML(assignee.name) + '</title><circle cx="' + (n.w - 18) + '" cy="' + (n.h - 16) + '" r="10" fill="' + assignee.color + '"></circle>' +
@@ -4227,9 +4358,8 @@ function buildTaskListRow(project, t){
 
   var taskType = getTaskTypeById(project, t.typeId);
   var typeIconHTML = '';
-  if(taskType){
-    var typeIconName = getTaskTypeIconName(taskType);
-    typeIconHTML = '<span class="kf-tasklist-type-icon" title="' + escapeHTML(taskType.name) + '">' + iconSvg(typeIconName, 13) + '</span>';
+  if(taskType && taskType.iconName){
+    typeIconHTML = '<span class="kf-tasklist-type-icon" title="' + escapeHTML(taskType.name) + '">' + iconSvg(taskType.iconName, 13) + '</span>';
   }
 
   var row = document.createElement('div');
@@ -4955,10 +5085,12 @@ function renderTaskTypeFilterChips(){
     var row = document.createElement('label');
     row.className = 'kf-dropdown-filter-row';
     var checked = ui.activeTaskTypes.has(tt.id);
-    var iconName = getTaskTypeIconName(tt);
+    var iconHTML = tt.iconName
+      ? '<span class="kf-tasklist-type-icon">' + iconSvg(tt.iconName, 13) + '</span>'
+      : '<span class="kf-dot" style="background:#c1c7d0"></span>';
     row.innerHTML =
       '<input type="checkbox" ' + (checked ? 'checked' : '') + '>' +
-      '<span class="kf-tasklist-type-icon">' + iconSvg(iconName, 13) + '</span>' +
+      iconHTML +
       '<span class="kf-dropdown-filter-name">' + escapeHTML(tt.name) + '</span>';
     row.querySelector('input').addEventListener('change', function(e){
       if(e.target.checked) ui.activeTaskTypes.add(tt.id);
@@ -5215,9 +5347,8 @@ function renderCard(project, task){
 
   var metaHTML = '<span class="kf-card-key">' + escapeHTML(task.key) + '</span>';
   var taskType = getTaskTypeById(project, task.typeId);
-  if(taskType){
-    var typeIconName = getTaskTypeIconName(taskType);
-    metaHTML += '<span class="kf-card-type-icon" title="' + escapeHTML(taskType.name) + '">' + iconSvg(typeIconName, 13) + '</span>';
+  if(taskType && taskType.iconName){
+    metaHTML += '<span class="kf-card-type-icon" title="' + escapeHTML(taskType.name) + '">' + iconSvg(taskType.iconName, 13) + '</span>';
   }
   metaHTML += '<span class="kf-priority-pill" style="color:' + prio.color + ';background:' + prio.bg + ';">' + iconSvg(prio.icon,12) + escapeHTML(prio.label) + '</span>';
   if(depCount > 0){
@@ -5684,6 +5815,7 @@ function openTaskTypesModal(){
 }
 function closeTaskTypesModal(){
   document.getElementById('taskTypesOverlay').classList.add('hidden');
+  closeAllTaskTypeIconPanels();
 }
 function renderTaskTypeList(){
   var project = getCurrentProject();
@@ -5697,9 +5829,45 @@ function renderTaskTypeList(){
     var row = document.createElement('div');
     row.className = 'kf-member-row';
     row.setAttribute('data-tasktype-id', tt.id);
+    var triggerIconHTML = tt.iconName ? iconSvg(tt.iconName, 16) : iconSvg('tag', 16);
     row.innerHTML =
+      '<div class="kf-tasktype-icon-wrap">' +
+        '<button type="button" class="kf-tasktype-icon-trigger' + (tt.iconName ? '' : ' kf-tasktype-icon-unset') + '" title="' + (tt.iconName ? 'Change icon (' + escapeHTML(getTaskTypeIconLabel(tt.iconName)) + ')' : 'Choose an icon') + '" aria-label="Choose an icon for this task type">' + triggerIconHTML + '</button>' +
+        '<div class="kf-tasktype-icon-panel hidden">' +
+          '<div class="kf-tasktype-icon-grid">' + buildTaskTypeIconGridHTML(tt.iconName) + '</div>' +
+          '<div class="kf-dropdown-filter-divider"></div>' +
+          '<button type="button" class="kf-dropdown-filter-clear kf-tasktype-icon-clear">No icon</button>' +
+        '</div>' +
+      '</div>' +
       '<input type="text" class="kf-member-name-input" value="' + escapeHTML(tt.name) + '" maxlength="40" aria-label="Task type name">' +
       '<button class="kf-btn kf-btn-ghost" data-action="remove-tasktype" title="Remove from project">' + iconSvg('trash',14) + '</button>';
+
+    var triggerBtn = row.querySelector('.kf-tasktype-icon-trigger');
+    var iconPanel = row.querySelector('.kf-tasktype-icon-panel');
+    triggerBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var wasHidden = iconPanel.classList.contains('hidden');
+      closeAllTaskTypeIconPanels();
+      if(wasHidden){
+        iconPanel.classList.remove('hidden');
+        positionTaskTypeIconPanel(triggerBtn, iconPanel);
+      }
+    });
+    iconPanel.querySelectorAll('.kf-tasktype-icon-option').forEach(function(optBtn){
+      optBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        setTaskTypeIcon(project, tt.id, optBtn.getAttribute('data-icon-name'));
+        renderTaskTypeList();
+        renderBoard();
+      });
+    });
+    iconPanel.querySelector('.kf-tasktype-icon-clear').addEventListener('click', function(e){
+      e.stopPropagation();
+      setTaskTypeIcon(project, tt.id, null);
+      renderTaskTypeList();
+      renderBoard();
+    });
+
     var nameInput = row.querySelector('.kf-member-name-input');
     nameInput.addEventListener('change', function(){
       renameTaskType(project, tt.id, nameInput.value);
@@ -5991,6 +6159,10 @@ function wireEvents(){
   document.getElementById('taskTypesOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'taskTypesOverlay') closeTaskTypesModal();
   });
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('.kf-tasktype-icon-wrap')) closeAllTaskTypeIconPanels();
+  });
+  document.getElementById('taskTypeList').addEventListener('scroll', closeAllTaskTypeIconPanels);
   document.getElementById('releasesBtn').addEventListener('click', openReleasesOverlay);
   document.getElementById('releasesModalClose').addEventListener('click', closeReleasesOverlay);
   document.getElementById('releasesDoneBtn').addEventListener('click', closeReleasesOverlay);
@@ -6303,6 +6475,7 @@ function wireEvents(){
     else if(!document.getElementById('columnOverlay').classList.contains('hidden')) closeColumnModal();
     else if(!document.getElementById('projectOverlay').classList.contains('hidden')) closeProjectModal();
     else if(!document.getElementById('teamOverlay').classList.contains('hidden')) closeTeamModal();
+    else if(document.querySelector('.kf-tasktype-icon-panel:not(.hidden)')) closeAllTaskTypeIconPanels();
     else if(!document.getElementById('taskTypesOverlay').classList.contains('hidden')) closeTaskTypesModal();
     else if(isReleasesOverlayOpen()) closeReleasesOverlay();
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
