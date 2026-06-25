@@ -764,7 +764,7 @@
   .kf-tasklist-group-count{font-size:11px;color:var(--kf-text-faint);flex-shrink:0;}
 
   /* Bulk Edit */
-  .kf-bulkedit-grid-cols{grid-template-columns:80px minmax(140px,1fr) 130px 130px 120px 140px 125px 125px 85px 85px 84px;}
+  .kf-bulkedit-grid-cols{grid-template-columns:80px minmax(140px,1fr) 130px 130px 120px 130px 140px 125px 125px 85px 85px 84px;}
   .kf-bulkedit-header{
     display:grid;
     grid-template-columns:80px minmax(140px,1fr) 130px 130px 120px 140px 125px 125px 85px 85px 84px;
@@ -1558,7 +1558,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.02.20260625.0731';
+var APP_VERSION = '1.03.20260625.0742';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -4216,7 +4216,7 @@ function renderTaskListDetail(project, t){
    ========================================================= */
 var BULKEDIT_COLUMNS = [
   {label: 'Key'}, {label: 'Title'}, {label: 'Column'}, {label: 'Release'}, {label: 'Priority'},
-  {label: 'Assignee'}, {label: 'Start'}, {label: 'End'}, {label: 'Bus. Value'},
+  {label: 'Type'}, {label: 'Assignee'}, {label: 'Start'}, {label: 'End'}, {label: 'Bus. Value'},
   {label: 'Task Cost'}, {label: 'Status'}
 ];
 
@@ -4355,6 +4355,24 @@ function renderBulkEditRow(project, t){
   });
   row.appendChild(prioritySelect);
 
+  // Type
+  var typeSelect = document.createElement('select');
+  var noTypeOpt = document.createElement('option');
+  noTypeOpt.value = '';
+  noTypeOpt.textContent = 'No type';
+  typeSelect.appendChild(noTypeOpt);
+  (project.taskTypes || []).forEach(function(tt){
+    var opt = document.createElement('option');
+    opt.value = tt.id;
+    opt.textContent = tt.name;
+    typeSelect.appendChild(opt);
+  });
+  typeSelect.value = bulkEditFieldValue(t.id, 'typeId', t.typeId) || '';
+  typeSelect.addEventListener('change', function(){
+    setBulkEditField(project, t.id, 'typeId', typeSelect.value || null, t.typeId || null, typeSelect);
+  });
+  row.appendChild(typeSelect);
+
   // Assignee
   var assigneeSelect = document.createElement('select');
   var unassignedOpt = document.createElement('option');
@@ -4457,6 +4475,10 @@ function applyBulkEdits(project){
     }
     if(edits.hasOwnProperty('priority') && edits.priority !== t.priority){
       t.priority = normalizeOrFallback(edits.priority, t.priority);
+      touched = true;
+    }
+    if(edits.hasOwnProperty('typeId') && edits.typeId !== t.typeId){
+      t.typeId = edits.typeId || null;
       touched = true;
     }
     if(edits.hasOwnProperty('assigneeId') && edits.assigneeId !== t.assigneeId){
