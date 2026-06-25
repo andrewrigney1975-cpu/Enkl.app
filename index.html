@@ -838,10 +838,13 @@
   .kf-costbenefit-scroll{
     flex:1;overflow:auto;padding:50px;
     background-color:var(--kf-canvas-bg);
-    display:flex;align-items:center;justify-content:center;
+    cursor:grab;
+    user-select:none;
+    -webkit-user-select:none;
   }
-  .kf-costbenefit-inner{width:100%;height:100%;}
-  .kf-costbenefit-inner svg{display:block;width:100%;height:100%;}
+  .kf-costbenefit-scroll.kf-costbenefit-panning{cursor:grabbing;}
+  .kf-costbenefit-inner{display:inline-block;}
+  .kf-costbenefit-inner svg{display:block;}
   .kf-cb-point{cursor:pointer;}
   .kf-cb-point circle.kf-cb-dot{transition:stroke .1s, stroke-width .1s, r .1s;}
   .kf-cb-point:hover circle.kf-cb-dot{stroke:var(--kf-blue);stroke-width:2.5;}
@@ -1285,6 +1288,11 @@
       <div class="kf-modal-header-actions">
         <button class="kf-btn kf-btn-ghost" id="costBenefitArchiveToggle" title="Show archived tasks"><span class="kf-icon" data-icon="archive" data-size="16"></span><span id="costBenefitArchiveToggleLabel">Show archived</span></button>
         <div class="kf-header-divider-light"></div>
+        <button class="kf-btn kf-btn-ghost" id="costBenefitZoomOutBtn" title="Zoom out"><span class="kf-icon" data-icon="zoomOut" data-size="16"></span></button>
+        <span id="costBenefitZoomLabel" class="kf-zoom-label">100%</span>
+        <button class="kf-btn kf-btn-ghost" id="costBenefitZoomInBtn" title="Zoom in"><span class="kf-icon" data-icon="zoomIn" data-size="16"></span></button>
+        <button class="kf-btn kf-btn-ghost" id="costBenefitResetBtn" title="Reset view"><span class="kf-icon" data-icon="fit" data-size="16"></span></button>
+        <div class="kf-header-divider-light"></div>
         <button class="kf-btn kf-btn-ghost" id="costBenefitClose" title="Close"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
       </div>
     </div>
@@ -1564,7 +1572,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.06.20260625.0830';
+var APP_VERSION = '1.07.20260625.0850';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -3694,6 +3702,10 @@ var CB_MARGIN_TOP = 44;
 var CB_MARGIN_BOTTOM = 64;
 var CB_SPLIT = 500;
 
+var cbZoomState = {scale: 1, panActive: false, panMoved: false, panStartX: 0, panStartY: 0, panStartScrollLeft: 0, panStartScrollTop: 0};
+var CB_MIN_ZOOM = 0.3;
+var CB_MAX_ZOOM = 2.5;
+
 /* Marker size scales with priority: Trivial uses the base size, and
    each step up increases linearly so Critical ends up exactly 4x the
    base — Low/Medium/High fall at even intervals in between. */
@@ -3843,6 +3855,58 @@ function renderCostBenefitChart(){
     '<svg width="' + CB_WIDTH + '" height="' + CB_HEIGHT + '" viewBox="0 0 ' + CB_WIDTH + ' ' + CB_HEIGHT + '" xmlns="http://www.w3.org/2000/svg">' +
       quadrantsHTML + axesHTML + quadrantLabelsHTML + ticksHTML + axisTitlesHTML + pointsHTML +
     '</svg>';
+  applyCbZoom();
+}
+
+function applyCbZoom(){
+  var svg = document.querySelector('#costBenefitInner svg');
+  var label = document.getElementById('costBenefitZoomLabel');
+  if(label) label.textContent = Math.round(cbZoomState.scale * 100) + '%';
+  if(!svg) return;
+  svg.setAttribute('width', Math.round(CB_WIDTH * cbZoomState.scale));
+  svg.setAttribute('height', Math.round(CB_HEIGHT * cbZoomState.scale));
+}
+
+function setCbZoom(delta){
+  cbZoomState.scale = Math.max(CB_MIN_ZOOM, Math.min(CB_MAX_ZOOM, Math.round((cbZoomState.scale + delta) * 100) / 100));
+  applyCbZoom();
+}
+function resetCbZoom(){
+  cbZoomState.scale = 1;
+  applyCbZoom();
+  var scroll = document.getElementById('costBenefitScroll');
+  scroll.scrollLeft = 0;
+  scroll.scrollTop = 0;
+}
+
+/* Zoom by `deltaScale`, keeping the point under (clientX, clientY) visually
+   fixed — the standard "zoom toward the cursor" behavior for scroll-wheel
+   zoom. Falls back to zooming around the viewport center if no cursor
+   position is given (e.g. from the toolbar zoom buttons). */
+function zoomCbAtPoint(deltaScale, clientX, clientY){
+  var scroll = document.getElementById('costBenefitScroll');
+  if(!scroll) return;
+
+  var oldScale = cbZoomState.scale;
+  var newScale = Math.max(CB_MIN_ZOOM, Math.min(CB_MAX_ZOOM, Math.round((oldScale + deltaScale) * 100) / 100));
+  if(newScale === oldScale) return;
+
+  var rect = scroll.getBoundingClientRect();
+  var offsetX = clientX != null ? clientX - rect.left : rect.width / 2;
+  var offsetY = clientY != null ? clientY - rect.top : rect.height / 2;
+
+  var oldWidth = CB_WIDTH * oldScale;
+  var oldHeight = CB_HEIGHT * oldScale;
+  var fracX = oldWidth > 0 ? (scroll.scrollLeft + offsetX) / oldWidth : 0;
+  var fracY = oldHeight > 0 ? (scroll.scrollTop + offsetY) / oldHeight : 0;
+
+  cbZoomState.scale = newScale;
+  applyCbZoom();
+
+  var newWidth = CB_WIDTH * newScale;
+  var newHeight = CB_HEIGHT * newScale;
+  scroll.scrollLeft = fracX * newWidth - offsetX;
+  scroll.scrollTop = fracY * newHeight - offsetY;
 }
 
 function updateCostBenefitArchiveToggleButton(){
@@ -3863,12 +3927,18 @@ function toggleCostBenefitShowArchived(){
 function openCostBenefitOverlay(){
   var project = getCurrentProject();
   if(!project){ toast('No project selected.'); return; }
+  cbZoomState.scale = 1;
+  cbZoomState.panActive = false;
+  cbZoomState.panMoved = false;
   updateCostBenefitArchiveToggleButton();
   renderCostBenefitChart();
   document.getElementById('costBenefitOverlay').classList.remove('hidden');
 }
 function closeCostBenefitOverlay(){
   document.getElementById('costBenefitOverlay').classList.add('hidden');
+  cbZoomState.panActive = false;
+  cbZoomState.panMoved = false;
+  document.getElementById('costBenefitScroll').classList.remove('kf-costbenefit-panning');
 }
 function isCostBenefitOverlayOpen(){
   return !document.getElementById('costBenefitOverlay').classList.contains('hidden');
@@ -6029,10 +6099,14 @@ function wireEvents(){
   document.getElementById('costBenefitBtn').addEventListener('click', openCostBenefitOverlay);
   document.getElementById('costBenefitClose').addEventListener('click', closeCostBenefitOverlay);
   document.getElementById('costBenefitArchiveToggle').addEventListener('click', toggleCostBenefitShowArchived);
+  document.getElementById('costBenefitZoomInBtn').addEventListener('click', function(){ setCbZoom(0.1); });
+  document.getElementById('costBenefitZoomOutBtn').addEventListener('click', function(){ setCbZoom(-0.1); });
+  document.getElementById('costBenefitResetBtn').addEventListener('click', resetCbZoom);
   document.getElementById('costBenefitOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'costBenefitOverlay') closeCostBenefitOverlay();
   });
   document.getElementById('costBenefitInner').addEventListener('click', function(e){
+    if(cbZoomState.panMoved) return; /* this click is really the tail end of a pan drag */
     var point = e.target.closest('.kf-cb-point');
     if(!point) return;
     var taskId = point.getAttribute('data-task-id');
@@ -6041,6 +6115,42 @@ function wireEvents(){
     if(!task) return;
     closeCostBenefitOverlay();
     openTaskModal(taskId, task.columnId);
+  });
+
+  /* Scroll-wheel zoom, anchored on the cursor position */
+  var costBenefitScrollEl = document.getElementById('costBenefitScroll');
+  costBenefitScrollEl.addEventListener('wheel', function(e){
+    e.preventDefault();
+    var cbStep = 0.12;
+    zoomCbAtPoint(e.deltaY < 0 ? cbStep : -cbStep, e.clientX, e.clientY);
+  }, {passive: false});
+
+  /* Click-and-drag panning */
+  costBenefitScrollEl.addEventListener('mousedown', function(e){
+    if(e.button !== 0) return; /* left mouse button only */
+    cbZoomState.panActive = true;
+    cbZoomState.panMoved = false;
+    cbZoomState.panStartX = e.clientX;
+    cbZoomState.panStartY = e.clientY;
+    cbZoomState.panStartScrollLeft = costBenefitScrollEl.scrollLeft;
+    cbZoomState.panStartScrollTop = costBenefitScrollEl.scrollTop;
+    costBenefitScrollEl.classList.add('kf-costbenefit-panning');
+  });
+  document.addEventListener('mousemove', function(e){
+    if(!cbZoomState.panActive) return;
+    var cbDx = e.clientX - cbZoomState.panStartX;
+    var cbDy = e.clientY - cbZoomState.panStartY;
+    if(Math.abs(cbDx) > 3 || Math.abs(cbDy) > 3) cbZoomState.panMoved = true;
+    if(cbZoomState.panMoved){
+      costBenefitScrollEl.scrollLeft = cbZoomState.panStartScrollLeft - cbDx;
+      costBenefitScrollEl.scrollTop = cbZoomState.panStartScrollTop - cbDy;
+    }
+  });
+  document.addEventListener('mouseup', function(){
+    if(cbZoomState.panActive){
+      cbZoomState.panActive = false;
+      costBenefitScrollEl.classList.remove('kf-costbenefit-panning');
+    }
   });
 
   /* Scroll-wheel zoom, anchored on the cursor position */
