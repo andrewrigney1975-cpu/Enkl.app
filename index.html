@@ -699,7 +699,7 @@
     cursor:pointer;padding:2px 4px;white-space:nowrap;
   }
   .kf-tasklist-toolbar-link:hover{text-decoration:underline;}
-  .kf-tasklist-grid-cols{grid-template-columns:32px 92px minmax(160px,1fr) 160px 116px 100px 100px 110px;}
+  .kf-tasklist-grid-cols{grid-template-columns:32px 92px minmax(160px,1fr) 130px 160px 116px 100px 100px 110px;}
   .kf-tasklist-header{
     display:grid;
     grid-template-columns:32px 92px minmax(160px,1fr) 160px 116px 100px 100px 110px;
@@ -724,6 +724,7 @@
   .kf-tasklist-key{font-size:12px;font-weight:700;color:var(--kf-text-faint);display:flex;align-items:center;gap:4px;overflow:hidden;}
   .kf-tasklist-type-icon{display:flex;align-items:center;color:var(--kf-text-secondary);flex-shrink:0;}
   .kf-tasklist-title{font-size:13px;color:var(--kf-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .kf-tasklist-column{font-size:12px;color:var(--kf-text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .kf-tasklist-chevron{
     background:none;border:none;color:var(--kf-text-faint);
     display:flex;align-items:center;justify-content:center;
@@ -1557,7 +1558,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.00.20260623.0705';
+var APP_VERSION = '1.02.20260625.0731';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -3899,6 +3900,7 @@ function computeReleaseValueProposition(tasks){
 var TASKLIST_COLUMNS = [
   {field:'key', label:'Key'},
   {field:'title', label:'Title'},
+  {field:'column', label:'Column'},
   {field:'assignee', label:'Assignee'},
   {field:'priority', label:'Priority'},
   {field:'startDate', label:'Start'},
@@ -3957,6 +3959,10 @@ function sortTaskListRows(project, rows){
     switch(field){
       case 'title':
         av = a.title.toLowerCase(); bv = b.title.toLowerCase();
+        break;
+      case 'column':
+        av = project.columns.findIndex(function(c){ return c.id === a.columnId; });
+        bv = project.columns.findIndex(function(c){ return c.id === b.columnId; });
         break;
       case 'assignee':
         av = (getMemberById(project, a.assigneeId) || {name:''}).name.toLowerCase();
@@ -4136,6 +4142,7 @@ function buildTaskListRow(project, t){
   var overdue = isTaskOverdue(project, t);
   var vp = computeValueProposition(t);
   var vpClass = valuePropClass(vp);
+  var col = getColumn(project, t.columnId);
 
   var assigneeHTML = assignee
     ? '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';">' + escapeHTML(memberInitials(assignee.name)) + '</span><span>' + escapeHTML(assignee.name) + '</span>'
@@ -4154,6 +4161,7 @@ function buildTaskListRow(project, t){
     '<button type="button" class="kf-tasklist-chevron' + (expanded ? ' expanded' : '') + '" data-toggle-id="' + t.id + '" aria-label="Toggle details">' + iconSvg('chevronDown',14) + '</button>' +
     '<span class="kf-tasklist-key">' + typeIconHTML + escapeHTML(t.key) + '</span>' +
     '<span class="kf-tasklist-title" title="' + escapeHTML(t.title) + '">' + escapeHTML(t.title) + '</span>' +
+    '<span class="kf-tasklist-column" title="' + escapeHTML(col ? col.name : '') + '">' + escapeHTML(col ? col.name : '\u2014') + '</span>' +
     '<span class="kf-tasklist-assignee">' + assigneeHTML + '</span>' +
     '<span class="kf-priority-pill" style="color:' + prio.color + ';background:' + prio.bg + ';">' + iconSvg(prio.icon,12) + escapeHTML(prio.label) + '</span>' +
     '<span class="kf-tasklist-date">' + (t.startDate ? escapeHTML(utcISOToLocalDisplayDate(t.startDate)) : '\u2014') + '</span>' +
