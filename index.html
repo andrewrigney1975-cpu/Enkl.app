@@ -938,12 +938,15 @@
   .kf-timeline-bar{
     position:absolute;top:8px;height:24px;border-radius:4px;
     cursor:pointer;
-    display:flex;align-items:center;
+    display:flex;align-items:center;gap:5px;
     padding:0 8px;
     font-size:11px;font-weight:500;color:#fff;
     white-space:nowrap;overflow:hidden;
     box-shadow:0 1px 3px rgba(0,0,0,.25);
   }
+  .kf-timeline-bar .kf-avatar{flex-shrink:0;}
+  .kf-timeline-bar-key{overflow:hidden;text-overflow:ellipsis;}
+  .kf-timeline-bar-type-icon{display:flex;align-items:center;flex-shrink:0;margin-left:auto;}
   .kf-timeline-bar:hover{filter:brightness(1.1);}
   .kf-timeline-bar-archived{opacity:0.4;}
   .kf-timeline-bar-archived:hover{opacity:0.65;}
@@ -1609,7 +1612,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.11.20260625.1737';
+var APP_VERSION = '1.13.20260626.0924';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -3306,6 +3309,8 @@ function renderDependencyMap(){
     '<defs>' +
       '<marker id="kf-arrow-blocked" viewBox="0 0 10 10" refX="9.25" refY="5" markerWidth="8" markerHeight="8" orient="auto"><circle cx="5" cy="5" r="3" fill="#de350b" stroke="#de350b" stroke-width="1.6"/></marker>' +
       '<marker id="kf-arrow-done" viewBox="0 0 10 10" refX="9.25" refY="5" markerWidth="8" markerHeight="8" orient="auto"><circle cx="5" cy="5" r="3" fill="#8993a4" stroke="#8993a4" stroke-width="1.6"/></marker>' +
+      '<marker id="kf-dot-start-blocked" viewBox="0 0 10 10" refX="0.75" refY="5" markerWidth="8" markerHeight="8" orient="auto"><circle cx="5" cy="5" r="3" fill="var(--kf-surface)" stroke="#de350b" stroke-width="1.6"/></marker>' +
+      '<marker id="kf-dot-start-done" viewBox="0 0 10 10" refX="0.75" refY="5" markerWidth="8" markerHeight="8" orient="auto"><circle cx="5" cy="5" r="3" fill="var(--kf-surface)" stroke="#8993a4" stroke-width="1.6"/></marker>' +
     '</defs>';
 
   var edgesHTML = layout.edges.map(function(e){
@@ -3317,7 +3322,8 @@ function renderDependencyMap(){
     var path = 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + bend) + ' ' + y1 + ', ' + (x2 - bend) + ' ' + y2 + ', ' + x2 + ' ' + y2;
     var color = e.blocked ? '#de350b' : '#8993a4';
     var marker = e.blocked ? 'url(#kf-arrow-blocked)' : 'url(#kf-arrow-done)';
-    return '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2" opacity="0.85" marker-end="' + marker + '"></path>';
+    var startMarker = e.blocked ? 'url(#kf-dot-start-blocked)' : 'url(#kf-dot-start-done)';
+    return '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2" opacity="0.85" marker-start="' + startMarker + '" marker-end="' + marker + '"></path>';
   }).join('');
 
   var nodesHTML = layout.nodes.map(function(n){
@@ -3799,7 +3805,19 @@ function renderTimeline(){
       bar.style.left = left + 'px';
       bar.style.width = barWidth + 'px';
       bar.style.background = prio.accent;
-      bar.textContent = t.key;
+      if(assignee){
+        var barAvatar = buildEl('span', 'kf-avatar kf-avatar-sm', escapeHTML(memberInitials(assignee.name)));
+        barAvatar.style.background = assignee.color;
+        barAvatar.title = assignee.name;
+        bar.appendChild(barAvatar);
+      }
+      bar.appendChild(buildEl('span', 'kf-timeline-bar-key', escapeHTML(t.key)));
+      var taskType = getTaskTypeById(project, t.typeId);
+      if(taskType && taskType.iconName){
+        var barTypeIcon = buildEl('span', 'kf-timeline-bar-type-icon', iconSvg(taskType.iconName, 13));
+        barTypeIcon.title = taskType.name;
+        bar.appendChild(barTypeIcon);
+      }
       bar.title = t.key + ' \u2014 ' + t.title +
         (startD ? ' \u00b7 Start ' + utcISOToLocalDisplayDate(t.startDate) : '') +
         (endD ? ' \u00b7 End ' + utcISOToLocalDisplayDate(t.endDate) : '');
