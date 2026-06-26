@@ -1,2 +1,2 @@
-# KanbanFlow
-Kanban board for small teams - portable with no external dependencies
+# Enkl.app
+Kanban board and project management/planning for small teams - portable with no external dependencies
