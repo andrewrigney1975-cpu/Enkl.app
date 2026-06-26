@@ -575,6 +575,9 @@
   #risksListView.hidden{display:none;}
   #risksFormView.hidden{display:none;}
   #deleteRiskBtn.hidden{display:none;}
+  #decisionsListView.hidden{display:none;}
+  #decisionsFormView.hidden{display:none;}
+  #deleteDecisionBtn.hidden{display:none;}
   .kf-modal-footer.hidden{display:none;}
   .kf-tasktype-icon-grid{
     display:grid;grid-template-columns:repeat(6, 1fr);gap:4px;
@@ -630,6 +633,9 @@
   .kf-risk-doc-picker-row{display:flex;align-items:center;gap:8px;padding:4px 6px;font-size:13px;color:var(--kf-text);border-radius:3px;}
   .kf-risk-doc-picker-row:hover{background:var(--kf-hover-tint);}
   .kf-risk-doc-picker-empty{padding:10px;text-align:center;color:var(--kf-text-faint);font-size:12px;}
+
+  /* Decisions */
+  .kf-decision-type-pill{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;color:var(--kf-text-secondary);background:var(--kf-column-bg);}
 
   .kf-overdue-alert-list{
     max-height:200px;overflow-y:auto;
@@ -1029,6 +1035,7 @@
       <div class="kf-drawer-action-group">
         <button class="kf-header-btn" id="documentsBtn" title="Documents"><span class="kf-icon" data-icon="ty_document" data-size="14"></span>Documents</button>
         <button class="kf-header-btn" id="risksBtn" title="Risks"><span class="kf-icon" data-icon="warning" data-size="14"></span>Risks</button>
+        <button class="kf-header-btn" id="decisionsBtn" title="Decisions"><span class="kf-icon" data-icon="ty_approve" data-size="14"></span>Decisions</button>
       </div>
       <div class="kf-drawer-views-section" id="drawerViewsSection">
         <div class="kf-header-divider"></div>
@@ -1689,6 +1696,70 @@
   </div>
 </div>
 
+<!-- Decisions Modal -->
+<div class="kf-overlay hidden" id="decisionsOverlay">
+  <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="decisionsModalTitle">Decisions</h2>
+      <button class="kf-btn kf-btn-ghost" id="decisionsModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div id="decisionsListView">
+        <button class="kf-btn kf-btn-secondary" id="addDecisionBtn" style="width:100%;justify-content:center;margin-bottom:14px;">
+          <span class="kf-icon" data-icon="plus" data-size="14"></span>New Decision
+        </button>
+        <div id="decisionsList" class="kf-releases-list"></div>
+      </div>
+      <div id="decisionsFormView" class="hidden">
+        <div class="kf-field">
+          <label for="decisionTitleInput">Title</label>
+          <input type="text" id="decisionTitleInput" maxlength="120" placeholder="e.g. Adopt PostgreSQL for the new service">
+        </div>
+        <div class="kf-field">
+          <label for="decisionDescriptionInput">Description</label>
+          <textarea id="decisionDescriptionInput" maxlength="2000" placeholder="Describe the decision and its rationale..."></textarea>
+        </div>
+        <div class="kf-field-row">
+          <div class="kf-field">
+            <label for="decisionTypeSelect">Type</label>
+            <select id="decisionTypeSelect">
+              <option value="strategy">Strategy</option>
+              <option value="policy">Policy</option>
+              <option value="budgetary">Budgetary</option>
+              <option value="financial">Financial</option>
+              <option value="functional">Functional</option>
+              <option value="technical">Technical</option>
+              <option value="process">Process</option>
+              <option value="operational">Operational</option>
+            </select>
+          </div>
+          <div class="kf-field">
+            <label for="decisionOwnerSelect">Owner</label>
+            <select id="decisionOwnerSelect"></select>
+          </div>
+        </div>
+        <div class="kf-field">
+          <label for="decisionTaskSelect">Linked task</label>
+          <select id="decisionTaskSelect"></select>
+        </div>
+        <div class="kf-field">
+          <label>Linked documents</label>
+          <div id="decisionDocumentPicker" class="kf-risk-doc-picker"></div>
+        </div>
+        <div class="kf-field" id="decisionMetaDates" style="color:var(--kf-text-faint);font-size:12px;"></div>
+      </div>
+    </div>
+    <div class="kf-modal-footer" id="decisionsListFooter">
+      <button class="kf-btn kf-btn-secondary" id="decisionsDoneBtn">Done</button>
+    </div>
+    <div class="kf-modal-footer hidden" id="decisionsFormFooter">
+      <button class="kf-btn kf-btn-danger kf-footer-left" id="deleteDecisionBtn">Delete</button>
+      <button class="kf-btn kf-btn-secondary" id="decisionFormCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="decisionFormSaveBtn">Save Decision</button>
+    </div>
+  </div>
+</div>
+
 <!-- Import Conflict Modal -->
 <div class="kf-overlay hidden" id="importConflictOverlay">
   <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
@@ -1782,7 +1853,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.14.20260626.1006';
+var APP_VERSION = '1.15.20260626.1731';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -2180,6 +2251,8 @@ function migrateDB(){
     if(typeof p.docCounter !== 'number'){ p.docCounter = 1; changed = true; }
     if(!Array.isArray(p.risks)){ p.risks = []; changed = true; }
     if(typeof p.riskCounter !== 'number'){ p.riskCounter = 1; changed = true; }
+    if(!Array.isArray(p.decisions)){ p.decisions = []; changed = true; }
+    if(typeof p.decCounter !== 'number'){ p.decCounter = 1; changed = true; }
     if(!p.dateCreated){ p.dateCreated = epoch; changed = true; }
     if(!p.dateLastModified){ p.dateLastModified = epoch; changed = true; }
     if(!p.dateLastExported){ p.dateLastExported = null; changed = true; }
@@ -2251,6 +2324,22 @@ function migrateDB(){
       if(!r.dateCreated){ r.dateCreated = epoch; changed = true; }
       if(!r.dateLastModified){ r.dateLastModified = r.dateCreated || epoch; changed = true; }
     });
+
+    p.decisions.forEach(function(dec){
+      if(dec.ownerId === undefined){ dec.ownerId = null; changed = true; }
+      else if(dec.ownerId && !validMemberIds[dec.ownerId]){ dec.ownerId = null; changed = true; }
+      if(dec.taskId === undefined){ dec.taskId = null; changed = true; }
+      else if(dec.taskId && !validTaskIds[dec.taskId]){ dec.taskId = null; changed = true; }
+      if(!Array.isArray(dec.documentIds)){ dec.documentIds = []; changed = true; }
+      else {
+        var filteredDecDocIds = dec.documentIds.filter(function(id){ return validDocIds[id]; });
+        if(filteredDecDocIds.length !== dec.documentIds.length){ dec.documentIds = filteredDecDocIds; changed = true; }
+      }
+      if(!DECISION_TYPE_META.hasOwnProperty(dec.type)){ dec.type = 'strategy'; changed = true; }
+      if(dec.description === undefined){ dec.description = ''; changed = true; }
+      if(!dec.dateCreated){ dec.dateCreated = epoch; changed = true; }
+      if(!dec.dateLastModified){ dec.dateLastModified = dec.dateCreated || epoch; changed = true; }
+    });
   });
   if(changed) saveDB();
 }
@@ -2282,6 +2371,8 @@ function createDefaultProject(name, key){
     docCounter: 1,
     risks: [],
     riskCounter: 1,
+    decisions: [],
+    decCounter: 1,
     startDate: null,
     endDate: null,
     dateCreated: now,
@@ -2521,6 +2612,9 @@ function removeMember(project, memberId){
   (project.risks || []).forEach(function(r){
     if(r.ownerId === memberId) r.ownerId = null;
   });
+  (project.decisions || []).forEach(function(d){
+    if(d.ownerId === memberId) d.ownerId = null;
+  });
   saveDB();
   return unassignedCount;
 }
@@ -2751,6 +2845,12 @@ function deleteDocument(project, docId){
       unlinkedCount++;
     }
   });
+  (project.decisions || []).forEach(function(d){
+    if(d.documentIds && d.documentIds.indexOf(docId) !== -1){
+      d.documentIds = d.documentIds.filter(function(id){ return id !== docId; });
+      unlinkedCount++;
+    }
+  });
   saveDB();
   return unlinkedCount;
 }
@@ -2857,6 +2957,76 @@ function deleteRisk(project, riskId){
   var risk = getRiskById(project, riskId);
   if(!risk) return false;
   project.risks = project.risks.filter(function(r){ return r.id !== riskId; });
+  saveDB();
+  return true;
+}
+
+/* =========================================================
+   DECISIONS
+   A per-project decision log — each with an autogenerated key
+   (<PROJECT>-DEC-NNN), exactly one type, an owner drawn from Team
+   Members, an optional link to a single Task, and zero or more
+   linked Documents.
+   ========================================================= */
+var DECISION_TYPE_META = {
+  strategy: {label: 'Strategy'},
+  policy: {label: 'Policy'},
+  budgetary: {label: 'Budgetary'},
+  financial: {label: 'Financial'},
+  functional: {label: 'Functional'},
+  technical: {label: 'Technical'},
+  process: {label: 'Process'},
+  operational: {label: 'Operational'}
+};
+function normalizeDecisionType(value){
+  return DECISION_TYPE_META.hasOwnProperty(value) ? value : 'strategy';
+}
+function getDecisionTypeMeta(value){
+  return DECISION_TYPE_META[normalizeDecisionType(value)];
+}
+function nextDecisionKey(project){
+  var n = project.decCounter++;
+  return project.key + '-DEC-' + String(n).padStart(3, '0');
+}
+function getDecisionById(project, decisionId){
+  if(!project || !decisionId) return null;
+  return (project.decisions || []).filter(function(d){ return d.id === decisionId; })[0] || null;
+}
+function addDecision(project, data){
+  var now = new Date().toISOString();
+  var decision = {
+    id: uid('dec'),
+    key: nextDecisionKey(project),
+    title: (data.title || '').trim().slice(0, 120) || 'Untitled decision',
+    description: (data.description || '').trim().slice(0, 2000),
+    type: normalizeDecisionType(data.type),
+    ownerId: data.ownerId || null,
+    taskId: data.taskId || null,
+    documentIds: Array.isArray(data.documentIds) ? data.documentIds.slice() : [],
+    dateCreated: now,
+    dateLastModified: now
+  };
+  project.decisions.push(decision);
+  saveDB();
+  return decision;
+}
+function updateDecision(project, decisionId, data){
+  var decision = getDecisionById(project, decisionId);
+  if(!decision) return;
+  var title = (data.title || '').trim().slice(0, 120);
+  decision.title = title || decision.title;
+  decision.description = (data.description || '').trim().slice(0, 2000);
+  decision.type = normalizeDecisionType(data.type);
+  decision.ownerId = data.ownerId || null;
+  decision.taskId = data.taskId || null;
+  decision.documentIds = Array.isArray(data.documentIds) ? data.documentIds.slice() : [];
+  decision.dateLastModified = new Date().toISOString();
+  saveDB();
+}
+function deleteDecision(project, decisionId){
+  var decision = getDecisionById(project, decisionId);
+  if(!decision) return false;
+  project.decisions = project.decisions.filter(function(d){ return d.id !== decisionId; });
   saveDB();
   return true;
 }
@@ -2979,6 +3149,9 @@ function deleteTask(project, taskId){
   });
   (project.risks || []).forEach(function(r){
     if(r.taskId === taskId) r.taskId = null;
+  });
+  (project.decisions || []).forEach(function(d){
+    if(d.taskId === taskId) d.taskId = null;
   });
   saveDB();
 }
@@ -3138,6 +3311,22 @@ function exportProjectJSON(project){
         dateClosed: r.dateClosed || null,
         dateCreated: r.dateCreated || null,
         dateLastModified: r.dateLastModified || null
+      };
+    }),
+    decisions: (project.decisions || []).map(function(dec){
+      var owner = getMemberById(project, dec.ownerId);
+      return {
+        id: dec.id,
+        key: dec.key,
+        title: dec.title,
+        description: dec.description || '',
+        type: dec.type,
+        ownerId: owner ? owner.id : null,
+        ownerName: owner ? owner.name : null,
+        taskId: dec.taskId || null,
+        documentIds: dec.documentIds || [],
+        dateCreated: dec.dateCreated || null,
+        dateLastModified: dec.dateLastModified || null
       };
     }),
     hierarchy: hierarchy
@@ -3343,6 +3532,12 @@ function buildProjectFromExportDoc(doc){
     members: [],
     releases: [],
     taskTypes: [],
+    documents: [],
+    docCounter: 1,
+    risks: [],
+    riskCounter: 1,
+    decisions: [],
+    decCounter: 1,
     startDate: (doc.project && isValidISODateString(doc.project.startDate)) ? doc.project.startDate : null,
     endDate: (doc.project && isValidISODateString(doc.project.endDate)) ? doc.project.endDate : null,
     dateCreated: (doc.project && typeof doc.project.dateCreated === 'string') ? doc.project.dateCreated : importedAt,
@@ -3570,6 +3765,49 @@ function buildProjectFromExportDoc(doc){
     });
   }
 
+  var unresolvedDecisionOwners = 0, unresolvedDecisionTasks = 0, unresolvedDecisionDocs = 0;
+  if(Array.isArray(doc.decisions)){
+    doc.decisions.forEach(function(dec){
+      if(!dec || typeof dec !== 'object') return;
+      var title = (typeof dec.title === 'string' && dec.title.trim()) ? dec.title.trim().slice(0,120) : null;
+      if(!title) return;
+      var ownerId = null;
+      if(typeof dec.ownerId === 'string' && memberOldIdToNewId.hasOwnProperty(dec.ownerId)){
+        ownerId = memberOldIdToNewId[dec.ownerId];
+      } else if(typeof dec.ownerName === 'string' && memberNameToNewId.hasOwnProperty(dec.ownerName.trim())){
+        ownerId = memberNameToNewId[dec.ownerName.trim()];
+      } else if(dec.ownerId || dec.ownerName){
+        unresolvedDecisionOwners++;
+      }
+      var taskId = null;
+      if(dec.taskId && idMap.hasOwnProperty(dec.taskId)){
+        taskId = idMap[dec.taskId];
+      } else if(dec.taskId){
+        unresolvedDecisionTasks++;
+      }
+      var documentIds = [];
+      if(Array.isArray(dec.documentIds)){
+        dec.documentIds.forEach(function(oldDocId){
+          if(docOldIdToNewId.hasOwnProperty(oldDocId)) documentIds.push(docOldIdToNewId[oldDocId]);
+          else unresolvedDecisionDocs++;
+        });
+      }
+      var newDecision = {
+        id: uid('dec'),
+        key: nextDecisionKey(project),
+        title: title,
+        description: (typeof dec.description === 'string') ? dec.description.trim().slice(0,2000) : '',
+        type: normalizeDecisionType(dec.type),
+        ownerId: ownerId,
+        taskId: taskId,
+        documentIds: documentIds,
+        dateCreated: typeof dec.dateCreated === 'string' ? dec.dateCreated : importedAt,
+        dateLastModified: typeof dec.dateLastModified === 'string' ? dec.dateLastModified : importedAt
+      };
+      project.decisions.push(newDecision);
+    });
+  }
+
   return {
     project: project,
     taskCount: Object.keys(project.tasks).length,
@@ -3584,6 +3822,9 @@ function buildProjectFromExportDoc(doc){
     unresolvedRiskOwners: unresolvedRiskOwners,
     unresolvedRiskTasks: unresolvedRiskTasks,
     unresolvedRiskDocs: unresolvedRiskDocs,
+    unresolvedDecisionOwners: unresolvedDecisionOwners,
+    unresolvedDecisionTasks: unresolvedDecisionTasks,
+    unresolvedDecisionDocs: unresolvedDecisionDocs,
     cyclesRemoved: cyclesRemoved
   };
 }
@@ -3634,6 +3875,11 @@ function overwriteProjectFromResult(existingId, result){
     var match = /-(\d+)$/.exec(r.key || '');
     var suffix = match ? match[1] : String(idx + 1).padStart(3, '0');
     r.key = fresh.key + '-RISK-' + suffix;
+  });
+  (fresh.decisions || []).forEach(function(d, idx){
+    var match = /-(\d+)$/.exec(d.key || '');
+    var suffix = match ? match[1] : String(idx + 1).padStart(3, '0');
+    d.key = fresh.key + '-DEC-' + suffix;
   });
   db.projects[existingId] = fresh;
   db.currentProjectId = existingId;
@@ -3696,8 +3942,9 @@ function finaliseImport(result, wasOverwrite){
   if(result.unresolvedAssignees > 0) msg += ' Skipped ' + result.unresolvedAssignees + ' assignee reference(s) that could not be matched.';
   if(result.unresolvedReleases > 0) msg += ' Skipped ' + result.unresolvedReleases + ' release reference(s) that could not be matched.';
   if(result.unresolvedTaskTypes > 0) msg += ' Skipped ' + result.unresolvedTaskTypes + ' task type reference(s) that could not be matched.';
-  var unresolvedDocLinks = (result.unresolvedDocOwners || 0) + (result.unresolvedDocTasks || 0) + (result.unresolvedRiskOwners || 0) + (result.unresolvedRiskTasks || 0) + (result.unresolvedRiskDocs || 0);
-  if(unresolvedDocLinks > 0) msg += ' Skipped ' + unresolvedDocLinks + ' document/risk reference(s) that could not be matched.';
+  var unresolvedDocLinks = (result.unresolvedDocOwners || 0) + (result.unresolvedDocTasks || 0) + (result.unresolvedRiskOwners || 0) + (result.unresolvedRiskTasks || 0) + (result.unresolvedRiskDocs || 0) +
+    (result.unresolvedDecisionOwners || 0) + (result.unresolvedDecisionTasks || 0) + (result.unresolvedDecisionDocs || 0);
+  if(unresolvedDocLinks > 0) msg += ' Skipped ' + unresolvedDocLinks + ' document/risk/decision reference(s) that could not be matched.';
   toast(msg);
 }
 
@@ -5417,6 +5664,7 @@ var ui = {
   editingReleaseId: null,
   editingDocumentId: null,
   editingRiskId: null,
+  editingDecisionId: null,
   taskListCollapsedGroups: new Set(),
   sideNavExpanded: false
 };
@@ -6783,10 +7031,10 @@ function deleteDocumentFromModal(){
   if(!doc) return;
   confirmDialog(
     'Delete ' + doc.key + '?',
-    'Any risks linking to this document will have the link removed.',
+    'Any risks or decisions linking to this document will have the link removed.',
     function(){
       var unlinked = deleteDocument(project, doc.id);
-      toast('Deleted ' + doc.key + (unlinked > 0 ? ' \u2014 removed from ' + unlinked + ' risk(s).' : '.'));
+      toast('Deleted ' + doc.key + (unlinked > 0 ? ' \u2014 removed ' + unlinked + ' link(s) from risks/decisions.' : '.'));
       showDocumentsListView();
     }
   );
@@ -6839,8 +7087,8 @@ function updateRiskScorePreview(){
     '<span class="kf-risk-score-badge ' + band + '">Score ' + score + ' \u00b7 ' + bandLabel + '</span>';
 }
 
-function renderRiskDocumentPicker(project, selectedDocIds){
-  var wrap = document.getElementById('riskDocumentPicker');
+function renderDocumentPickerInto(wrapId, project, selectedDocIds){
+  var wrap = document.getElementById(wrapId);
   wrap.innerHTML = '';
   var docs = (project.documents || []).slice().sort(function(a, b){ return a.key.localeCompare(b.key, undefined, {numeric: true}); });
   if(docs.length === 0){
@@ -6858,10 +7106,16 @@ function renderRiskDocumentPicker(project, selectedDocIds){
     wrap.appendChild(row);
   });
 }
-function getCheckedRiskDocumentIds(){
-  return Array.from(document.querySelectorAll('#riskDocumentPicker input[type=checkbox]:checked')).map(function(cb){
+function getCheckedDocumentIdsFrom(wrapId){
+  return Array.from(document.querySelectorAll('#' + wrapId + ' input[type=checkbox]:checked')).map(function(cb){
     return cb.getAttribute('data-doc-id');
   });
+}
+function renderRiskDocumentPicker(project, selectedDocIds){
+  renderDocumentPickerInto('riskDocumentPicker', project, selectedDocIds);
+}
+function getCheckedRiskDocumentIds(){
+  return getCheckedDocumentIdsFrom('riskDocumentPicker');
 }
 
 function showRisksFormView(riskId){
@@ -6988,6 +7242,158 @@ function deleteRiskFromModal(){
       deleteRisk(project, risk.id);
       toast('Deleted ' + risk.key + '.');
       showRisksListView();
+    }
+  );
+}
+
+/* =========================================================
+   DECISIONS MODAL
+   ========================================================= */
+function openDecisionsOverlay(){
+  var project = getCurrentProject();
+  if(!project){ toast('No project selected.'); return; }
+  showDecisionsListView();
+  document.getElementById('decisionsOverlay').classList.remove('hidden');
+}
+function closeDecisionsOverlay(){
+  document.getElementById('decisionsOverlay').classList.add('hidden');
+}
+function isDecisionsOverlayOpen(){
+  return !document.getElementById('decisionsOverlay').classList.contains('hidden');
+}
+
+function showDecisionsListView(){
+  ui.editingDecisionId = null;
+  document.getElementById('decisionsModalTitle').textContent = 'Decisions';
+  document.getElementById('decisionsListView').classList.remove('hidden');
+  document.getElementById('decisionsFormView').classList.add('hidden');
+  document.getElementById('decisionsListFooter').classList.remove('hidden');
+  document.getElementById('decisionsFormFooter').classList.add('hidden');
+  renderDecisionsList();
+}
+
+function populateDecisionTypeSelect(currentType){
+  document.getElementById('decisionTypeSelect').value = normalizeDecisionType(currentType);
+}
+
+function showDecisionsFormView(decisionId){
+  var project = getCurrentProject();
+  if(!project) return;
+  ui.editingDecisionId = decisionId || null;
+  var decision = decisionId ? getDecisionById(project, decisionId) : null;
+
+  document.getElementById('decisionsModalTitle').textContent = decision ? 'Edit Decision' : 'New Decision';
+  document.getElementById('decisionsListView').classList.add('hidden');
+  document.getElementById('decisionsFormView').classList.remove('hidden');
+  document.getElementById('decisionsListFooter').classList.add('hidden');
+  document.getElementById('decisionsFormFooter').classList.remove('hidden');
+  document.getElementById('deleteDecisionBtn').classList.toggle('hidden', !decision);
+
+  document.getElementById('decisionTitleInput').value = decision ? decision.title : '';
+  document.getElementById('decisionDescriptionInput').value = decision ? decision.description : '';
+  populateDecisionTypeSelect(decision ? decision.type : 'strategy');
+  populateOwnerSelect(document.getElementById('decisionOwnerSelect'), project, decision ? decision.ownerId : null);
+  populateTaskSelect(document.getElementById('decisionTaskSelect'), project, decision ? decision.taskId : null);
+  renderDocumentPickerInto('decisionDocumentPicker', project, decision ? decision.documentIds : []);
+
+  var metaEl = document.getElementById('decisionMetaDates');
+  if(decision){
+    metaEl.textContent = 'Added ' + utcISOToLocalDisplayDate(decision.dateCreated) +
+      (decision.dateLastModified && decision.dateLastModified !== decision.dateCreated ? ' \u00b7 Last changed ' + utcISOToLocalDisplayDate(decision.dateLastModified) : '');
+    metaEl.style.display = '';
+  } else {
+    metaEl.textContent = '';
+    metaEl.style.display = 'none';
+  }
+  document.getElementById('decisionTitleInput').focus();
+}
+
+function renderDecisionsList(){
+  var project = getCurrentProject();
+  var listEl = document.getElementById('decisionsList');
+  listEl.innerHTML = '';
+  if(!project) return;
+
+  var decisions = (project.decisions || []).slice().sort(function(a, b){
+    return a.key.localeCompare(b.key, undefined, {numeric: true});
+  });
+
+  if(decisions.length === 0){
+    listEl.innerHTML = '<div class="kf-releases-empty">No decisions yet. Add one above to start this project\u2019s decision log.</div>';
+    return;
+  }
+
+  decisions.forEach(function(dec){
+    var owner = getMemberById(project, dec.ownerId);
+    var typeMeta = getDecisionTypeMeta(dec.type);
+    var linkedTask = dec.taskId ? project.tasks[dec.taskId] : null;
+
+    var row = document.createElement('div');
+    row.className = 'kf-release-row';
+    row.setAttribute('data-decision-id', dec.id);
+
+    var metaHTML = '';
+    if(owner){
+      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML(memberInitials(owner.name)) + '</span><span>' + escapeHTML(owner.name) + '</span>';
+    } else {
+      metaHTML += '<span>Unassigned</span>';
+    }
+    metaHTML += '<span>Added ' + escapeHTML(utcISOToLocalDisplayDate(dec.dateCreated)) + '</span>';
+    if(linkedTask) metaHTML += '<span>' + escapeHTML(linkedTask.key) + '</span>';
+    if(dec.documentIds && dec.documentIds.length > 0){
+      metaHTML += '<span>' + dec.documentIds.length + ' doc' + (dec.documentIds.length === 1 ? '' : 's') + '</span>';
+    }
+
+    row.innerHTML =
+      '<div class="kf-release-row-top">' +
+        '<span class="kf-dep-key">' + escapeHTML(dec.key) + '</span>' +
+        '<span class="kf-release-name">' + escapeHTML(dec.title) + '</span>' +
+        '<span class="kf-decision-type-pill">' + escapeHTML(typeMeta.label) + '</span>' +
+      '</div>' +
+      '<div class="kf-release-row-meta">' + metaHTML + '</div>';
+
+    row.addEventListener('click', function(){ showDecisionsFormView(dec.id); });
+    listEl.appendChild(row);
+  });
+}
+
+function saveDecisionFromModal(){
+  var project = getCurrentProject();
+  if(!project) return;
+  var title = document.getElementById('decisionTitleInput').value.trim();
+  if(!title){ toast('Please enter a decision title.'); return; }
+
+  var data = {
+    title: title,
+    description: document.getElementById('decisionDescriptionInput').value,
+    type: document.getElementById('decisionTypeSelect').value,
+    ownerId: document.getElementById('decisionOwnerSelect').value || null,
+    taskId: document.getElementById('decisionTaskSelect').value || null,
+    documentIds: getCheckedDocumentIdsFrom('decisionDocumentPicker')
+  };
+
+  if(ui.editingDecisionId){
+    updateDecision(project, ui.editingDecisionId, data);
+    toast('Decision updated.');
+  } else {
+    addDecision(project, data);
+    toast('Decision created.');
+  }
+  showDecisionsListView();
+}
+
+function deleteDecisionFromModal(){
+  var project = getCurrentProject();
+  if(!project || !ui.editingDecisionId) return;
+  var decision = getDecisionById(project, ui.editingDecisionId);
+  if(!decision) return;
+  confirmDialog(
+    'Delete ' + decision.key + '?',
+    'This cannot be undone.',
+    function(){
+      deleteDecision(project, decision.id);
+      toast('Deleted ' + decision.key + '.');
+      showDecisionsListView();
     }
   );
 }
@@ -7128,6 +7534,17 @@ function wireEvents(){
   document.getElementById('deleteRiskBtn').addEventListener('click', deleteRiskFromModal);
   document.getElementById('riskLikelihoodSelect').addEventListener('change', updateRiskScorePreview);
   document.getElementById('riskImpactSelect').addEventListener('change', updateRiskScorePreview);
+
+  document.getElementById('decisionsBtn').addEventListener('click', openDecisionsOverlay);
+  document.getElementById('decisionsModalClose').addEventListener('click', closeDecisionsOverlay);
+  document.getElementById('decisionsDoneBtn').addEventListener('click', closeDecisionsOverlay);
+  document.getElementById('decisionsOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'decisionsOverlay') closeDecisionsOverlay();
+  });
+  document.getElementById('addDecisionBtn').addEventListener('click', function(){ showDecisionsFormView(null); });
+  document.getElementById('decisionFormCancelBtn').addEventListener('click', showDecisionsListView);
+  document.getElementById('decisionFormSaveBtn').addEventListener('click', saveDecisionFromModal);
+  document.getElementById('deleteDecisionBtn').addEventListener('click', deleteDecisionFromModal);
 
   document.getElementById('deleteProjectBtn').addEventListener('click', function(){
     var p = getCurrentProject();
@@ -7436,6 +7853,7 @@ function wireEvents(){
     else if(isReleasesOverlayOpen()) closeReleasesOverlay();
     else if(isDocumentsOverlayOpen()) closeDocumentsOverlay();
     else if(isRisksOverlayOpen()) closeRisksOverlay();
+    else if(isDecisionsOverlayOpen()) closeDecisionsOverlay();
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
     else if(!document.getElementById('importConflictOverlay').classList.contains('hidden')) closeImportConflictModal();
     else if(!document.getElementById('overdueAlertOverlay').classList.contains('hidden')) closeOverdueAlert();
