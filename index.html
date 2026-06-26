@@ -569,6 +569,12 @@
   #releasesFormView.hidden{display:none;}
   #releasesListView.hidden{display:none;}
   #deleteReleaseBtn.hidden{display:none;}
+  #documentsListView.hidden{display:none;}
+  #documentsFormView.hidden{display:none;}
+  #deleteDocumentBtn.hidden{display:none;}
+  #risksListView.hidden{display:none;}
+  #risksFormView.hidden{display:none;}
+  #deleteRiskBtn.hidden{display:none;}
   .kf-modal-footer.hidden{display:none;}
   .kf-tasktype-icon-grid{
     display:grid;grid-template-columns:repeat(6, 1fr);gap:4px;
@@ -604,6 +610,26 @@
   .kf-releases-empty{padding:30px 10px;text-align:center;color:var(--kf-text-faint);font-size:13px;}
   .kf-release-task-count{flex-shrink:0;}
   .kf-member-empty{color:var(--kf-text-faint);font-size:13px;text-align:center;padding:18px 0;}
+
+  /* Risks */
+  .kf-risk-status-pill{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;}
+  .kf-risk-status-pill.new{color:var(--kf-text-secondary);background:var(--kf-column-bg);}
+  .kf-risk-status-pill.in_review{color:var(--kf-blue);background:var(--kf-release-progress-bg);}
+  .kf-risk-status-pill.closed{color:var(--kf-good-fg);background:var(--kf-good-bg);}
+  .kf-risk-score-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;}
+  .kf-risk-score-badge.low{color:var(--kf-good-fg);background:var(--kf-good-bg);}
+  .kf-risk-score-badge.medium{color:var(--kf-overdue-fg);background:var(--kf-overdue-bg);}
+  .kf-risk-score-badge.high{color:#974c00;background:#ffe2b8;}
+  .kf-risk-score-badge.critical{color:var(--kf-blocked-fg);background:var(--kf-blocked-bg);}
+  .kf-risk-doc-picker{
+    display:flex;flex-direction:column;gap:4px;
+    max-height:160px;overflow-y:auto;
+    border:1px solid var(--kf-border);border-radius:var(--kf-radius);
+    padding:6px;
+  }
+  .kf-risk-doc-picker-row{display:flex;align-items:center;gap:8px;padding:4px 6px;font-size:13px;color:var(--kf-text);border-radius:3px;}
+  .kf-risk-doc-picker-row:hover{background:var(--kf-hover-tint);}
+  .kf-risk-doc-picker-empty{padding:10px;text-align:center;color:var(--kf-text-faint);font-size:12px;}
 
   .kf-overdue-alert-list{
     max-height:200px;overflow-y:auto;
@@ -998,6 +1024,11 @@
         <button class="kf-header-btn" id="editProjectBtn" title="Edit project"><span class="kf-icon" data-icon="edit" data-size="14"></span>Edit</button>
         <button class="kf-header-btn" id="manageTeamBtn" title="Manage team members"><span class="kf-icon" data-icon="team" data-size="14"></span>Team</button>
         <button class="kf-header-btn" id="deleteProjectBtn" title="Delete project"><span class="kf-icon" data-icon="trash" data-size="14"></span>Delete</button>
+      </div>
+      <div class="kf-header-divider"></div>
+      <div class="kf-drawer-action-group">
+        <button class="kf-header-btn" id="documentsBtn" title="Documents"><span class="kf-icon" data-icon="ty_document" data-size="14"></span>Documents</button>
+        <button class="kf-header-btn" id="risksBtn" title="Risks"><span class="kf-icon" data-icon="warning" data-size="14"></span>Risks</button>
       </div>
       <div class="kf-drawer-views-section" id="drawerViewsSection">
         <div class="kf-header-divider"></div>
@@ -1519,6 +1550,145 @@
   </div>
 </div>
 
+<!-- Documents Modal -->
+<div class="kf-overlay hidden" id="documentsOverlay">
+  <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="documentsModalTitle">Documents</h2>
+      <button class="kf-btn kf-btn-ghost" id="documentsModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div id="documentsListView">
+        <button class="kf-btn kf-btn-secondary" id="addDocumentBtn" style="width:100%;justify-content:center;margin-bottom:14px;">
+          <span class="kf-icon" data-icon="plus" data-size="14"></span>New Document
+        </button>
+        <div id="documentsList" class="kf-releases-list"></div>
+      </div>
+      <div id="documentsFormView" class="hidden">
+        <div class="kf-field">
+          <label for="documentTitleInput">Title</label>
+          <input type="text" id="documentTitleInput" maxlength="120" placeholder="e.g. Vendor Contract v2">
+        </div>
+        <div class="kf-field">
+          <label for="documentUrlInput">URL</label>
+          <div class="kf-doc-url-row">
+            <input type="url" id="documentUrlInput" maxlength="500" placeholder="https://example.com/doc">
+            <button type="button" class="kf-btn kf-btn-ghost kf-doc-url-open-btn hidden" id="documentUrlOpenBtn" title="Open document link in a new tab" aria-label="Open document link in a new tab">
+              <span class="kf-icon" data-icon="externalLink" data-size="16"></span>
+            </button>
+          </div>
+        </div>
+        <div class="kf-field">
+          <label for="documentDescriptionInput">Description</label>
+          <textarea id="documentDescriptionInput" maxlength="500" placeholder="Brief description of this document..." style="min-height:60px;"></textarea>
+        </div>
+        <div class="kf-field-row">
+          <div class="kf-field">
+            <label for="documentOwnerSelect">Owner</label>
+            <select id="documentOwnerSelect"></select>
+          </div>
+          <div class="kf-field">
+            <label for="documentTaskSelect">Linked task</label>
+            <select id="documentTaskSelect"></select>
+          </div>
+        </div>
+        <div class="kf-field" id="documentMetaDates" style="color:var(--kf-text-faint);font-size:12px;"></div>
+      </div>
+    </div>
+    <div class="kf-modal-footer" id="documentsListFooter">
+      <button class="kf-btn kf-btn-secondary" id="documentsDoneBtn">Done</button>
+    </div>
+    <div class="kf-modal-footer hidden" id="documentsFormFooter">
+      <button class="kf-btn kf-btn-danger kf-footer-left" id="deleteDocumentBtn">Delete</button>
+      <button class="kf-btn kf-btn-secondary" id="documentFormCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="documentFormSaveBtn">Save Document</button>
+    </div>
+  </div>
+</div>
+
+<!-- Risks Modal -->
+<div class="kf-overlay hidden" id="risksOverlay">
+  <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="risksModalTitle">Risks</h2>
+      <button class="kf-btn kf-btn-ghost" id="risksModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div id="risksListView">
+        <button class="kf-btn kf-btn-secondary" id="addRiskBtn" style="width:100%;justify-content:center;margin-bottom:14px;">
+          <span class="kf-icon" data-icon="plus" data-size="14"></span>New Risk
+        </button>
+        <div id="risksList" class="kf-releases-list"></div>
+      </div>
+      <div id="risksFormView" class="hidden">
+        <div class="kf-field">
+          <label for="riskTitleInput">Title</label>
+          <input type="text" id="riskTitleInput" maxlength="120" placeholder="e.g. Key vendor may miss delivery date">
+        </div>
+        <div class="kf-field">
+          <label for="riskDescriptionInput">Description</label>
+          <textarea id="riskDescriptionInput" maxlength="2000" placeholder="Describe the risk in detail..."></textarea>
+        </div>
+        <div class="kf-field-row">
+          <div class="kf-field">
+            <label for="riskLikelihoodSelect">Likelihood</label>
+            <select id="riskLikelihoodSelect"></select>
+          </div>
+          <div class="kf-field">
+            <label for="riskImpactSelect">Impact</label>
+            <select id="riskImpactSelect"></select>
+          </div>
+        </div>
+        <div class="kf-field" id="riskScorePreview"></div>
+        <div class="kf-field">
+          <label for="riskMitigationsInput">Mitigations</label>
+          <textarea id="riskMitigationsInput" maxlength="2000" placeholder="What's being done to reduce this risk..."></textarea>
+        </div>
+        <div class="kf-field-row">
+          <div class="kf-field">
+            <label for="riskStatusSelect">Status</label>
+            <select id="riskStatusSelect">
+              <option value="new">New</option>
+              <option value="in_review">In Review</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          <div class="kf-field">
+            <label for="riskOwnerSelect">Owner</label>
+            <select id="riskOwnerSelect"></select>
+          </div>
+        </div>
+        <div class="kf-field">
+          <label for="riskTaskSelect">Linked task</label>
+          <select id="riskTaskSelect"></select>
+        </div>
+        <div class="kf-field-row">
+          <div class="kf-field">
+            <label for="riskCloseTargetInput">Target closure date</label>
+            <input type="date" id="riskCloseTargetInput">
+          </div>
+          <div class="kf-field">
+            <label for="riskClosedDateInput">Date closed</label>
+            <input type="date" id="riskClosedDateInput">
+          </div>
+        </div>
+        <div class="kf-field">
+          <label>Linked documents</label>
+          <div id="riskDocumentPicker" class="kf-risk-doc-picker"></div>
+        </div>
+      </div>
+    </div>
+    <div class="kf-modal-footer" id="risksListFooter">
+      <button class="kf-btn kf-btn-secondary" id="risksDoneBtn">Done</button>
+    </div>
+    <div class="kf-modal-footer hidden" id="risksFormFooter">
+      <button class="kf-btn kf-btn-danger kf-footer-left" id="deleteRiskBtn">Delete</button>
+      <button class="kf-btn kf-btn-secondary" id="riskFormCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="riskFormSaveBtn">Save Risk</button>
+    </div>
+  </div>
+</div>
+
 <!-- Import Conflict Modal -->
 <div class="kf-overlay hidden" id="importConflictOverlay">
   <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
@@ -1612,7 +1782,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.13.20260626.0924';
+var APP_VERSION = '1.14.20260626.1006';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -2006,6 +2176,10 @@ function migrateDB(){
     if(!Array.isArray(p.members)){ p.members = []; changed = true; }
     if(!Array.isArray(p.releases)){ p.releases = []; changed = true; }
     if(!Array.isArray(p.taskTypes)){ p.taskTypes = defaultTaskTypes(); changed = true; }
+    if(!Array.isArray(p.documents)){ p.documents = []; changed = true; }
+    if(typeof p.docCounter !== 'number'){ p.docCounter = 1; changed = true; }
+    if(!Array.isArray(p.risks)){ p.risks = []; changed = true; }
+    if(typeof p.riskCounter !== 'number'){ p.riskCounter = 1; changed = true; }
     if(!p.dateCreated){ p.dateCreated = epoch; changed = true; }
     if(!p.dateLastModified){ p.dateLastModified = epoch; changed = true; }
     if(!p.dateLastExported){ p.dateLastExported = null; changed = true; }
@@ -2038,6 +2212,45 @@ function migrateDB(){
       if(t.taskCost === undefined){ t.taskCost = 1; changed = true; }
       if(t.archived === undefined){ t.archived = false; changed = true; }
     });
+
+    var validMemberIds = {};
+    p.members.forEach(function(m){ validMemberIds[m.id] = true; });
+    var validTaskIds = {};
+    getTasksArray(p).forEach(function(t){ validTaskIds[t.id] = true; });
+
+    p.documents.forEach(function(d){
+      if(d.ownerId === undefined){ d.ownerId = null; changed = true; }
+      else if(d.ownerId && !validMemberIds[d.ownerId]){ d.ownerId = null; changed = true; }
+      if(d.taskId === undefined){ d.taskId = null; changed = true; }
+      else if(d.taskId && !validTaskIds[d.taskId]){ d.taskId = null; changed = true; }
+      if(d.url === undefined){ d.url = null; changed = true; }
+      if(d.description === undefined){ d.description = ''; changed = true; }
+      if(!d.dateCreated){ d.dateCreated = epoch; changed = true; }
+      if(!d.dateLastModified){ d.dateLastModified = d.dateCreated || epoch; changed = true; }
+    });
+
+    var validDocIds = {};
+    p.documents.forEach(function(d){ validDocIds[d.id] = true; });
+
+    p.risks.forEach(function(r){
+      if(r.ownerId === undefined){ r.ownerId = null; changed = true; }
+      else if(r.ownerId && !validMemberIds[r.ownerId]){ r.ownerId = null; changed = true; }
+      if(r.taskId === undefined){ r.taskId = null; changed = true; }
+      else if(r.taskId && !validTaskIds[r.taskId]){ r.taskId = null; changed = true; }
+      if(!Array.isArray(r.documentIds)){ r.documentIds = []; changed = true; }
+      else {
+        var filteredDocIds = r.documentIds.filter(function(id){ return validDocIds[id]; });
+        if(filteredDocIds.length !== r.documentIds.length){ r.documentIds = filteredDocIds; changed = true; }
+      }
+      if(!RISK_STATUS_META.hasOwnProperty(r.status)){ r.status = 'new'; changed = true; }
+      if(r.dateToClose === undefined){ r.dateToClose = null; changed = true; }
+      if(r.dateClosed === undefined){ r.dateClosed = null; changed = true; }
+      if(!isValidRiskScoreValue(r.likelihood)){ r.likelihood = 1; changed = true; }
+      if(!isValidRiskScoreValue(r.impact)){ r.impact = 1; changed = true; }
+      if(r.mitigations === undefined){ r.mitigations = ''; changed = true; }
+      if(!r.dateCreated){ r.dateCreated = epoch; changed = true; }
+      if(!r.dateLastModified){ r.dateLastModified = r.dateCreated || epoch; changed = true; }
+    });
   });
   if(changed) saveDB();
 }
@@ -2065,6 +2278,10 @@ function createDefaultProject(name, key){
     members: [],
     releases: [],
     taskTypes: defaultTaskTypes(),
+    documents: [],
+    docCounter: 1,
+    risks: [],
+    riskCounter: 1,
     startDate: null,
     endDate: null,
     dateCreated: now,
@@ -2298,6 +2515,12 @@ function removeMember(project, memberId){
   getTasksArray(project).forEach(function(t){
     if(t.assigneeId === memberId){ t.assigneeId = null; unassignedCount++; }
   });
+  (project.documents || []).forEach(function(d){
+    if(d.ownerId === memberId) d.ownerId = null;
+  });
+  (project.risks || []).forEach(function(r){
+    if(r.ownerId === memberId) r.ownerId = null;
+  });
   saveDB();
   return unassignedCount;
 }
@@ -2474,6 +2697,170 @@ function deleteRelease(project, releaseId){
   return unassignedCount;
 }
 
+/* =========================================================
+   DOCUMENTS
+   A per-project register of reference documents — each with an
+   autogenerated key (<PROJECT>-DOC-NNN), an external URL, an owner
+   drawn from Team Members, and an optional link to a single Task.
+   ========================================================= */
+function nextDocKey(project){
+  var n = project.docCounter++;
+  return project.key + '-DOC-' + String(n).padStart(3, '0');
+}
+function getDocumentById(project, docId){
+  if(!project || !docId) return null;
+  return (project.documents || []).filter(function(d){ return d.id === docId; })[0] || null;
+}
+function addDocument(project, data){
+  var now = new Date().toISOString();
+  var doc = {
+    id: uid('doc'),
+    key: nextDocKey(project),
+    title: (data.title || '').trim().slice(0, 120) || 'Untitled document',
+    url: normalizeDocumentationUrl(data.url),
+    description: (data.description || '').trim().slice(0, 500),
+    ownerId: data.ownerId || null,
+    taskId: data.taskId || null,
+    dateCreated: now,
+    dateLastModified: now
+  };
+  project.documents.push(doc);
+  saveDB();
+  return doc;
+}
+function updateDocument(project, docId, data){
+  var doc = getDocumentById(project, docId);
+  if(!doc) return;
+  var title = (data.title || '').trim().slice(0, 120);
+  doc.title = title || doc.title;
+  doc.url = normalizeDocumentationUrl(data.url);
+  doc.description = (data.description || '').trim().slice(0, 500);
+  doc.ownerId = data.ownerId || null;
+  doc.taskId = data.taskId || null;
+  doc.dateLastModified = new Date().toISOString();
+  saveDB();
+}
+function deleteDocument(project, docId){
+  var doc = getDocumentById(project, docId);
+  if(!doc) return 0;
+  project.documents = project.documents.filter(function(d){ return d.id !== docId; });
+  var unlinkedCount = 0;
+  (project.risks || []).forEach(function(r){
+    if(r.documentIds && r.documentIds.indexOf(docId) !== -1){
+      r.documentIds = r.documentIds.filter(function(id){ return id !== docId; });
+      unlinkedCount++;
+    }
+  });
+  saveDB();
+  return unlinkedCount;
+}
+
+/* =========================================================
+   RISKS
+   A per-project risk register following a standard 5x5 risk matrix:
+   likelihood (1-5) x impact (1-5), each independently rated. A Risk
+   may link to a single Task and to zero or more Documents.
+   ========================================================= */
+var RISK_LIKELIHOOD_META = {
+  1: {label: 'Rare', description: 'Unlikely to happen and/or have minor or negligible consequences'},
+  2: {label: 'Unlikely', description: 'Possible to happen and/or to have moderate consequences'},
+  3: {label: 'Moderate', description: 'Likely to happen and/or to have serious consequences'},
+  4: {label: 'Likely', description: 'Almost sure to happen and/or to have major consequences'},
+  5: {label: 'Almost certain', description: 'Sure to happen and/or have major consequences'}
+};
+var RISK_IMPACT_META = {
+  1: {label: 'Insignificant', description: 'Won\u2019t cause serious harm or delays'},
+  2: {label: 'Minor', description: 'Can cause harm or delays, only to a mild extent'},
+  3: {label: 'Significant', description: 'Can cause harm or delays that will require additional treatments'},
+  4: {label: 'Major', description: 'Can cause major harm or delays that will require significant treatment or changes to the project'},
+  5: {label: 'Severe', description: 'Can result in critical harm or project failure'}
+};
+var RISK_STATUS_META = {
+  new: {label: 'New'},
+  in_review: {label: 'In Review'},
+  closed: {label: 'Closed'}
+};
+function isValidRiskScoreValue(v){
+  return typeof v === 'number' && isFinite(v) && v >= 1 && v <= 5;
+}
+function clampRiskScoreValue(v){
+  var n = Math.round(Number(v));
+  if(!isFinite(n)) return 1;
+  return Math.max(1, Math.min(5, n));
+}
+function normalizeRiskStatus(value){
+  return RISK_STATUS_META.hasOwnProperty(value) ? value : 'new';
+}
+function getRiskStatusMeta(value){
+  return RISK_STATUS_META[normalizeRiskStatus(value)];
+}
+function riskScore(risk){
+  return clampRiskScoreValue(risk.likelihood) * clampRiskScoreValue(risk.impact);
+}
+/* Standard 5x5 matrix banding: 1-4 Low, 5-9 Medium, 10-15 High, 16-25 Critical. */
+function riskScoreBand(score){
+  if(score >= 16) return 'critical';
+  if(score >= 10) return 'high';
+  if(score >= 5) return 'medium';
+  return 'low';
+}
+function nextRiskKey(project){
+  var n = project.riskCounter++;
+  return project.key + '-RISK-' + String(n).padStart(3, '0');
+}
+function getRiskById(project, riskId){
+  if(!project || !riskId) return null;
+  return (project.risks || []).filter(function(r){ return r.id === riskId; })[0] || null;
+}
+function addRisk(project, data){
+  var now = new Date().toISOString();
+  var risk = {
+    id: uid('risk'),
+    key: nextRiskKey(project),
+    title: (data.title || '').trim().slice(0, 120) || 'Untitled risk',
+    description: (data.description || '').trim().slice(0, 2000),
+    likelihood: clampRiskScoreValue(data.likelihood),
+    impact: clampRiskScoreValue(data.impact),
+    mitigations: (data.mitigations || '').trim().slice(0, 2000),
+    ownerId: data.ownerId || null,
+    taskId: data.taskId || null,
+    documentIds: Array.isArray(data.documentIds) ? data.documentIds.slice() : [],
+    status: normalizeRiskStatus(data.status),
+    dateToClose: data.dateToClose || null,
+    dateClosed: data.dateClosed || null,
+    dateCreated: now,
+    dateLastModified: now
+  };
+  project.risks.push(risk);
+  saveDB();
+  return risk;
+}
+function updateRisk(project, riskId, data){
+  var risk = getRiskById(project, riskId);
+  if(!risk) return;
+  var title = (data.title || '').trim().slice(0, 120);
+  risk.title = title || risk.title;
+  risk.description = (data.description || '').trim().slice(0, 2000);
+  risk.likelihood = clampRiskScoreValue(data.likelihood);
+  risk.impact = clampRiskScoreValue(data.impact);
+  risk.mitigations = (data.mitigations || '').trim().slice(0, 2000);
+  risk.ownerId = data.ownerId || null;
+  risk.taskId = data.taskId || null;
+  risk.documentIds = Array.isArray(data.documentIds) ? data.documentIds.slice() : [];
+  risk.status = normalizeRiskStatus(data.status);
+  risk.dateToClose = data.dateToClose || null;
+  risk.dateClosed = data.dateClosed || null;
+  risk.dateLastModified = new Date().toISOString();
+  saveDB();
+}
+function deleteRisk(project, riskId){
+  var risk = getRiskById(project, riskId);
+  if(!risk) return false;
+  project.risks = project.risks.filter(function(r){ return r.id !== riskId; });
+  saveDB();
+  return true;
+}
+
 function addColumn(project, name, done){
   var col = makeColumn(name, done);
   project.columns.push(col);
@@ -2586,6 +2973,12 @@ function deleteTask(project, taskId){
     if(t.dependencies && t.dependencies.indexOf(taskId) !== -1){
       t.dependencies = t.dependencies.filter(function(id){ return id !== taskId; });
     }
+  });
+  (project.documents || []).forEach(function(d){
+    if(d.taskId === taskId) d.taskId = null;
+  });
+  (project.risks || []).forEach(function(r){
+    if(r.taskId === taskId) r.taskId = null;
   });
   saveDB();
 }
@@ -2711,6 +3104,42 @@ function exportProjectJSON(project){
     }),
     columns: project.columns.map(function(c, idx){ return {name: c.name, done: c.done, order: idx}; }),
     taskTypes: (project.taskTypes || []).map(function(tt){ return {id: tt.id, name: tt.name, iconName: tt.iconName || null}; }),
+    documents: (project.documents || []).map(function(d){
+      var owner = getMemberById(project, d.ownerId);
+      return {
+        id: d.id,
+        key: d.key,
+        title: d.title,
+        url: d.url || null,
+        description: d.description || '',
+        ownerId: owner ? owner.id : null,
+        ownerName: owner ? owner.name : null,
+        taskId: d.taskId || null,
+        dateCreated: d.dateCreated || null,
+        dateLastModified: d.dateLastModified || null
+      };
+    }),
+    risks: (project.risks || []).map(function(r){
+      var owner = getMemberById(project, r.ownerId);
+      return {
+        id: r.id,
+        key: r.key,
+        title: r.title,
+        description: r.description || '',
+        likelihood: r.likelihood,
+        impact: r.impact,
+        mitigations: r.mitigations || '',
+        ownerId: owner ? owner.id : null,
+        ownerName: owner ? owner.name : null,
+        taskId: r.taskId || null,
+        documentIds: r.documentIds || [],
+        status: r.status,
+        dateToClose: r.dateToClose || null,
+        dateClosed: r.dateClosed || null,
+        dateCreated: r.dateCreated || null,
+        dateLastModified: r.dateLastModified || null
+      };
+    }),
     hierarchy: hierarchy
   };
   var blob = new Blob([JSON.stringify(doc, null, 2)], {type:'application/json'});
@@ -3056,6 +3485,91 @@ function buildProjectFromExportDoc(doc){
       .filter(Boolean);
   });
 
+  var docOldIdToNewId = {};
+  var unresolvedDocOwners = 0, unresolvedDocTasks = 0;
+  if(Array.isArray(doc.documents)){
+    doc.documents.forEach(function(d){
+      if(!d || typeof d !== 'object') return;
+      var title = (typeof d.title === 'string' && d.title.trim()) ? d.title.trim().slice(0,120) : null;
+      if(!title) return;
+      var ownerId = null;
+      if(typeof d.ownerId === 'string' && memberOldIdToNewId.hasOwnProperty(d.ownerId)){
+        ownerId = memberOldIdToNewId[d.ownerId];
+      } else if(typeof d.ownerName === 'string' && memberNameToNewId.hasOwnProperty(d.ownerName.trim())){
+        ownerId = memberNameToNewId[d.ownerName.trim()];
+      } else if(d.ownerId || d.ownerName){
+        unresolvedDocOwners++;
+      }
+      var taskId = null;
+      if(d.taskId && idMap.hasOwnProperty(d.taskId)){
+        taskId = idMap[d.taskId];
+      } else if(d.taskId){
+        unresolvedDocTasks++;
+      }
+      var newDoc = {
+        id: uid('doc'),
+        key: nextDocKey(project),
+        title: title,
+        url: normalizeDocumentationUrl(d.url),
+        description: (typeof d.description === 'string') ? d.description.trim().slice(0,500) : '',
+        ownerId: ownerId,
+        taskId: taskId,
+        dateCreated: typeof d.dateCreated === 'string' ? d.dateCreated : importedAt,
+        dateLastModified: typeof d.dateLastModified === 'string' ? d.dateLastModified : importedAt
+      };
+      project.documents.push(newDoc);
+      if(typeof d.id === 'string') docOldIdToNewId[d.id] = newDoc.id;
+    });
+  }
+
+  var unresolvedRiskOwners = 0, unresolvedRiskTasks = 0, unresolvedRiskDocs = 0;
+  if(Array.isArray(doc.risks)){
+    doc.risks.forEach(function(r){
+      if(!r || typeof r !== 'object') return;
+      var title = (typeof r.title === 'string' && r.title.trim()) ? r.title.trim().slice(0,120) : null;
+      if(!title) return;
+      var ownerId = null;
+      if(typeof r.ownerId === 'string' && memberOldIdToNewId.hasOwnProperty(r.ownerId)){
+        ownerId = memberOldIdToNewId[r.ownerId];
+      } else if(typeof r.ownerName === 'string' && memberNameToNewId.hasOwnProperty(r.ownerName.trim())){
+        ownerId = memberNameToNewId[r.ownerName.trim()];
+      } else if(r.ownerId || r.ownerName){
+        unresolvedRiskOwners++;
+      }
+      var taskId = null;
+      if(r.taskId && idMap.hasOwnProperty(r.taskId)){
+        taskId = idMap[r.taskId];
+      } else if(r.taskId){
+        unresolvedRiskTasks++;
+      }
+      var documentIds = [];
+      if(Array.isArray(r.documentIds)){
+        r.documentIds.forEach(function(oldDocId){
+          if(docOldIdToNewId.hasOwnProperty(oldDocId)) documentIds.push(docOldIdToNewId[oldDocId]);
+          else unresolvedRiskDocs++;
+        });
+      }
+      var newRisk = {
+        id: uid('risk'),
+        key: nextRiskKey(project),
+        title: title,
+        description: (typeof r.description === 'string') ? r.description.trim().slice(0,2000) : '',
+        likelihood: clampRiskScoreValue(r.likelihood),
+        impact: clampRiskScoreValue(r.impact),
+        mitigations: (typeof r.mitigations === 'string') ? r.mitigations.trim().slice(0,2000) : '',
+        ownerId: ownerId,
+        taskId: taskId,
+        documentIds: documentIds,
+        status: normalizeRiskStatus(r.status),
+        dateToClose: isValidISODateString(r.dateToClose) ? r.dateToClose : null,
+        dateClosed: isValidISODateString(r.dateClosed) ? r.dateClosed : null,
+        dateCreated: typeof r.dateCreated === 'string' ? r.dateCreated : importedAt,
+        dateLastModified: typeof r.dateLastModified === 'string' ? r.dateLastModified : importedAt
+      };
+      project.risks.push(newRisk);
+    });
+  }
+
   return {
     project: project,
     taskCount: Object.keys(project.tasks).length,
@@ -3065,6 +3579,11 @@ function buildProjectFromExportDoc(doc){
     unresolvedAssignees: unresolvedAssignees,
     unresolvedReleases: unresolvedReleases,
     unresolvedTaskTypes: unresolvedTaskTypes,
+    unresolvedDocOwners: unresolvedDocOwners,
+    unresolvedDocTasks: unresolvedDocTasks,
+    unresolvedRiskOwners: unresolvedRiskOwners,
+    unresolvedRiskTasks: unresolvedRiskTasks,
+    unresolvedRiskDocs: unresolvedRiskDocs,
     cyclesRemoved: cyclesRemoved
   };
 }
@@ -3105,6 +3624,16 @@ function overwriteProjectFromResult(existingId, result){
     var match = /-(\d+)$/.exec(t.key || '');
     var suffix = match ? match[1] : String(Object.keys(fresh.tasks).indexOf(taskId) + 1);
     t.key = fresh.key + '-' + suffix;
+  });
+  (fresh.documents || []).forEach(function(d, idx){
+    var match = /-(\d+)$/.exec(d.key || '');
+    var suffix = match ? match[1] : String(idx + 1).padStart(3, '0');
+    d.key = fresh.key + '-DOC-' + suffix;
+  });
+  (fresh.risks || []).forEach(function(r, idx){
+    var match = /-(\d+)$/.exec(r.key || '');
+    var suffix = match ? match[1] : String(idx + 1).padStart(3, '0');
+    r.key = fresh.key + '-RISK-' + suffix;
   });
   db.projects[existingId] = fresh;
   db.currentProjectId = existingId;
@@ -3167,6 +3696,8 @@ function finaliseImport(result, wasOverwrite){
   if(result.unresolvedAssignees > 0) msg += ' Skipped ' + result.unresolvedAssignees + ' assignee reference(s) that could not be matched.';
   if(result.unresolvedReleases > 0) msg += ' Skipped ' + result.unresolvedReleases + ' release reference(s) that could not be matched.';
   if(result.unresolvedTaskTypes > 0) msg += ' Skipped ' + result.unresolvedTaskTypes + ' task type reference(s) that could not be matched.';
+  var unresolvedDocLinks = (result.unresolvedDocOwners || 0) + (result.unresolvedDocTasks || 0) + (result.unresolvedRiskOwners || 0) + (result.unresolvedRiskTasks || 0) + (result.unresolvedRiskDocs || 0);
+  if(unresolvedDocLinks > 0) msg += ' Skipped ' + unresolvedDocLinks + ' document/risk reference(s) that could not be matched.';
   toast(msg);
 }
 
@@ -4884,6 +5415,8 @@ var ui = {
   timelineScale: 'week',
   timelineShowArchived: false,
   editingReleaseId: null,
+  editingDocumentId: null,
+  editingRiskId: null,
   taskListCollapsedGroups: new Set(),
   sideNavExpanded: false
 };
@@ -6084,6 +6617,382 @@ function deleteReleaseFromModal(){
 }
 
 /* =========================================================
+   DOCUMENTS MODAL
+   ========================================================= */
+function openDocumentsOverlay(){
+  var project = getCurrentProject();
+  if(!project){ toast('No project selected.'); return; }
+  showDocumentsListView();
+  document.getElementById('documentsOverlay').classList.remove('hidden');
+}
+function closeDocumentsOverlay(){
+  document.getElementById('documentsOverlay').classList.add('hidden');
+}
+function isDocumentsOverlayOpen(){
+  return !document.getElementById('documentsOverlay').classList.contains('hidden');
+}
+
+function showDocumentsListView(){
+  ui.editingDocumentId = null;
+  document.getElementById('documentsModalTitle').textContent = 'Documents';
+  document.getElementById('documentsListView').classList.remove('hidden');
+  document.getElementById('documentsFormView').classList.add('hidden');
+  document.getElementById('documentsListFooter').classList.remove('hidden');
+  document.getElementById('documentsFormFooter').classList.add('hidden');
+  renderDocumentsList();
+}
+
+function populateOwnerSelect(selectEl, project, currentOwnerId){
+  selectEl.innerHTML = '<option value="">Unassigned</option>';
+  (project.members || []).forEach(function(m){
+    var opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name;
+    selectEl.appendChild(opt);
+  });
+  selectEl.value = currentOwnerId || '';
+}
+function populateTaskSelect(selectEl, project, currentTaskId){
+  selectEl.innerHTML = '<option value="">No task linked</option>';
+  getTasksArray(project).filter(function(t){ return !t.archived; }).forEach(function(t){
+    var opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.key + ' \u2014 ' + t.title;
+    selectEl.appendChild(opt);
+  });
+  selectEl.value = currentTaskId || '';
+}
+
+function showDocumentsFormView(docId){
+  var project = getCurrentProject();
+  if(!project) return;
+  ui.editingDocumentId = docId || null;
+  var doc = docId ? getDocumentById(project, docId) : null;
+
+  document.getElementById('documentsModalTitle').textContent = doc ? 'Edit Document' : 'New Document';
+  document.getElementById('documentsListView').classList.add('hidden');
+  document.getElementById('documentsFormView').classList.remove('hidden');
+  document.getElementById('documentsListFooter').classList.add('hidden');
+  document.getElementById('documentsFormFooter').classList.remove('hidden');
+  document.getElementById('deleteDocumentBtn').classList.toggle('hidden', !doc);
+
+  document.getElementById('documentTitleInput').value = doc ? doc.title : '';
+  document.getElementById('documentUrlInput').value = doc && doc.url ? doc.url : '';
+  updateDocUrlOpenButtonVisibilityFor('documentUrlInput', 'documentUrlOpenBtn');
+  document.getElementById('documentDescriptionInput').value = doc ? doc.description : '';
+  populateOwnerSelect(document.getElementById('documentOwnerSelect'), project, doc ? doc.ownerId : null);
+  populateTaskSelect(document.getElementById('documentTaskSelect'), project, doc ? doc.taskId : null);
+
+  var metaEl = document.getElementById('documentMetaDates');
+  if(doc){
+    metaEl.textContent = 'Added ' + utcISOToLocalDisplayDate(doc.dateCreated) +
+      (doc.dateLastModified && doc.dateLastModified !== doc.dateCreated ? ' \u00b7 Last changed ' + utcISOToLocalDisplayDate(doc.dateLastModified) : '');
+    metaEl.style.display = '';
+  } else {
+    metaEl.textContent = '';
+    metaEl.style.display = 'none';
+  }
+  document.getElementById('documentTitleInput').focus();
+}
+
+/* Generic version of updateDocUrlOpenButtonVisibility (originally built
+   for the Task modal's single Documentation field) that works for any
+   url-input + open-button pair by id, so Documents can reuse it too. */
+function updateDocUrlOpenButtonVisibilityFor(inputId, btnId){
+  var hasValue = document.getElementById(inputId).value.trim().length > 0;
+  document.getElementById(btnId).classList.toggle('hidden', !hasValue);
+}
+function openUrlInputInNewTab(inputId){
+  var url = normalizeDocumentationUrl(document.getElementById(inputId).value);
+  if(!url) return;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function renderDocumentsList(){
+  var project = getCurrentProject();
+  var listEl = document.getElementById('documentsList');
+  listEl.innerHTML = '';
+  if(!project) return;
+
+  var docs = (project.documents || []).slice().sort(function(a, b){
+    return a.key.localeCompare(b.key, undefined, {numeric: true});
+  });
+
+  if(docs.length === 0){
+    listEl.innerHTML = '<div class="kf-releases-empty">No documents yet. Add one above to start building this project\u2019s document register.</div>';
+    return;
+  }
+
+  docs.forEach(function(d){
+    var owner = getMemberById(project, d.ownerId);
+    var linkedTask = d.taskId ? project.tasks[d.taskId] : null;
+
+    var row = document.createElement('div');
+    row.className = 'kf-release-row';
+    row.setAttribute('data-document-id', d.id);
+
+    var metaHTML = '';
+    if(owner){
+      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML(memberInitials(owner.name)) + '</span><span>' + escapeHTML(owner.name) + '</span>';
+    } else {
+      metaHTML += '<span>Unassigned</span>';
+    }
+    metaHTML += '<span>Added ' + escapeHTML(utcISOToLocalDisplayDate(d.dateCreated)) + '</span>';
+    if(linkedTask) metaHTML += '<span>' + escapeHTML(linkedTask.key) + '</span>';
+
+    row.innerHTML =
+      '<div class="kf-release-row-top">' +
+        '<span class="kf-dep-key">' + escapeHTML(d.key) + '</span>' +
+        '<span class="kf-release-name">' + escapeHTML(d.title) + '</span>' +
+      '</div>' +
+      '<div class="kf-release-row-meta">' + metaHTML + '</div>';
+
+    row.addEventListener('click', function(){ showDocumentsFormView(d.id); });
+    listEl.appendChild(row);
+  });
+}
+
+function saveDocumentFromModal(){
+  var project = getCurrentProject();
+  if(!project) return;
+  var title = document.getElementById('documentTitleInput').value.trim();
+  if(!title){ toast('Please enter a document title.'); return; }
+
+  var data = {
+    title: title,
+    url: document.getElementById('documentUrlInput').value,
+    description: document.getElementById('documentDescriptionInput').value,
+    ownerId: document.getElementById('documentOwnerSelect').value || null,
+    taskId: document.getElementById('documentTaskSelect').value || null
+  };
+
+  if(ui.editingDocumentId){
+    updateDocument(project, ui.editingDocumentId, data);
+    toast('Document updated.');
+  } else {
+    addDocument(project, data);
+    toast('Document created.');
+  }
+  showDocumentsListView();
+}
+
+function deleteDocumentFromModal(){
+  var project = getCurrentProject();
+  if(!project || !ui.editingDocumentId) return;
+  var doc = getDocumentById(project, ui.editingDocumentId);
+  if(!doc) return;
+  confirmDialog(
+    'Delete ' + doc.key + '?',
+    'Any risks linking to this document will have the link removed.',
+    function(){
+      var unlinked = deleteDocument(project, doc.id);
+      toast('Deleted ' + doc.key + (unlinked > 0 ? ' \u2014 removed from ' + unlinked + ' risk(s).' : '.'));
+      showDocumentsListView();
+    }
+  );
+}
+
+/* =========================================================
+   RISKS MODAL
+   ========================================================= */
+function openRisksOverlay(){
+  var project = getCurrentProject();
+  if(!project){ toast('No project selected.'); return; }
+  showRisksListView();
+  document.getElementById('risksOverlay').classList.remove('hidden');
+}
+function closeRisksOverlay(){
+  document.getElementById('risksOverlay').classList.add('hidden');
+}
+function isRisksOverlayOpen(){
+  return !document.getElementById('risksOverlay').classList.contains('hidden');
+}
+
+function showRisksListView(){
+  ui.editingRiskId = null;
+  document.getElementById('risksModalTitle').textContent = 'Risks';
+  document.getElementById('risksListView').classList.remove('hidden');
+  document.getElementById('risksFormView').classList.add('hidden');
+  document.getElementById('risksListFooter').classList.remove('hidden');
+  document.getElementById('risksFormFooter').classList.add('hidden');
+  renderRisksList();
+}
+
+function populateRiskScoreSelect(selectEl, meta, currentValue){
+  selectEl.innerHTML = '';
+  [1,2,3,4,5].forEach(function(n){
+    var opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = n + ' \u2014 ' + meta[n].label;
+    opt.title = meta[n].description;
+    selectEl.appendChild(opt);
+  });
+  selectEl.value = currentValue || 1;
+}
+function updateRiskScorePreview(){
+  var likelihood = clampRiskScoreValue(document.getElementById('riskLikelihoodSelect').value);
+  var impact = clampRiskScoreValue(document.getElementById('riskImpactSelect').value);
+  var score = likelihood * impact;
+  var band = riskScoreBand(score);
+  var bandLabel = band.charAt(0).toUpperCase() + band.slice(1);
+  document.getElementById('riskScorePreview').innerHTML =
+    '<span class="kf-risk-score-badge ' + band + '">Score ' + score + ' \u00b7 ' + bandLabel + '</span>';
+}
+
+function renderRiskDocumentPicker(project, selectedDocIds){
+  var wrap = document.getElementById('riskDocumentPicker');
+  wrap.innerHTML = '';
+  var docs = (project.documents || []).slice().sort(function(a, b){ return a.key.localeCompare(b.key, undefined, {numeric: true}); });
+  if(docs.length === 0){
+    wrap.innerHTML = '<div class="kf-risk-doc-picker-empty">No documents in this project yet.</div>';
+    return;
+  }
+  docs.forEach(function(d){
+    var row = document.createElement('label');
+    row.className = 'kf-risk-doc-picker-row';
+    var checked = selectedDocIds.indexOf(d.id) !== -1;
+    row.innerHTML =
+      '<input type="checkbox" data-doc-id="' + d.id + '" ' + (checked ? 'checked' : '') + '>' +
+      '<span class="kf-dep-key">' + escapeHTML(d.key) + '</span>' +
+      '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(d.title) + '</span>';
+    wrap.appendChild(row);
+  });
+}
+function getCheckedRiskDocumentIds(){
+  return Array.from(document.querySelectorAll('#riskDocumentPicker input[type=checkbox]:checked')).map(function(cb){
+    return cb.getAttribute('data-doc-id');
+  });
+}
+
+function showRisksFormView(riskId){
+  var project = getCurrentProject();
+  if(!project) return;
+  ui.editingRiskId = riskId || null;
+  var risk = riskId ? getRiskById(project, riskId) : null;
+
+  document.getElementById('risksModalTitle').textContent = risk ? 'Edit Risk' : 'New Risk';
+  document.getElementById('risksListView').classList.add('hidden');
+  document.getElementById('risksFormView').classList.remove('hidden');
+  document.getElementById('risksListFooter').classList.add('hidden');
+  document.getElementById('risksFormFooter').classList.remove('hidden');
+  document.getElementById('deleteRiskBtn').classList.toggle('hidden', !risk);
+
+  document.getElementById('riskTitleInput').value = risk ? risk.title : '';
+  document.getElementById('riskDescriptionInput').value = risk ? risk.description : '';
+  populateRiskScoreSelect(document.getElementById('riskLikelihoodSelect'), RISK_LIKELIHOOD_META, risk ? risk.likelihood : 1);
+  populateRiskScoreSelect(document.getElementById('riskImpactSelect'), RISK_IMPACT_META, risk ? risk.impact : 1);
+  updateRiskScorePreview();
+  document.getElementById('riskMitigationsInput').value = risk ? risk.mitigations : '';
+  document.getElementById('riskStatusSelect').value = risk ? normalizeRiskStatus(risk.status) : 'new';
+  populateOwnerSelect(document.getElementById('riskOwnerSelect'), project, risk ? risk.ownerId : null);
+  populateTaskSelect(document.getElementById('riskTaskSelect'), project, risk ? risk.taskId : null);
+  document.getElementById('riskCloseTargetInput').value = risk ? utcISOToLocalDateValue(risk.dateToClose) : '';
+  document.getElementById('riskClosedDateInput').value = risk ? utcISOToLocalDateValue(risk.dateClosed) : '';
+  renderRiskDocumentPicker(project, risk ? risk.documentIds : []);
+
+  document.getElementById('riskTitleInput').focus();
+}
+
+function renderRisksList(){
+  var project = getCurrentProject();
+  var listEl = document.getElementById('risksList');
+  listEl.innerHTML = '';
+  if(!project) return;
+
+  var risks = (project.risks || []).slice().sort(function(a, b){
+    return riskScore(b) - riskScore(a) || a.key.localeCompare(b.key, undefined, {numeric: true});
+  });
+
+  if(risks.length === 0){
+    listEl.innerHTML = '<div class="kf-releases-empty">No risks yet. Add one above to start this project\u2019s risk register.</div>';
+    return;
+  }
+
+  risks.forEach(function(r){
+    var owner = getMemberById(project, r.ownerId);
+    var statusMeta = getRiskStatusMeta(r.status);
+    var score = riskScore(r);
+    var band = riskScoreBand(score);
+
+    var row = document.createElement('div');
+    row.className = 'kf-release-row';
+    row.setAttribute('data-risk-id', r.id);
+
+    var metaHTML = '';
+    if(owner){
+      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML(memberInitials(owner.name)) + '</span><span>' + escapeHTML(owner.name) + '</span>';
+    } else {
+      metaHTML += '<span>Unassigned</span>';
+    }
+    metaHTML += '<span class="kf-risk-score-badge ' + band + '">Score ' + score + '</span>';
+    if(r.documentIds && r.documentIds.length > 0){
+      metaHTML += '<span>' + r.documentIds.length + ' doc' + (r.documentIds.length === 1 ? '' : 's') + '</span>';
+    }
+
+    row.innerHTML =
+      '<div class="kf-release-row-top">' +
+        '<span class="kf-dep-key">' + escapeHTML(r.key) + '</span>' +
+        '<span class="kf-release-name">' + escapeHTML(r.title) + '</span>' +
+        '<span class="kf-risk-status-pill ' + normalizeRiskStatus(r.status) + '">' + escapeHTML(statusMeta.label) + '</span>' +
+      '</div>' +
+      '<div class="kf-release-row-meta">' + metaHTML + '</div>';
+
+    row.addEventListener('click', function(){ showRisksFormView(r.id); });
+    listEl.appendChild(row);
+  });
+}
+
+function saveRiskFromModal(){
+  var project = getCurrentProject();
+  if(!project) return;
+  var title = document.getElementById('riskTitleInput').value.trim();
+  if(!title){ toast('Please enter a risk title.'); return; }
+
+  var status = document.getElementById('riskStatusSelect').value;
+  var dateToClose = localDateValueToUTCISO(document.getElementById('riskCloseTargetInput').value);
+  var dateClosed = localDateValueToUTCISO(document.getElementById('riskClosedDateInput').value);
+
+  var data = {
+    title: title,
+    description: document.getElementById('riskDescriptionInput').value,
+    likelihood: document.getElementById('riskLikelihoodSelect').value,
+    impact: document.getElementById('riskImpactSelect').value,
+    mitigations: document.getElementById('riskMitigationsInput').value,
+    ownerId: document.getElementById('riskOwnerSelect').value || null,
+    taskId: document.getElementById('riskTaskSelect').value || null,
+    documentIds: getCheckedRiskDocumentIds(),
+    status: status,
+    dateToClose: dateToClose,
+    dateClosed: dateClosed
+  };
+
+  if(ui.editingRiskId){
+    updateRisk(project, ui.editingRiskId, data);
+    toast('Risk updated.');
+  } else {
+    addRisk(project, data);
+    toast('Risk created.');
+  }
+  showRisksListView();
+}
+
+function deleteRiskFromModal(){
+  var project = getCurrentProject();
+  if(!project || !ui.editingRiskId) return;
+  var risk = getRiskById(project, ui.editingRiskId);
+  if(!risk) return;
+  confirmDialog(
+    'Delete ' + risk.key + '?',
+    'This cannot be undone.',
+    function(){
+      deleteRisk(project, risk.id);
+      toast('Deleted ' + risk.key + '.');
+      showRisksListView();
+    }
+  );
+}
+
+/* =========================================================
    CONFIRM MODAL (generic)
    ========================================================= */
 var pendingConfirmAction = null;
@@ -6191,6 +7100,35 @@ function wireEvents(){
   document.getElementById('releaseFormCancelBtn').addEventListener('click', showReleasesListView);
   document.getElementById('releaseFormSaveBtn').addEventListener('click', saveReleaseFromModal);
   document.getElementById('deleteReleaseBtn').addEventListener('click', deleteReleaseFromModal);
+
+  document.getElementById('documentsBtn').addEventListener('click', openDocumentsOverlay);
+  document.getElementById('documentsModalClose').addEventListener('click', closeDocumentsOverlay);
+  document.getElementById('documentsDoneBtn').addEventListener('click', closeDocumentsOverlay);
+  document.getElementById('documentsOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'documentsOverlay') closeDocumentsOverlay();
+  });
+  document.getElementById('addDocumentBtn').addEventListener('click', function(){ showDocumentsFormView(null); });
+  document.getElementById('documentFormCancelBtn').addEventListener('click', showDocumentsListView);
+  document.getElementById('documentFormSaveBtn').addEventListener('click', saveDocumentFromModal);
+  document.getElementById('deleteDocumentBtn').addEventListener('click', deleteDocumentFromModal);
+  document.getElementById('documentUrlInput').addEventListener('input', function(){
+    updateDocUrlOpenButtonVisibilityFor('documentUrlInput', 'documentUrlOpenBtn');
+  });
+  document.getElementById('documentUrlOpenBtn').addEventListener('click', function(){ openUrlInputInNewTab('documentUrlInput'); });
+
+  document.getElementById('risksBtn').addEventListener('click', openRisksOverlay);
+  document.getElementById('risksModalClose').addEventListener('click', closeRisksOverlay);
+  document.getElementById('risksDoneBtn').addEventListener('click', closeRisksOverlay);
+  document.getElementById('risksOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'risksOverlay') closeRisksOverlay();
+  });
+  document.getElementById('addRiskBtn').addEventListener('click', function(){ showRisksFormView(null); });
+  document.getElementById('riskFormCancelBtn').addEventListener('click', showRisksListView);
+  document.getElementById('riskFormSaveBtn').addEventListener('click', saveRiskFromModal);
+  document.getElementById('deleteRiskBtn').addEventListener('click', deleteRiskFromModal);
+  document.getElementById('riskLikelihoodSelect').addEventListener('change', updateRiskScorePreview);
+  document.getElementById('riskImpactSelect').addEventListener('change', updateRiskScorePreview);
+
   document.getElementById('deleteProjectBtn').addEventListener('click', function(){
     var p = getCurrentProject();
     if(!p) return;
@@ -6496,6 +7434,8 @@ function wireEvents(){
     else if(document.querySelector('.kf-tasktype-icon-panel:not(.hidden)')) closeAllTaskTypeIconPanels();
     else if(!document.getElementById('taskTypesOverlay').classList.contains('hidden')) closeTaskTypesModal();
     else if(isReleasesOverlayOpen()) closeReleasesOverlay();
+    else if(isDocumentsOverlayOpen()) closeDocumentsOverlay();
+    else if(isRisksOverlayOpen()) closeRisksOverlay();
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
     else if(!document.getElementById('importConflictOverlay').classList.contains('hidden')) closeImportConflictModal();
     else if(!document.getElementById('overdueAlertOverlay').classList.contains('hidden')) closeOverdueAlert();
