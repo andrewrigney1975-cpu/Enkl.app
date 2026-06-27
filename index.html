@@ -1892,6 +1892,14 @@
           <div id="decisionRiskPicker" class="kf-risk-doc-picker"></div>
         </div>
         <div class="kf-field">
+          <label>Influenced by</label>
+          <div id="decisionPrinciplePicker" class="kf-risk-doc-picker"></div>
+        </div>
+        <div class="kf-field">
+          <label>Alignment with</label>
+          <div id="decisionObjectivePicker" class="kf-risk-doc-picker"></div>
+        </div>
+        <div class="kf-field">
           <label for="decisionOutcomeInput">Outcome</label>
           <textarea id="decisionOutcomeInput" maxlength="2000" placeholder="What was the outcome of this decision..."></textarea>
         </div>
@@ -2179,7 +2187,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.30.20260627.2221';
+var APP_VERSION = '1.31.20260627.2255';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -2726,6 +2734,16 @@ function migrateDB(){
       else {
         var filteredDecRiskIds = dec.riskIds.filter(function(id){ return validRiskIds[id]; });
         if(filteredDecRiskIds.length !== dec.riskIds.length){ dec.riskIds = filteredDecRiskIds; changed = true; }
+      }
+      if(!Array.isArray(dec.principleIds)){ dec.principleIds = []; changed = true; }
+      else {
+        var filteredDecPrinIds = dec.principleIds.filter(function(id){ return validPrincipleIds[id]; });
+        if(filteredDecPrinIds.length !== dec.principleIds.length){ dec.principleIds = filteredDecPrinIds; changed = true; }
+      }
+      if(!Array.isArray(dec.objectiveIds)){ dec.objectiveIds = []; changed = true; }
+      else {
+        var filteredDecObjIds = dec.objectiveIds.filter(function(id){ return validObjectiveIds[id]; });
+        if(filteredDecObjIds.length !== dec.objectiveIds.length){ dec.objectiveIds = filteredDecObjIds; changed = true; }
       }
       if(!DECISION_TYPE_META.hasOwnProperty(dec.type)){ dec.type = 'strategy'; changed = true; }
       if(!DECISION_STATUS_META.hasOwnProperty(dec.status)){ dec.status = 'open'; changed = true; }
@@ -3488,6 +3506,8 @@ function addDecision(project, data){
     taskId: data.taskId || null,
     documentIds: Array.isArray(data.documentIds) ? data.documentIds.slice() : [],
     riskIds: Array.isArray(data.riskIds) ? data.riskIds.slice() : [],
+    principleIds: Array.isArray(data.principleIds) ? data.principleIds.slice() : [],
+    objectiveIds: Array.isArray(data.objectiveIds) ? data.objectiveIds.slice() : [],
     dateCreated: now,
     dateLastModified: now
   };
@@ -3509,6 +3529,8 @@ function updateDecision(project, decisionId, data){
   decision.taskId = data.taskId || null;
   decision.documentIds = Array.isArray(data.documentIds) ? data.documentIds.slice() : [];
   decision.riskIds = Array.isArray(data.riskIds) ? data.riskIds.slice() : [];
+  decision.principleIds = Array.isArray(data.principleIds) ? data.principleIds.slice() : [];
+  decision.objectiveIds = Array.isArray(data.objectiveIds) ? data.objectiveIds.slice() : [];
   decision.dateLastModified = new Date().toISOString();
   saveDB();
 }
@@ -3576,6 +3598,12 @@ function deletePrinciple(project, principleId){
       unlinkedCount++;
     }
   });
+  (project.decisions || []).forEach(function(d){
+    if(d.principleIds && d.principleIds.indexOf(principleId) !== -1){
+      d.principleIds = d.principleIds.filter(function(id){ return id !== principleId; });
+      unlinkedCount++;
+    }
+  });
   saveDB();
   return unlinkedCount;
 }
@@ -3627,6 +3655,12 @@ function deleteObjective(project, objectiveId){
   (project.risks || []).forEach(function(r){
     if(r.objectiveIds && r.objectiveIds.indexOf(objectiveId) !== -1){
       r.objectiveIds = r.objectiveIds.filter(function(id){ return id !== objectiveId; });
+      unlinkedCount++;
+    }
+  });
+  (project.decisions || []).forEach(function(d){
+    if(d.objectiveIds && d.objectiveIds.indexOf(objectiveId) !== -1){
+      d.objectiveIds = d.objectiveIds.filter(function(id){ return id !== objectiveId; });
       unlinkedCount++;
     }
   });
@@ -4324,6 +4358,8 @@ function exportProjectJSON(project){
         taskId: dec.taskId || null,
         documentIds: dec.documentIds || [],
         riskIds: dec.riskIds || [],
+        principleIds: dec.principleIds || [],
+        objectiveIds: dec.objectiveIds || [],
         dateCreated: dec.dateCreated || null,
         dateLastModified: dec.dateLastModified || null
       };
@@ -4859,7 +4895,7 @@ function buildProjectFromExportDoc(doc){
     });
   }
 
-  var unresolvedDecisionOwners = 0, unresolvedDecisionTasks = 0, unresolvedDecisionDocs = 0, unresolvedDecisionRisks = 0;
+  var unresolvedDecisionOwners = 0, unresolvedDecisionTasks = 0, unresolvedDecisionDocs = 0, unresolvedDecisionRisks = 0, unresolvedDecisionPrinciples = 0, unresolvedDecisionObjectives = 0;
   if(Array.isArray(doc.approvers)){
     doc.approvers.forEach(function(name){
       if(typeof name === 'string') registerApprover(project, name);
@@ -4898,6 +4934,20 @@ function buildProjectFromExportDoc(doc){
           else unresolvedDecisionRisks++;
         });
       }
+      var decPrincipleIds = [];
+      if(Array.isArray(dec.principleIds)){
+        dec.principleIds.forEach(function(oldPrinId){
+          if(prinOldIdToNewId.hasOwnProperty(oldPrinId)) decPrincipleIds.push(prinOldIdToNewId[oldPrinId]);
+          else unresolvedDecisionPrinciples++;
+        });
+      }
+      var decObjectiveIds = [];
+      if(Array.isArray(dec.objectiveIds)){
+        dec.objectiveIds.forEach(function(oldObjId){
+          if(objOldIdToNewId.hasOwnProperty(oldObjId)) decObjectiveIds.push(objOldIdToNewId[oldObjId]);
+          else unresolvedDecisionObjectives++;
+        });
+      }
       var newDecision = {
         id: uid('dec'),
         key: nextDecisionKey(project),
@@ -4911,6 +4961,8 @@ function buildProjectFromExportDoc(doc){
         taskId: taskId,
         documentIds: documentIds,
         riskIds: riskIds,
+        principleIds: decPrincipleIds,
+        objectiveIds: decObjectiveIds,
         dateCreated: typeof dec.dateCreated === 'string' ? dec.dateCreated : importedAt,
         dateLastModified: typeof dec.dateLastModified === 'string' ? dec.dateLastModified : importedAt
       };
@@ -4940,6 +4992,8 @@ function buildProjectFromExportDoc(doc){
     unresolvedDecisionTasks: unresolvedDecisionTasks,
     unresolvedDecisionDocs: unresolvedDecisionDocs,
     unresolvedDecisionRisks: unresolvedDecisionRisks,
+    unresolvedDecisionPrinciples: unresolvedDecisionPrinciples,
+    unresolvedDecisionObjectives: unresolvedDecisionObjectives,
     cyclesRemoved: cyclesRemoved
   };
 }
@@ -5069,7 +5123,8 @@ function finaliseImport(result, wasOverwrite){
   if(result.unresolvedTaskTypes > 0) msg += ' Skipped ' + result.unresolvedTaskTypes + ' task type reference(s) that could not be matched.';
   var unresolvedDocLinks = (result.unresolvedDocOwners || 0) + (result.unresolvedDocTasks || 0) + (result.unresolvedDocRelated || 0) + (result.unresolvedRiskOwners || 0) + (result.unresolvedRiskTasks || 0) + (result.unresolvedRiskDocs || 0) +
     (result.unresolvedDecisionOwners || 0) + (result.unresolvedDecisionTasks || 0) + (result.unresolvedDecisionDocs || 0) + (result.unresolvedDecisionRisks || 0) +
-    (result.unresolvedRiskPrinciples || 0) + (result.unresolvedRiskObjectives || 0) + (result.unresolvedObjectivePrinciples || 0);
+    (result.unresolvedRiskPrinciples || 0) + (result.unresolvedRiskObjectives || 0) + (result.unresolvedObjectivePrinciples || 0) +
+    (result.unresolvedDecisionPrinciples || 0) + (result.unresolvedDecisionObjectives || 0);
   if(unresolvedDocLinks > 0) msg += ' Skipped ' + unresolvedDocLinks + ' document/risk/decision/principle/objective reference(s) that could not be matched.';
   toast(msg);
 }
@@ -8768,6 +8823,8 @@ function showDecisionsFormView(decisionId){
   populateTaskSelect(document.getElementById('decisionTaskSelect'), project, decision ? decision.taskId : null);
   renderDocumentPickerInto('decisionDocumentPicker', project, decision ? decision.documentIds : []);
   renderRiskPickerInto('decisionRiskPicker', project, decision ? decision.riskIds : []);
+  renderItemPickerInto('decisionPrinciplePicker', project.principles || [], decision ? decision.principleIds : [], 'No principles in this project yet.');
+  renderItemPickerInto('decisionObjectivePicker', project.objectives || [], decision ? decision.objectiveIds : [], 'No objectives in this project yet.');
   document.getElementById('decisionOutcomeInput').value = decision ? decision.outcome : '';
 
   var metaEl = document.getElementById('decisionMetaDates');
@@ -8834,6 +8891,12 @@ function renderDecisionsList(){
     if(dec.riskIds && dec.riskIds.length > 0){
       metaHTML += '<span>' + dec.riskIds.length + ' risk' + (dec.riskIds.length === 1 ? '' : 's') + '</span>';
     }
+    if(dec.principleIds && dec.principleIds.length > 0){
+      metaHTML += '<span>' + dec.principleIds.length + ' principle' + (dec.principleIds.length === 1 ? '' : 's') + '</span>';
+    }
+    if(dec.objectiveIds && dec.objectiveIds.length > 0){
+      metaHTML += '<span>' + dec.objectiveIds.length + ' objective' + (dec.objectiveIds.length === 1 ? '' : 's') + '</span>';
+    }
 
     row.innerHTML =
       '<div class="kf-release-row-top">' +
@@ -8865,7 +8928,9 @@ function saveDecisionFromModal(){
     approver: document.getElementById('decisionApproverInput').value,
     taskId: document.getElementById('decisionTaskSelect').value || null,
     documentIds: getCheckedDocumentIdsFrom('decisionDocumentPicker'),
-    riskIds: getCheckedRiskIdsFrom('decisionRiskPicker')
+    riskIds: getCheckedRiskIdsFrom('decisionRiskPicker'),
+    principleIds: getCheckedItemIdsFrom('decisionPrinciplePicker'),
+    objectiveIds: getCheckedItemIdsFrom('decisionObjectivePicker')
   };
 
   if(ui.editingDecisionId){
@@ -9035,10 +9100,10 @@ function deletePrincipleFromModal(){
   if(!principle) return;
   confirmDialog(
     'Delete ' + principle.key + '?',
-    'Any objectives or risks linking to this principle will have the link removed.',
+    'Any objectives, risks, or decisions linking to this principle will have the link removed.',
     function(){
       var unlinked = deletePrinciple(project, principle.id);
-      toast('Deleted ' + principle.key + (unlinked > 0 ? ' \u2014 removed ' + unlinked + ' link(s) from objectives/risks.' : '.'));
+      toast('Deleted ' + principle.key + (unlinked > 0 ? ' \u2014 removed ' + unlinked + ' link(s) from objectives/risks/decisions.' : '.'));
       showPrinciplesListView();
     }
   );
@@ -9178,10 +9243,10 @@ function deleteObjectiveFromModal(){
   if(!objective) return;
   confirmDialog(
     'Delete ' + objective.key + '?',
-    'Any risks linking to this objective will have the link removed.',
+    'Any risks or decisions linking to this objective will have the link removed.',
     function(){
       var unlinked = deleteObjective(project, objective.id);
-      toast('Deleted ' + objective.key + (unlinked > 0 ? ' \u2014 removed from ' + unlinked + ' risk(s).' : '.'));
+      toast('Deleted ' + objective.key + (unlinked > 0 ? ' \u2014 removed ' + unlinked + ' link(s) from risks/decisions.' : '.'));
       showObjectivesListView();
     }
   );
