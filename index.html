@@ -563,6 +563,7 @@
   .kf-member-row input[type=text]{
     flex:1;border:none;background:transparent;padding:4px 2px;font-size:13px;color:var(--kf-text);
   }
+  .kf-member-row .kf-member-role-input{flex:0.65;border-left:1px solid var(--kf-border);padding-left:10px;}
   .kf-member-row input[type=text]:focus{outline:none;background:var(--kf-bg);border-radius:3px;}
 
   /* Task Type icon picker */
@@ -679,6 +680,7 @@
   .kf-health-top-member-row:last-child{border-bottom:none;}
   .kf-health-top-member-rank{width:20px;text-align:center;font-size:12px;font-weight:500;color:var(--kf-text-faint);flex-shrink:0;}
   .kf-health-top-member-name{flex:1;font-size:13px;font-weight:500;color:var(--kf-text);}
+  .kf-health-top-member-role{font-size:11px;font-weight:500;color:var(--kf-text-faint);margin-left:6px;}
   .kf-health-top-member-bar-track{flex:2;height:8px;border-radius:4px;background:var(--kf-column-bg);overflow:hidden;}
   .kf-health-top-member-bar-fill{height:100%;background:#0c66e4;border-radius:4px;}
   .kf-health-top-member-count{width:30px;text-align:right;font-size:12px;font-weight:500;color:var(--kf-text-secondary);flex-shrink:0;}
@@ -1559,6 +1561,7 @@
         </div>
       </div>
       <div id="memberList" class="kf-member-list"></div>
+      <datalist id="memberRoleOptions"></datalist>
     </div>
     <div class="kf-modal-footer">
       <button class="kf-btn kf-btn-secondary" id="teamDoneBtn">Done</button>
@@ -1901,6 +1904,11 @@
       <p style="margin:0 0 12px;color:var(--kf-text-faint);font-size:12px;line-height:1.5;">Choose which modules should be used in this Project</p>
       <div style="display:flex;flex-direction:column;gap:4px;">
         <label class="kf-risk-doc-picker-row">
+          <input type="checkbox" id="settingsShowHealthBtn">
+          <span class="kf-icon" data-icon="heartPulse" data-size="14"></span>
+          <span>Health Dashboard</span>
+        </label>
+        <label class="kf-risk-doc-picker-row">
           <input type="checkbox" id="settingsShowDocumentsBtn">
           <span class="kf-icon" data-icon="ty_document" data-size="14"></span>
           <span>Documents</span>
@@ -1914,11 +1922,6 @@
           <input type="checkbox" id="settingsShowDecisionsBtn">
           <span class="kf-icon" data-icon="ty_approve" data-size="14"></span>
           <span>Decisions</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowHealthBtn">
-          <span class="kf-icon" data-icon="heartPulse" data-size="14"></span>
-          <span>Health Dashboard</span>
         </label>
       </div>
     </div>
@@ -2052,7 +2055,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.25.20260627.1801';
+var APP_VERSION = '1.27.20260627.1943';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -2454,6 +2457,11 @@ function migrateDB(){
     if(!Array.isArray(p.decisions)){ p.decisions = []; changed = true; }
     if(typeof p.decCounter !== 'number'){ p.decCounter = 1; changed = true; }
     if(!Array.isArray(p.approvers)){ p.approvers = []; changed = true; }
+    if(!Array.isArray(p.roles)){ p.roles = []; changed = true; }
+    p.members.forEach(function(m){
+      if(m.role === undefined){ m.role = null; changed = true; }
+      else if(m.role !== null && typeof m.role !== 'string'){ m.role = null; changed = true; }
+    });
     if(!p.headerButtonVisibility || typeof p.headerButtonVisibility !== 'object' ||
        typeof p.headerButtonVisibility.documents !== 'boolean' ||
        typeof p.headerButtonVisibility.risks !== 'boolean' ||
@@ -2611,6 +2619,7 @@ function createDefaultProject(name, key){
     decisions: [],
     decCounter: 1,
     approvers: [],
+    roles: [],
     headerButtonVisibility: {documents: true, risks: true, decisions: true},
     startDate: null,
     endDate: null,
@@ -2634,9 +2643,10 @@ function createSeedDB(){
   var c4 = makeColumn('Done', true);
   p.columns = [c1, c2, c3, c4];
 
-  var riley = {id: uid('member'), name: 'Riley Chen', color: memberColorForIndex(0)};
-  var sam = {id: uid('member'), name: 'Sam Okafor', color: memberColorForIndex(1)};
+  var riley = {id: uid('member'), name: 'Riley Chen', color: memberColorForIndex(0), role: 'Project Manager'};
+  var sam = {id: uid('member'), name: 'Sam Okafor', color: memberColorForIndex(1), role: 'Developer'};
   p.members = [riley, sam];
+  p.roles = ['Project Manager', 'Developer'];
 
   function addSeedTask(col, title, desc, priority, deps, assigneeId, businessValue, taskCost){
     var n = p.taskCounter++;
@@ -2824,7 +2834,7 @@ function deleteProject(projectId){
 function addMember(project, name){
   var trimmed = (name || '').trim().slice(0, 60);
   if(!trimmed) return null;
-  var member = {id: uid('member'), name: trimmed, color: memberColorForIndex(project.members.length)};
+  var member = {id: uid('member'), name: trimmed, color: memberColorForIndex(project.members.length), role: null};
   project.members.push(member);
   saveDB();
   return member;
@@ -2835,6 +2845,13 @@ function renameMember(project, memberId, name){
   var trimmed = (name || '').trim().slice(0, 60);
   if(!trimmed) return;
   member.name = trimmed;
+  saveDB();
+}
+function setMemberRole(project, memberId, role){
+  var member = getMemberById(project, memberId);
+  if(!member) return;
+  var trimmed = (role || '').trim();
+  member.role = trimmed ? registerRole(project, trimmed) : null;
   saveDB();
 }
 function removeMember(project, memberId){
@@ -3249,19 +3266,27 @@ function normalizeDecisionStatus(value){
 function getDecisionStatusMeta(value){
   return DECISION_STATUS_META[normalizeDecisionStatus(value)];
 }
-/* The Approver field is a free-text combobox backed by a per-project
-   vocabulary that grows as people type new names — not a Team Member
-   reference. Matching is case-insensitive so "Jo Smith" and "jo smith"
-   reuse the same entry rather than creating a near-duplicate, but the
-   casing of whichever value was entered FIRST is what's kept/reused. */
-function registerApprover(project, name){
-  var trimmed = (name || '').trim().slice(0, 80);
+/* Generic "free-text combobox backed by a per-project vocabulary"
+   helper — matching is case-insensitive so e.g. "Developer" and
+   "developer" reuse the same entry rather than creating a near-
+   duplicate, but the casing of whichever value was entered FIRST is
+   what's kept/reused. Used by both the Decision Approver field and
+   Team Member Role. */
+function registerVocabularyValue(list, name, maxLen){
+  var trimmed = (name || '').trim().slice(0, maxLen || 80);
   if(!trimmed) return null;
-  if(!Array.isArray(project.approvers)) project.approvers = [];
-  var existing = project.approvers.filter(function(a){ return a.toLowerCase() === trimmed.toLowerCase(); })[0];
+  var existing = list.filter(function(v){ return v.toLowerCase() === trimmed.toLowerCase(); })[0];
   if(existing) return existing;
-  project.approvers.push(trimmed);
+  list.push(trimmed);
   return trimmed;
+}
+function registerApprover(project, name){
+  if(!Array.isArray(project.approvers)) project.approvers = [];
+  return registerVocabularyValue(project.approvers, name, 80);
+}
+function registerRole(project, name){
+  if(!Array.isArray(project.roles)) project.roles = [];
+  return registerVocabularyValue(project.roles, name, 60);
 }
 function getDecisionTypeMeta(value){
   return DECISION_TYPE_META[normalizeDecisionType(value)];
@@ -3565,7 +3590,7 @@ function computeTopTeamMembers(project){
   });
   var rows = Object.keys(counts).map(function(memberId){
     var m = getMemberById(project, memberId);
-    return {memberId: memberId, name: m ? m.name : 'Unknown', color: m ? m.color : '#8993a4', count: counts[memberId]};
+    return {memberId: memberId, name: m ? m.name : 'Unknown', role: m ? (m.role || null) : null, color: m ? m.color : '#8993a4', count: counts[memberId]};
   });
   rows.sort(function(a, b){
     if(b.count !== a.count) return b.count - a.count;
@@ -3917,7 +3942,7 @@ function exportProjectJSON(project){
     exportedAt: exportedAt,
     appVersion: APP_VERSION,
     totalTasks: Object.keys(project.tasks).length,
-    members: (project.members || []).map(function(m){ return {id: m.id, name: m.name, color: m.color}; }),
+    members: (project.members || []).map(function(m){ return {id: m.id, name: m.name, color: m.color, role: m.role || null}; }),
     releases: (project.releases || []).map(function(r){
       var owner = getMemberById(project, r.ownerId);
       return {
@@ -3992,6 +4017,7 @@ function exportProjectJSON(project){
       };
     }),
     approvers: (project.approvers || []).slice(),
+    roles: (project.roles || []).slice(),
     headerButtonVisibility: normalizeHeaderButtonVisibility(project.headerButtonVisibility),
     hierarchy: hierarchy
   };
@@ -4203,6 +4229,7 @@ function buildProjectFromExportDoc(doc){
     decisions: [],
     decCounter: 1,
     approvers: [],
+    roles: Array.isArray(doc.roles) ? doc.roles.filter(function(r){ return typeof r === 'string' && r.trim(); }).map(function(r){ return r.trim().slice(0,60); }) : [],
     headerButtonVisibility: normalizeHeaderButtonVisibility(doc.headerButtonVisibility),
     startDate: (doc.project && isValidISODateString(doc.project.startDate)) ? doc.project.startDate : null,
     endDate: (doc.project && isValidISODateString(doc.project.endDate)) ? doc.project.endDate : null,
@@ -4219,7 +4246,8 @@ function buildProjectFromExportDoc(doc){
       var name = (typeof m.name === 'string' && m.name.trim()) ? m.name.trim().slice(0,60) : null;
       if(!name) return;
       var color = (typeof m.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(m.color)) ? m.color : memberColorForIndex(project.members.length);
-      var newMember = {id: uid('member'), name: name, color: color};
+      var role = (typeof m.role === 'string' && m.role.trim()) ? registerRole(project, m.role) : null;
+      var newMember = {id: uid('member'), name: name, color: color, role: role};
       project.members.push(newMember);
       if(typeof m.id === 'string') memberOldIdToNewId[m.id] = newMember.id;
       if(!memberNameToNewId.hasOwnProperty(name)) memberNameToNewId[name] = newMember.id;
@@ -7382,6 +7410,7 @@ function renderMemberList(){
     listEl.innerHTML = '<div class="kf-member-empty">No team members yet. Add one above.</div>';
     return;
   }
+  populateRoleOptions(project);
   project.members.forEach(function(m){
     var row = document.createElement('div');
     row.className = 'kf-member-row';
@@ -7389,12 +7418,18 @@ function renderMemberList(){
     row.innerHTML =
       '<span class="kf-avatar kf-avatar-md" style="background:' + m.color + ';">' + escapeHTML(memberInitials(m.name)) + '</span>' +
       '<input type="text" class="kf-member-name-input" value="' + escapeHTML(m.name) + '" maxlength="60" aria-label="Member name">' +
+      '<input type="text" class="kf-member-role-input" value="' + escapeHTML(m.role || '') + '" maxlength="60" list="memberRoleOptions" placeholder="Role" aria-label="Member role">' +
       '<button class="kf-btn kf-btn-ghost" data-action="remove-member" title="Remove from project">' + iconSvg('trash',14) + '</button>';
     var nameInput = row.querySelector('.kf-member-name-input');
     nameInput.addEventListener('change', function(){
       renameMember(project, m.id, nameInput.value);
       renderMemberList();
       renderBoard();
+    });
+    var roleInput = row.querySelector('.kf-member-role-input');
+    roleInput.addEventListener('change', function(){
+      setMemberRole(project, m.id, roleInput.value);
+      renderMemberList();
     });
     row.querySelector('[data-action="remove-member"]').addEventListener('click', function(){
       confirmDialog(
@@ -8220,7 +8255,7 @@ function renderHealthDashboard(){
       return '<div class="kf-health-top-member-row">' +
         '<span class="kf-health-top-member-rank">' + (idx + 1) + '</span>' +
         '<span class="kf-avatar kf-avatar-sm" style="background:' + row.color + ';">' + escapeHTML(memberInitials(row.name)) + '</span>' +
-        '<span class="kf-health-top-member-name">' + escapeHTML(row.name) + '</span>' +
+        '<span class="kf-health-top-member-name">' + escapeHTML(row.name) + (row.role ? ' <span class="kf-health-top-member-role">' + escapeHTML(row.role) + '</span>' : '') + '</span>' +
         '<span class="kf-health-top-member-bar-track"><span class="kf-health-top-member-bar-fill" style="width:' + barPct + '%;"></span></span>' +
         '<span class="kf-health-top-member-count">' + row.count + '</span>' +
       '</div>';
@@ -8256,14 +8291,20 @@ function showDecisionsListView(){
 function populateDecisionTypeSelect(currentType){
   document.getElementById('decisionTypeSelect').value = normalizeDecisionType(currentType);
 }
-function populateApproverOptions(project){
-  var list = document.getElementById('decisionApproverOptions');
+function populateVocabularyDatalist(datalistId, values){
+  var list = document.getElementById(datalistId);
   list.innerHTML = '';
-  (project.approvers || []).slice().sort(function(a, b){ return a.localeCompare(b, undefined, {sensitivity:'base'}); }).forEach(function(name){
+  (values || []).slice().sort(function(a, b){ return a.localeCompare(b, undefined, {sensitivity:'base'}); }).forEach(function(name){
     var opt = document.createElement('option');
     opt.value = name;
     list.appendChild(opt);
   });
+}
+function populateApproverOptions(project){
+  populateVocabularyDatalist('decisionApproverOptions', project.approvers);
+}
+function populateRoleOptions(project){
+  populateVocabularyDatalist('memberRoleOptions', project.roles);
 }
 
 function showDecisionsFormView(decisionId){
