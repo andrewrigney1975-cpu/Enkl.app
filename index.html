@@ -1624,6 +1624,10 @@
             <select id="documentTaskSelect"></select>
           </div>
         </div>
+        <div class="kf-field">
+          <label>Related document(s)</label>
+          <div id="documentRelatedPicker" class="kf-risk-doc-picker"></div>
+        </div>
         <div class="kf-field" id="documentMetaDates" style="color:var(--kf-text-faint);font-size:12px;"></div>
       </div>
     </div>
@@ -1909,7 +1913,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.18.20260626.2244';
+var APP_VERSION = '1.19.20260627.0036';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -2347,6 +2351,8 @@ function migrateDB(){
     p.members.forEach(function(m){ validMemberIds[m.id] = true; });
     var validTaskIds = {};
     getTasksArray(p).forEach(function(t){ validTaskIds[t.id] = true; });
+    var validDocIds = {};
+    p.documents.forEach(function(d){ validDocIds[d.id] = true; });
 
     p.documents.forEach(function(d){
       if(d.ownerId === undefined){ d.ownerId = null; changed = true; }
@@ -2355,12 +2361,14 @@ function migrateDB(){
       else if(d.taskId && !validTaskIds[d.taskId]){ d.taskId = null; changed = true; }
       if(d.url === undefined){ d.url = null; changed = true; }
       if(d.description === undefined){ d.description = ''; changed = true; }
+      if(!Array.isArray(d.relatedDocumentIds)){ d.relatedDocumentIds = []; changed = true; }
+      else {
+        var filteredRelatedIds = d.relatedDocumentIds.filter(function(id){ return id !== d.id && validDocIds[id]; });
+        if(filteredRelatedIds.length !== d.relatedDocumentIds.length){ d.relatedDocumentIds = filteredRelatedIds; changed = true; }
+      }
       if(!d.dateCreated){ d.dateCreated = epoch; changed = true; }
       if(!d.dateLastModified){ d.dateLastModified = d.dateCreated || epoch; changed = true; }
     });
-
-    var validDocIds = {};
-    p.documents.forEach(function(d){ validDocIds[d.id] = true; });
 
     p.risks.forEach(function(r){
       if(r.ownerId === undefined){ r.ownerId = null; changed = true; }
@@ -2884,6 +2892,7 @@ function addDocument(project, data){
     description: (data.description || '').trim().slice(0, 500),
     ownerId: data.ownerId || null,
     taskId: data.taskId || null,
+    relatedDocumentIds: Array.isArray(data.relatedDocumentIds) ? data.relatedDocumentIds.slice() : [],
     dateCreated: now,
     dateLastModified: now
   };
@@ -2900,6 +2909,12 @@ function updateDocument(project, docId, data){
   doc.description = (data.description || '').trim().slice(0, 500);
   doc.ownerId = data.ownerId || null;
   doc.taskId = data.taskId || null;
+  /* A document can never relate to itself — filtered defensively here
+     too, not just in the UI, in case data ever arrives some other way
+     (e.g. a future import path). */
+  doc.relatedDocumentIds = Array.isArray(data.relatedDocumentIds)
+    ? data.relatedDocumentIds.filter(function(id){ return id !== docId; })
+    : [];
   doc.dateLastModified = new Date().toISOString();
   saveDB();
 }
@@ -2917,6 +2932,12 @@ function deleteDocument(project, docId){
   (project.decisions || []).forEach(function(d){
     if(d.documentIds && d.documentIds.indexOf(docId) !== -1){
       d.documentIds = d.documentIds.filter(function(id){ return id !== docId; });
+      unlinkedCount++;
+    }
+  });
+  project.documents.forEach(function(d){
+    if(d.relatedDocumentIds && d.relatedDocumentIds.indexOf(docId) !== -1){
+      d.relatedDocumentIds = d.relatedDocumentIds.filter(function(id){ return id !== docId; });
       unlinkedCount++;
     }
   });
@@ -3395,6 +3416,7 @@ function exportProjectJSON(project){
         ownerId: owner ? owner.id : null,
         ownerName: owner ? owner.name : null,
         taskId: d.taskId || null,
+        relatedDocumentIds: d.relatedDocumentIds || [],
         dateCreated: d.dateCreated || null,
         dateLastModified: d.dateLastModified || null
       };
@@ -3794,7 +3816,8 @@ function buildProjectFromExportDoc(doc){
   });
 
   var docOldIdToNewId = {};
-  var unresolvedDocOwners = 0, unresolvedDocTasks = 0;
+  var unresolvedDocOwners = 0, unresolvedDocTasks = 0, unresolvedDocRelated = 0;
+  var docsNeedingRelatedResolution = [];
   if(Array.isArray(doc.documents)){
     doc.documents.forEach(function(d){
       if(!d || typeof d !== 'object') return;
@@ -3822,13 +3845,30 @@ function buildProjectFromExportDoc(doc){
         description: (typeof d.description === 'string') ? d.description.trim().slice(0,500) : '',
         ownerId: ownerId,
         taskId: taskId,
+        relatedDocumentIds: [],
         dateCreated: typeof d.dateCreated === 'string' ? d.dateCreated : importedAt,
         dateLastModified: typeof d.dateLastModified === 'string' ? d.dateLastModified : importedAt
       };
       project.documents.push(newDoc);
       if(typeof d.id === 'string') docOldIdToNewId[d.id] = newDoc.id;
+      /* A document may relate to another document that hasn't been
+         created yet at this point in the loop, so the relatedDocumentIds
+         themselves are resolved in a second pass below, once every
+         document in this import has a known new id. */
+      if(Array.isArray(d.relatedDocumentIds) && d.relatedDocumentIds.length > 0){
+        docsNeedingRelatedResolution.push({newDoc: newDoc, oldRelatedIds: d.relatedDocumentIds});
+      }
     });
   }
+  docsNeedingRelatedResolution.forEach(function(entry){
+    entry.oldRelatedIds.forEach(function(oldRelatedId){
+      if(docOldIdToNewId.hasOwnProperty(oldRelatedId) && docOldIdToNewId[oldRelatedId] !== entry.newDoc.id){
+        entry.newDoc.relatedDocumentIds.push(docOldIdToNewId[oldRelatedId]);
+      } else {
+        unresolvedDocRelated++;
+      }
+    });
+  });
 
   var unresolvedRiskOwners = 0, unresolvedRiskTasks = 0, unresolvedRiskDocs = 0;
   var riskOldIdToNewId = {};
@@ -3950,6 +3990,7 @@ function buildProjectFromExportDoc(doc){
     unresolvedTaskTypes: unresolvedTaskTypes,
     unresolvedDocOwners: unresolvedDocOwners,
     unresolvedDocTasks: unresolvedDocTasks,
+    unresolvedDocRelated: unresolvedDocRelated,
     unresolvedRiskOwners: unresolvedRiskOwners,
     unresolvedRiskTasks: unresolvedRiskTasks,
     unresolvedRiskDocs: unresolvedRiskDocs,
@@ -4074,7 +4115,7 @@ function finaliseImport(result, wasOverwrite){
   if(result.unresolvedAssignees > 0) msg += ' Skipped ' + result.unresolvedAssignees + ' assignee reference(s) that could not be matched.';
   if(result.unresolvedReleases > 0) msg += ' Skipped ' + result.unresolvedReleases + ' release reference(s) that could not be matched.';
   if(result.unresolvedTaskTypes > 0) msg += ' Skipped ' + result.unresolvedTaskTypes + ' task type reference(s) that could not be matched.';
-  var unresolvedDocLinks = (result.unresolvedDocOwners || 0) + (result.unresolvedDocTasks || 0) + (result.unresolvedRiskOwners || 0) + (result.unresolvedRiskTasks || 0) + (result.unresolvedRiskDocs || 0) +
+  var unresolvedDocLinks = (result.unresolvedDocOwners || 0) + (result.unresolvedDocTasks || 0) + (result.unresolvedDocRelated || 0) + (result.unresolvedRiskOwners || 0) + (result.unresolvedRiskTasks || 0) + (result.unresolvedRiskDocs || 0) +
     (result.unresolvedDecisionOwners || 0) + (result.unresolvedDecisionTasks || 0) + (result.unresolvedDecisionDocs || 0) + (result.unresolvedDecisionRisks || 0);
   if(unresolvedDocLinks > 0) msg += ' Skipped ' + unresolvedDocLinks + ' document/risk/decision reference(s) that could not be matched.';
   toast(msg);
@@ -7067,6 +7108,7 @@ function showDocumentsFormView(docId){
   document.getElementById('documentDescriptionInput').value = doc ? doc.description : '';
   populateOwnerSelect(document.getElementById('documentOwnerSelect'), project, doc ? doc.ownerId : null);
   populateTaskSelect(document.getElementById('documentTaskSelect'), project, doc ? doc.taskId : null);
+  renderDocumentPickerInto('documentRelatedPicker', project, doc ? doc.relatedDocumentIds : [], docId || null);
 
   var metaEl = document.getElementById('documentMetaDates');
   if(doc){
@@ -7136,6 +7178,9 @@ function renderDocumentsList(){
     }
     metaHTML += '<span>Added ' + escapeHTML(utcISOToLocalDisplayDate(d.dateCreated)) + '</span>';
     if(linkedTask) metaHTML += '<span>' + escapeHTML(linkedTask.key) + '</span>';
+    if(d.relatedDocumentIds && d.relatedDocumentIds.length > 0){
+      metaHTML += '<span>' + d.relatedDocumentIds.length + ' related</span>';
+    }
 
     var urlLinkHTML = d.url
       ? '<a class="kf-doc-row-link" href="' + escapeHTML(d.url) + '" target="_blank" rel="noopener noreferrer" title="Open ' + escapeHTML(d.url) + ' in a new tab" aria-label="Open document link in a new tab">' + iconSvg('externalLink', 14) + '</a>'
@@ -7169,7 +7214,8 @@ function saveDocumentFromModal(){
     url: document.getElementById('documentUrlInput').value,
     description: document.getElementById('documentDescriptionInput').value,
     ownerId: document.getElementById('documentOwnerSelect').value || null,
-    taskId: document.getElementById('documentTaskSelect').value || null
+    taskId: document.getElementById('documentTaskSelect').value || null,
+    relatedDocumentIds: getCheckedDocumentIdsFrom('documentRelatedPicker')
   };
 
   if(ui.editingDocumentId){
@@ -7247,10 +7293,12 @@ function updateRiskScorePreview(){
     '<span class="kf-risk-score-badge ' + band + '">Score ' + score + ' \u00b7 ' + bandLabel + '</span>';
 }
 
-function renderDocumentPickerInto(wrapId, project, selectedDocIds){
+function renderDocumentPickerInto(wrapId, project, selectedDocIds, excludeId){
   var wrap = document.getElementById(wrapId);
   wrap.innerHTML = '';
-  var docs = (project.documents || []).slice().sort(function(a, b){ return a.key.localeCompare(b.key, undefined, {numeric: true}); });
+  var docs = (project.documents || [])
+    .filter(function(d){ return d.id !== excludeId; })
+    .slice().sort(function(a, b){ return a.key.localeCompare(b.key, undefined, {numeric: true}); });
   if(docs.length === 0){
     wrap.innerHTML = '<div class="kf-risk-doc-picker-empty">No documents in this project yet.</div>';
     return;
