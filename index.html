@@ -593,6 +593,9 @@
   #decisionsListView.hidden{display:none;}
   #decisionsFormView.hidden{display:none;}
   #deleteDecisionBtn.hidden{display:none;}
+  #documentsBtn.hidden{display:none;}
+  #risksBtn.hidden{display:none;}
+  #decisionsBtn.hidden{display:none;}
   .kf-modal-footer.hidden{display:none;}
   .kf-tasktype-icon-grid{
     display:grid;grid-template-columns:repeat(6, 1fr);gap:4px;
@@ -1077,6 +1080,7 @@
       <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
       <div class="kf-header-divider"></div>
       <button class="kf-header-btn kf-theme-toggle" id="themeToggleBtn" title="Switch to dark theme" aria-label="Switch to dark theme"></button>
+      <button class="kf-header-btn" id="appSettingsBtn" title="App Settings" aria-label="App Settings"><span class="kf-icon" data-icon="ty_configure" data-size="16"></span></button>
     </div>
   </header>
   <div class="kf-drawer-backdrop" id="drawerBackdrop"></div>
@@ -1820,6 +1824,42 @@
   </div>
 </div>
 
+<!-- App Settings Modal -->
+<div class="kf-overlay hidden" id="appSettingsOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>App Settings</h2>
+      <button class="kf-btn kf-btn-ghost" id="appSettingsClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div class="kf-field-row" style="margin-bottom:4px;">
+        <label style="font-size:13px;font-weight:600;color:var(--kf-text);">Header buttons</label>
+      </div>
+      <p style="margin:0 0 12px;color:var(--kf-text-faint);font-size:12px;line-height:1.5;">Choose which of these buttons appear in the header for this project.</p>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label class="kf-risk-doc-picker-row">
+          <input type="checkbox" id="settingsShowDocumentsBtn">
+          <span class="kf-icon" data-icon="ty_document" data-size="14"></span>
+          <span>Documents</span>
+        </label>
+        <label class="kf-risk-doc-picker-row">
+          <input type="checkbox" id="settingsShowRisksBtn">
+          <span class="kf-icon" data-icon="warning" data-size="14"></span>
+          <span>Risks</span>
+        </label>
+        <label class="kf-risk-doc-picker-row">
+          <input type="checkbox" id="settingsShowDecisionsBtn">
+          <span class="kf-icon" data-icon="ty_approve" data-size="14"></span>
+          <span>Decisions</span>
+        </label>
+      </div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-secondary" id="appSettingsDoneBtn">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Import Conflict Modal -->
 <div class="kf-overlay hidden" id="importConflictOverlay">
   <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
@@ -1913,7 +1953,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.19.20260627.0036';
+var APP_VERSION = '1.20.20260627.0117';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -2314,6 +2354,13 @@ function migrateDB(){
     if(!Array.isArray(p.decisions)){ p.decisions = []; changed = true; }
     if(typeof p.decCounter !== 'number'){ p.decCounter = 1; changed = true; }
     if(!Array.isArray(p.approvers)){ p.approvers = []; changed = true; }
+    if(!p.headerButtonVisibility || typeof p.headerButtonVisibility !== 'object' ||
+       typeof p.headerButtonVisibility.documents !== 'boolean' ||
+       typeof p.headerButtonVisibility.risks !== 'boolean' ||
+       typeof p.headerButtonVisibility.decisions !== 'boolean'){
+      p.headerButtonVisibility = normalizeHeaderButtonVisibility(p.headerButtonVisibility);
+      changed = true;
+    }
     if(!p.dateCreated){ p.dateCreated = epoch; changed = true; }
     if(!p.dateLastModified){ p.dateLastModified = epoch; changed = true; }
     if(!p.dateLastExported){ p.dateLastExported = null; changed = true; }
@@ -2431,6 +2478,19 @@ function defaultTaskTypes(){
   ];
 }
 
+/* App Settings: which header buttons (Documents/Risks/Decisions) are
+   shown for this project. Defensive against partial/garbled data —
+   any missing or non-boolean field defaults to visible (true), so a
+   corrupted setting never silently hides a button the user never
+   chose to hide. */
+function normalizeHeaderButtonVisibility(value){
+  var v = (value && typeof value === 'object') ? value : {};
+  return {
+    documents: v.documents !== false,
+    risks: v.risks !== false,
+    decisions: v.decisions !== false
+  };
+}
 function createDefaultProject(name, key){
   var now = new Date().toISOString();
   return {
@@ -2450,6 +2510,7 @@ function createDefaultProject(name, key){
     decisions: [],
     decCounter: 1,
     approvers: [],
+    headerButtonVisibility: {documents: true, risks: true, decisions: true},
     startDate: null,
     endDate: null,
     dateCreated: now,
@@ -3463,6 +3524,7 @@ function exportProjectJSON(project){
       };
     }),
     approvers: (project.approvers || []).slice(),
+    headerButtonVisibility: normalizeHeaderButtonVisibility(project.headerButtonVisibility),
     hierarchy: hierarchy
   };
   var blob = new Blob([JSON.stringify(doc, null, 2)], {type:'application/json'});
@@ -3673,6 +3735,7 @@ function buildProjectFromExportDoc(doc){
     decisions: [],
     decCounter: 1,
     approvers: [],
+    headerButtonVisibility: normalizeHeaderButtonVisibility(doc.headerButtonVisibility),
     startDate: (doc.project && isValidISODateString(doc.project.startDate)) ? doc.project.startDate : null,
     endDate: (doc.project && isValidISODateString(doc.project.endDate)) ? doc.project.endDate : null,
     dateCreated: (doc.project && typeof doc.project.dateCreated === 'string') ? doc.project.dateCreated : importedAt,
@@ -5870,12 +5933,46 @@ function toast(message){
 /* =========================================================
    RENDERING
    ========================================================= */
+function applyHeaderButtonVisibility(){
+  var project = getCurrentProject();
+  var visibility = project ? normalizeHeaderButtonVisibility(project.headerButtonVisibility) : {documents:true, risks:true, decisions:true};
+  document.getElementById('documentsBtn').classList.toggle('hidden', !visibility.documents);
+  document.getElementById('risksBtn').classList.toggle('hidden', !visibility.risks);
+  document.getElementById('decisionsBtn').classList.toggle('hidden', !visibility.decisions);
+}
+
+function openAppSettingsOverlay(){
+  var project = getCurrentProject();
+  if(!project){ toast('No project selected.'); return; }
+  var visibility = normalizeHeaderButtonVisibility(project.headerButtonVisibility);
+  document.getElementById('settingsShowDocumentsBtn').checked = visibility.documents;
+  document.getElementById('settingsShowRisksBtn').checked = visibility.risks;
+  document.getElementById('settingsShowDecisionsBtn').checked = visibility.decisions;
+  document.getElementById('appSettingsOverlay').classList.remove('hidden');
+}
+function closeAppSettingsOverlay(){
+  document.getElementById('appSettingsOverlay').classList.add('hidden');
+}
+function isAppSettingsOverlayOpen(){
+  return !document.getElementById('appSettingsOverlay').classList.contains('hidden');
+}
+function updateHeaderButtonVisibilitySetting(field, isVisible){
+  var project = getCurrentProject();
+  if(!project) return;
+  var visibility = normalizeHeaderButtonVisibility(project.headerButtonVisibility);
+  visibility[field] = isVisible;
+  project.headerButtonVisibility = visibility;
+  saveDB();
+  applyHeaderButtonVisibility();
+}
+
 function renderAll(){
   renderProjectSelect();
   renderToolbar();
   renderPriorityFilterChips();
   renderAssigneeFilterChips();
   renderTaskTypeFilterChips();
+  applyHeaderButtonVisibility();
   renderBoard();
 }
 
@@ -8038,6 +8135,21 @@ function wireEvents(){
   });
 
   document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+  document.getElementById('appSettingsBtn').addEventListener('click', openAppSettingsOverlay);
+  document.getElementById('appSettingsClose').addEventListener('click', closeAppSettingsOverlay);
+  document.getElementById('appSettingsDoneBtn').addEventListener('click', closeAppSettingsOverlay);
+  document.getElementById('appSettingsOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'appSettingsOverlay') closeAppSettingsOverlay();
+  });
+  document.getElementById('settingsShowDocumentsBtn').addEventListener('change', function(e){
+    updateHeaderButtonVisibilitySetting('documents', e.target.checked);
+  });
+  document.getElementById('settingsShowRisksBtn').addEventListener('change', function(e){
+    updateHeaderButtonVisibilitySetting('risks', e.target.checked);
+  });
+  document.getElementById('settingsShowDecisionsBtn').addEventListener('change', function(e){
+    updateHeaderButtonVisibilitySetting('decisions', e.target.checked);
+  });
 
   document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileDrawer);
   document.getElementById('drawerCloseBtn').addEventListener('click', closeMobileDrawer);
@@ -8148,6 +8260,7 @@ function wireEvents(){
     else if(isDocumentsOverlayOpen()) closeDocumentsOverlay();
     else if(isRisksOverlayOpen()) closeRisksOverlay();
     else if(isDecisionsOverlayOpen()) closeDecisionsOverlay();
+    else if(isAppSettingsOverlayOpen()) closeAppSettingsOverlay();
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
     else if(!document.getElementById('importConflictOverlay').classList.contains('hidden')) closeImportConflictModal();
     else if(!document.getElementById('overdueAlertOverlay').classList.contains('hidden')) closeOverdueAlert();
