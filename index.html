@@ -1102,10 +1102,10 @@
       </div>
       <div class="kf-header-divider"></div>
       <div class="kf-drawer-action-group">
+        <button class="kf-header-btn" id="healthBtn" title="Health Dashboard"><span class="kf-icon" data-icon="heartPulse" data-size="14"></span>Health Dashboard</button>
         <button class="kf-header-btn" id="documentsBtn" title="Documents"><span class="kf-icon" data-icon="ty_document" data-size="14"></span>Documents</button>
         <button class="kf-header-btn" id="risksBtn" title="Risks"><span class="kf-icon" data-icon="warning" data-size="14"></span>Risks</button>
         <button class="kf-header-btn" id="decisionsBtn" title="Decisions"><span class="kf-icon" data-icon="ty_approve" data-size="14"></span>Decisions</button>
-        <button class="kf-header-btn" id="healthBtn" title="Project Health Dashboard"><span class="kf-icon" data-icon="ty_monitor" data-size="14"></span>Health</button>
       </div>
       <div class="kf-drawer-views-section" id="drawerViewsSection">
         <div class="kf-header-divider"></div>
@@ -1917,7 +1917,7 @@
         </label>
         <label class="kf-risk-doc-picker-row">
           <input type="checkbox" id="settingsShowHealthBtn">
-          <span class="kf-icon" data-icon="ty_monitor" data-size="14"></span>
+          <span class="kf-icon" data-icon="heartPulse" data-size="14"></span>
           <span>Health Dashboard</span>
         </label>
       </div>
@@ -2052,7 +2052,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.24.20260627.1746';
+var APP_VERSION = '1.25.20260627.1801';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -2119,6 +2119,7 @@ var ICON_PATHS = {
   ty_migrate:     '<path d="M16 3l4 4-4 4"/><path d="M20 7H6a3 3 0 0 0-3 3"/><path d="M8 21l-4-4 4-4"/><path d="M4 17h14a3 3 0 0 0 3-3"/>',
   ty_configure:   '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
   ty_monitor:     '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  heartPulse:     '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>',
   ty_approve:     '<path d="M12 2l2.4 1.4 2.7-.4 1.3 2.4 2.4 1.3-.4 2.7L22 12l-1.6 2.4.4 2.7-2.4 1.3-1.3 2.4-2.7-.4L12 22l-2.4-1.6-2.7.4-1.3-2.4-2.4-1.3.4-2.7L2 12l1.6-2.4-.4-2.7 2.4-1.3 1.3-2.4 2.7.4Z"/><path d="M9 12l2 2 4-4"/>',
   ty_negotiate:   '<path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0Z"/><path d="M19 7l-3 7a3 3 0 0 0 6 0Z"/>',
   ty_schedule:    '<rect x="3" y="5" width="14" height="16" rx="2"/><path d="M7 3v4"/><path d="M13 3v4"/><path d="M3 10h10"/><circle cx="18" cy="17" r="4"/><path d="M18 15.5V17l1 1"/>',
