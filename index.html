@@ -245,6 +245,7 @@
      mobile override regardless of viewport width. */
   #toolbarViewButtons,#toolbarRow2Buttons{display:none;}
   #toolbarRow2{display:none;}
+  .kf-appsettings-label{display:none;}
 
   @media (max-width: 1024px){
     .kf-header-hamburger{display:flex;}
@@ -274,6 +275,7 @@
     .kf-header-controls .kf-header-btn{width:100%;justify-content:flex-start;}
     .kf-header-controls .kf-header-spacer{display:block;}
     .kf-header-controls .kf-theme-toggle{width:100%;justify-content:flex-start;padding:6px 10px;}
+    .kf-appsettings-label{display:inline;}
     .kf-header-controls .kf-theme-toggle::after{content:attr(data-mobile-label);}
     .kf-drawer-views-section{display:block;}
     .kf-drawer-section-label{
@@ -1080,7 +1082,7 @@
       <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
       <div class="kf-header-divider"></div>
       <button class="kf-header-btn kf-theme-toggle" id="themeToggleBtn" title="Switch to dark theme" aria-label="Switch to dark theme"></button>
-      <button class="kf-header-btn" id="appSettingsBtn" title="App Settings" aria-label="App Settings"><span class="kf-icon" data-icon="ty_configure" data-size="16"></span></button>
+      <button class="kf-header-btn" id="appSettingsBtn" title="Project Settings" aria-label="Project Settings"><span class="kf-icon" data-icon="ty_configure" data-size="16"></span><span class="kf-appsettings-label">Project Settings</span></button>
     </div>
   </header>
   <div class="kf-drawer-backdrop" id="drawerBackdrop"></div>
@@ -1833,9 +1835,9 @@
     </div>
     <div class="kf-modal-body">
       <div class="kf-field-row" style="margin-bottom:4px;">
-        <label style="font-size:13px;font-weight:600;color:var(--kf-text);">Header buttons</label>
+        <label style="font-size:13px;font-weight:600;color:var(--kf-text);">Extended Project Modules</label>
       </div>
-      <p style="margin:0 0 12px;color:var(--kf-text-faint);font-size:12px;line-height:1.5;">Choose which of these buttons appear in the header for this project.</p>
+      <p style="margin:0 0 12px;color:var(--kf-text-faint);font-size:12px;line-height:1.5;">Choose which modules should be used in this Project</p>
       <div style="display:flex;flex-direction:column;gap:4px;">
         <label class="kf-risk-doc-picker-row">
           <input type="checkbox" id="settingsShowDocumentsBtn">
@@ -1953,7 +1955,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.20.20260627.0117';
+var APP_VERSION = '1.21.20260627.0311';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
