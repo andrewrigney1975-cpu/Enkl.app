@@ -2056,7 +2056,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.28.20260627.2032';
+var APP_VERSION = '1.29.20260627.2049';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -8460,12 +8460,14 @@ function deleteDecisionFromModal(){
 /* =========================================================
    SVG / PNG EXPORT (Dependency Map, Cost/Benefit Chart)
    These SVGs are styled with CSS custom properties (var(--kf-...))
-   so they adapt to light/dark theme on screen. A detached, downloaded
-   file has no access to this page's stylesheet, so every relevant
-   color property is "baked" from its live, already-resolved computed
-   value onto the exported clone before serializing — otherwise
-   colors using var() would render as black/transparent once opened
-   outside this app.
+   so they adapt to light/dark theme on screen, and their <text>
+   elements inherit font-family from the page's body rule rather than
+   setting it themselves. A detached, downloaded file has no access to
+   this page's stylesheet, so every relevant style property is "baked"
+   from its live, already-resolved computed value onto the exported
+   clone before serializing — otherwise colors using var() would
+   render as black/transparent, and text would fall back to the
+   renderer's generic default font, once opened outside this app.
    ========================================================= */
 function downloadBlob(blob, filename){
   var url = URL.createObjectURL(blob);
@@ -8478,16 +8480,22 @@ function downloadBlob(blob, filename){
   URL.revokeObjectURL(url);
 }
 
-var SVG_EXPORT_COLOR_PROPS = ['fill', 'stroke', 'color', 'opacity', 'stroke-width', 'stroke-opacity', 'fill-opacity'];
-function cloneSvgWithResolvedColors(svgEl){
+/* Properties baked from each element's live, already-resolved computed
+   value onto the exported clone — covers both the color/opacity
+   properties that use var(--kf-...) custom properties, and font-family,
+   which every <text> element inherits from the page's body rule rather
+   than setting itself, so it would otherwise be lost once the SVG is
+   detached from this page's stylesheet. */
+var SVG_EXPORT_BAKED_PROPS = ['fill', 'stroke', 'color', 'opacity', 'stroke-width', 'stroke-opacity', 'fill-opacity', 'font-family'];
+function cloneSvgWithBakedStyles(svgEl){
   var clone = svgEl.cloneNode(true);
   var liveAll = [svgEl].concat(Array.prototype.slice.call(svgEl.querySelectorAll('*')));
   var cloneAll = [clone].concat(Array.prototype.slice.call(clone.querySelectorAll('*')));
   for(var i = 0; i < liveAll.length; i++){
     var liveStyle = window.getComputedStyle(liveAll[i]);
     var cssText = '';
-    for(var j = 0; j < SVG_EXPORT_COLOR_PROPS.length; j++){
-      var prop = SVG_EXPORT_COLOR_PROPS[j];
+    for(var j = 0; j < SVG_EXPORT_BAKED_PROPS.length; j++){
+      var prop = SVG_EXPORT_BAKED_PROPS[j];
       var val = liveStyle.getPropertyValue(prop);
       if(val) cssText += prop + ':' + val + ';';
     }
@@ -8518,7 +8526,7 @@ function resolveCssVarsInString(str){
   return str;
 }
 function serializeResolvedSvg(svgEl){
-  var clone = cloneSvgWithResolvedColors(svgEl);
+  var clone = cloneSvgWithBakedStyles(svgEl);
   var w = parseFloat(svgEl.getAttribute('width')) || (svgEl.viewBox && svgEl.viewBox.baseVal && svgEl.viewBox.baseVal.width) || svgEl.clientWidth || 800;
   var h = parseFloat(svgEl.getAttribute('height')) || (svgEl.viewBox && svgEl.viewBox.baseVal && svgEl.viewBox.baseVal.height) || svgEl.clientHeight || 600;
   clone.setAttribute('width', w);
