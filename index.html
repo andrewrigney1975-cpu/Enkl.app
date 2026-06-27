@@ -578,7 +578,7 @@
   .kf-tasktype-icon-trigger.kf-tasktype-icon-unset{color:var(--kf-text-faint);opacity:0.6;}
   .kf-tasktype-icon-panel{
     position:fixed;z-index:50;
-    width:220px;
+    width:240px;
     background:var(--kf-surface);border:1px solid var(--kf-border);border-radius:var(--kf-radius);
     box-shadow:var(--kf-modal-shadow);
     padding:8px;
@@ -739,6 +739,7 @@
     box-shadow:var(--kf-modal-shadow);
   }
   .kf-modal.kf-modal-sm{width:420px;}
+  .kf-modal.kf-modal-md{width:540px;}
   .kf-modal.kf-modal-lg{width:98vw;max-width:98vw;height:86vh;max-height:86vh;}
   .kf-modal-header{
     display:flex;align-items:center;justify-content:space-between;
@@ -1547,7 +1548,7 @@
 
 <!-- Team Modal -->
 <div class="kf-overlay hidden" id="teamOverlay">
-  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+  <div class="kf-modal kf-modal-md" role="dialog" aria-modal="true">
     <div class="kf-modal-header">
       <h2 id="teamModalTitle">Manage team</h2>
       <button class="kf-btn kf-btn-ghost" id="teamModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
@@ -2055,7 +2056,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.27.20260627.1943';
+var APP_VERSION = '1.28.20260627.2032';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
