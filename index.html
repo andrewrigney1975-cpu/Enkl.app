@@ -722,6 +722,24 @@
   .kf-modal-header-actions{display:flex;align-items:center;gap:4px;}
   .kf-header-divider-light{width:1px;height:22px;background:var(--kf-border);margin:0 4px;}
   .kf-zoom-label{font-size:12px;font-weight:500;color:var(--kf-text-secondary);min-width:42px;text-align:center;}
+  .kf-export-as-wrap{position:relative;}
+  .kf-export-as-panel{
+    position:absolute;top:calc(100% + 4px);right:0;z-index:20;
+    min-width:200px;
+    background:var(--kf-surface);border:1px solid var(--kf-border);border-radius:var(--kf-radius);
+    box-shadow:var(--kf-modal-shadow);
+    padding:4px;
+    display:flex;flex-direction:column;
+  }
+  .kf-export-as-option{
+    width:100%;text-align:left;
+    padding:8px 10px;
+    background:none;border:none;border-radius:3px;
+    color:var(--kf-text);font-size:13px;
+    cursor:pointer;
+  }
+  .kf-export-as-option:hover{background:var(--kf-hover-tint);}
+  .kf-export-as-panel.hidden{display:none;}
   .kf-modal-body{padding:18px 20px;overflow-y:auto;flex:1;}
   .kf-modal-footer{
     padding:14px 20px;border-top:1px solid var(--kf-border);
@@ -787,7 +805,7 @@
     padding:10px 16px;border-bottom:1px solid var(--kf-border);
     flex-shrink:0;
   }
-  .kf-tasklist-count{color:var(--kf-text-faint);font-size:12px;margin-left:auto;}
+  .kf-tasklist-count{color:var(--kf-text-faint);font-size:12px;}
   .kf-tasklist-toolbar-link{
     background:none;border:none;
     color:var(--kf-blue);font-size:12px;font-weight:500;
@@ -1348,6 +1366,14 @@
         <button class="kf-btn kf-btn-ghost" id="depMapZoomInBtn" title="Zoom in"><span class="kf-icon" data-icon="zoomIn" data-size="16"></span></button>
         <button class="kf-btn kf-btn-ghost" id="depMapResetBtn" title="Reset view"><span class="kf-icon" data-icon="fit" data-size="16"></span></button>
         <div class="kf-header-divider-light"></div>
+        <div class="kf-export-as-wrap">
+          <button class="kf-btn kf-btn-ghost" id="depMapExportAsBtn" title="Export As..."><span class="kf-icon" data-icon="download" data-size="14"></span>Export As...</button>
+          <div class="kf-export-as-panel hidden" id="depMapExportAsPanel">
+            <button type="button" class="kf-export-as-option" data-export-type="svg">Export as SVG</button>
+            <button type="button" class="kf-export-as-option" data-export-type="png">Export as PNG (4x resolution)</button>
+          </div>
+        </div>
+        <div class="kf-header-divider-light"></div>
         <button class="kf-btn kf-btn-ghost" id="depMapClose" title="Close"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
       </div>
     </div>
@@ -1398,6 +1424,14 @@
         <button class="kf-btn kf-btn-ghost" id="costBenefitZoomInBtn" title="Zoom in"><span class="kf-icon" data-icon="zoomIn" data-size="16"></span></button>
         <button class="kf-btn kf-btn-ghost" id="costBenefitResetBtn" title="Reset view"><span class="kf-icon" data-icon="fit" data-size="16"></span></button>
         <div class="kf-header-divider-light"></div>
+        <div class="kf-export-as-wrap">
+          <button class="kf-btn kf-btn-ghost" id="costBenefitExportAsBtn" title="Export As..."><span class="kf-icon" data-icon="download" data-size="14"></span>Export As...</button>
+          <div class="kf-export-as-panel hidden" id="costBenefitExportAsPanel">
+            <button type="button" class="kf-export-as-option" data-export-type="svg">Export as SVG</button>
+            <button type="button" class="kf-export-as-option" data-export-type="png">Export as PNG (4x resolution)</button>
+          </div>
+        </div>
+        <div class="kf-header-divider-light"></div>
         <button class="kf-btn kf-btn-ghost" id="costBenefitClose" title="Close"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
       </div>
     </div>
@@ -1424,6 +1458,7 @@
       </div>
       <button type="button" class="kf-tasklist-toolbar-link" id="taskListCollapseAllBtn">Collapse all</button>
       <button type="button" class="kf-tasklist-toolbar-link" id="taskListExpandAllBtn">Expand all</button>
+      <button type="button" class="kf-btn kf-btn-ghost" id="taskListExportCsvBtn" style="margin-left:auto;"><span class="kf-icon" data-icon="download" data-size="14"></span>Export as CSV</button>
       <span id="taskListCount" class="kf-tasklist-count"></span>
     </div>
     <div class="kf-tasklist-header" id="taskListHeader"></div>
@@ -1955,7 +1990,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.21.20260627.0311';
+var APP_VERSION = '1.22.20260627.0438';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -5238,12 +5273,11 @@ function sortTaskListRows(project, rows){
   return rows;
 }
 
-function renderTaskListBody(){
-  var project = getCurrentProject();
-  var body = document.getElementById('taskListBody');
-  body.innerHTML = '';
-  if(!project) return;
-
+/* Shared by renderTaskListBody and the CSV export, so both can never
+   drift out of sync with each other — the CSV always reflects exactly
+   what's filtered and ordered on screen (just not collapse state,
+   since that's a pure display concern, not a data one). */
+function getOrderedTaskListRows(project){
   var term = ui.taskListSearch.trim().toLowerCase();
   var rows = getTasksArray(project).filter(function(t){
     if(t.archived) return false;
@@ -5251,6 +5285,45 @@ function renderTaskListBody(){
     var hay = (t.key + ' ' + t.title + ' ' + (t.description||'')).toLowerCase();
     return hay.indexOf(term) !== -1;
   });
+
+  var groups = {};
+  rows.forEach(function(t){
+    var key = t.releaseId || NO_RELEASE_GROUP_KEY;
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  var releaseGroupKeys = Object.keys(groups).filter(function(k){ return k !== NO_RELEASE_GROUP_KEY; });
+  releaseGroupKeys.sort(function(aId, bId){
+    var ra = getReleaseById(project, aId);
+    var rb = getReleaseById(project, bId);
+    var aHas = !!(ra && ra.startDate);
+    var bHas = !!(rb && rb.startDate);
+    if(aHas && bHas) return new Date(ra.startDate).getTime() - new Date(rb.startDate).getTime();
+    if(aHas && !bHas) return -1;
+    if(!aHas && bHas) return 1;
+    var an = ra ? ra.name.toLowerCase() : '';
+    var bn = rb ? rb.name.toLowerCase() : '';
+    return an.localeCompare(bn);
+  });
+  var orderedGroupKeys = releaseGroupKeys.concat(groups.hasOwnProperty(NO_RELEASE_GROUP_KEY) ? [NO_RELEASE_GROUP_KEY] : []);
+
+  var ordered = [];
+  orderedGroupKeys.forEach(function(groupKey){
+    var groupTasks = groups[groupKey];
+    sortTaskListRows(project, groupTasks);
+    ordered = ordered.concat(groupTasks);
+  });
+  return ordered;
+}
+
+function renderTaskListBody(){
+  var project = getCurrentProject();
+  var body = document.getElementById('taskListBody');
+  body.innerHTML = '';
+  if(!project) return;
+
+  var rows = getOrderedTaskListRows(project);
 
   document.getElementById('taskListCount').textContent = rows.length + ' task' + (rows.length === 1 ? '' : 's');
 
@@ -5316,6 +5389,46 @@ function renderTaskListBody(){
       renderTaskListBody();
     });
   });
+}
+
+/* =========================================================
+   LIST VIEW: EXPORT AS CSV
+   ========================================================= */
+function csvEscapeValue(value){
+  var str = String(value == null ? '' : value);
+  if(/[",\r\n]/.test(str)) return '"' + str.replace(/"/g, '""') + '"';
+  return str;
+}
+function buildTaskListCsv(project){
+  var orderedTasks = getOrderedTaskListRows(project);
+  var lines = [TASKLIST_COLUMNS.map(function(c){ return csvEscapeValue(c.label); }).join(',')];
+  orderedTasks.forEach(function(t){
+    var assignee = getMemberById(project, t.assigneeId);
+    var col = getColumn(project, t.columnId);
+    var prio = getPriority(t.priority);
+    var vp = computeValueProposition(t);
+    var fields = [
+      t.key,
+      t.title,
+      col ? col.name : '',
+      assignee ? assignee.name : '',
+      prio.label,
+      t.startDate ? utcISOToLocalDisplayDate(t.startDate) : '',
+      t.endDate ? utcISOToLocalDisplayDate(t.endDate) : '',
+      formatValueProp(vp)
+    ];
+    lines.push(fields.map(csvEscapeValue).join(','));
+  });
+  return lines.join('\r\n');
+}
+function exportTaskListAsCsv(){
+  var project = getCurrentProject();
+  if(!project){ toast('No project selected.'); return; }
+  var csv = buildTaskListCsv(project);
+  var blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  var filename = project.key + '-task-list-' + new Date().toISOString().slice(0,10) + '.csv';
+  downloadBlob(blob, filename);
+  toast('Exported ' + filename);
 }
 
 function buildTaskListGroupHeader(project, groupKey, groupTasks, collapsed){
@@ -7780,6 +7893,120 @@ function deleteDecisionFromModal(){
 }
 
 /* =========================================================
+   SVG / PNG EXPORT (Dependency Map, Cost/Benefit Chart)
+   These SVGs are styled with CSS custom properties (var(--kf-...))
+   so they adapt to light/dark theme on screen. A detached, downloaded
+   file has no access to this page's stylesheet, so every relevant
+   color property is "baked" from its live, already-resolved computed
+   value onto the exported clone before serializing — otherwise
+   colors using var() would render as black/transparent once opened
+   outside this app.
+   ========================================================= */
+function downloadBlob(blob, filename){
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+var SVG_EXPORT_COLOR_PROPS = ['fill', 'stroke', 'color', 'opacity', 'stroke-width', 'stroke-opacity', 'fill-opacity'];
+function cloneSvgWithResolvedColors(svgEl){
+  var clone = svgEl.cloneNode(true);
+  var liveAll = [svgEl].concat(Array.prototype.slice.call(svgEl.querySelectorAll('*')));
+  var cloneAll = [clone].concat(Array.prototype.slice.call(clone.querySelectorAll('*')));
+  for(var i = 0; i < liveAll.length; i++){
+    var liveStyle = window.getComputedStyle(liveAll[i]);
+    var cssText = '';
+    for(var j = 0; j < SVG_EXPORT_COLOR_PROPS.length; j++){
+      var prop = SVG_EXPORT_COLOR_PROPS[j];
+      var val = liveStyle.getPropertyValue(prop);
+      if(val) cssText += prop + ':' + val + ';';
+    }
+    if(cssText) cloneAll[i].setAttribute('style', cssText);
+  }
+  return clone;
+}
+/* Resolves any remaining var(--name[, fallback]) references directly
+   against :root's computed custom properties. This exists as a
+   belt-and-suspenders final pass on top of the per-element computed-
+   style baking above — some environments don't fully resolve custom
+   properties through getComputedStyle, and the original attribute
+   values (which the style override merely outranks, not replaces)
+   can still contain literal var(...) text after cloning. Multiple
+   passes handle a variable whose own value references another variable. */
+function resolveCssVarsInString(str){
+  var rootStyle = window.getComputedStyle(document.documentElement);
+  for(var pass = 0; pass < 5; pass++){
+    var changed = false;
+    str = str.replace(/var\((--[a-zA-Z0-9-]+)\s*(?:,\s*([^()]*(?:\([^()]*\))?[^()]*))?\)/g, function(match, varName, fallback){
+      var resolved = rootStyle.getPropertyValue(varName).trim();
+      if(resolved){ changed = true; return resolved; }
+      if(fallback){ changed = true; return fallback.trim(); }
+      return match;
+    });
+    if(!changed) break;
+  }
+  return str;
+}
+function serializeResolvedSvg(svgEl){
+  var clone = cloneSvgWithResolvedColors(svgEl);
+  var w = parseFloat(svgEl.getAttribute('width')) || (svgEl.viewBox && svgEl.viewBox.baseVal && svgEl.viewBox.baseVal.width) || svgEl.clientWidth || 800;
+  var h = parseFloat(svgEl.getAttribute('height')) || (svgEl.viewBox && svgEl.viewBox.baseVal && svgEl.viewBox.baseVal.height) || svgEl.clientHeight || 600;
+  clone.setAttribute('width', w);
+  clone.setAttribute('height', h);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  var markup = new XMLSerializer().serializeToString(clone);
+  markup = resolveCssVarsInString(markup);
+  if(markup.indexOf('<?xml') !== 0) markup = '<?xml version="1.0" encoding="UTF-8"?>\n' + markup;
+  return {markup: markup, width: w, height: h};
+}
+function exportSvgElementAsSvgFile(svgEl, filenameBase){
+  var result = serializeResolvedSvg(svgEl);
+  var blob = new Blob([result.markup], {type: 'image/svg+xml'});
+  downloadBlob(blob, filenameBase + '.svg');
+  toast('Exported ' + filenameBase + '.svg');
+}
+function exportSvgElementAsPng(svgEl, filenameBase, scale){
+  var result = serializeResolvedSvg(svgEl);
+  var svgBlob = new Blob([result.markup], {type: 'image/svg+xml'});
+  var url = URL.createObjectURL(svgBlob);
+  var img = new Image();
+  img.onload = function(){
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(result.width * scale));
+    canvas.height = Math.max(1, Math.round(result.height * scale));
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(function(blob){
+      if(!blob){ toast('PNG export failed.'); return; }
+      downloadBlob(blob, filenameBase + '.png');
+      toast('Exported ' + filenameBase + '.png');
+    }, 'image/png');
+  };
+  img.onerror = function(){
+    URL.revokeObjectURL(url);
+    toast('PNG export failed.');
+  };
+  img.src = url;
+}
+function toggleExportAsPanel(panelId){
+  var panel = document.getElementById(panelId);
+  var wasHidden = panel.classList.contains('hidden');
+  closeAllExportAsPanels();
+  if(wasHidden) panel.classList.remove('hidden');
+}
+function closeAllExportAsPanels(){
+  document.querySelectorAll('.kf-export-as-panel').forEach(function(panel){
+    panel.classList.add('hidden');
+  });
+}
+
+/* =========================================================
    CONFIRM MODAL (generic)
    ========================================================= */
 var pendingConfirmAction = null;
@@ -7877,6 +8104,9 @@ function wireEvents(){
     if(!e.target.closest('.kf-tasktype-icon-wrap')) closeAllTaskTypeIconPanels();
   });
   document.getElementById('taskTypeList').addEventListener('scroll', closeAllTaskTypeIconPanels);
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('.kf-export-as-wrap')) closeAllExportAsPanels();
+  });
   document.getElementById('releasesBtn').addEventListener('click', openReleasesOverlay);
   document.getElementById('releasesModalClose').addEventListener('click', closeReleasesOverlay);
   document.getElementById('releasesDoneBtn').addEventListener('click', closeReleasesOverlay);
@@ -7966,6 +8196,7 @@ function wireEvents(){
   });
   document.getElementById('taskListCollapseAllBtn').addEventListener('click', collapseAllTaskListGroups);
   document.getElementById('taskListExpandAllBtn').addEventListener('click', expandAllTaskListGroups);
+  document.getElementById('taskListExportCsvBtn').addEventListener('click', exportTaskListAsCsv);
 
   document.getElementById('bulkEditBtn').addEventListener('click', openBulkEditOverlay);
   document.getElementById('bulkEditClose').addEventListener('click', closeBulkEditOverlay);
@@ -7999,6 +8230,21 @@ function wireEvents(){
   document.getElementById('depMapZoomInBtn').addEventListener('click', function(){ setDepMapZoom(0.1); });
   document.getElementById('depMapZoomOutBtn').addEventListener('click', function(){ setDepMapZoom(-0.1); });
   document.getElementById('depMapResetBtn').addEventListener('click', resetDepMapZoom);
+  document.getElementById('depMapExportAsBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('depMapExportAsPanel');
+  });
+  document.querySelectorAll('#depMapExportAsPanel .kf-export-as-option').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      closeAllExportAsPanels();
+      var project = getCurrentProject();
+      var filenameBase = (project ? project.key : 'export') + '-dependency-map';
+      var svgEl = document.querySelector('#depMapInner svg');
+      if(!svgEl){ toast('Nothing to export.'); return; }
+      if(btn.getAttribute('data-export-type') === 'svg') exportSvgElementAsSvgFile(svgEl, filenameBase);
+      else exportSvgElementAsPng(svgEl, filenameBase, 4);
+    });
+  });
   document.getElementById('depMapOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'depMapOverlay') closeDepMapOverlay();
   });
@@ -8041,6 +8287,21 @@ function wireEvents(){
   document.getElementById('costBenefitZoomInBtn').addEventListener('click', function(){ setCbZoom(0.1); });
   document.getElementById('costBenefitZoomOutBtn').addEventListener('click', function(){ setCbZoom(-0.1); });
   document.getElementById('costBenefitResetBtn').addEventListener('click', resetCbZoom);
+  document.getElementById('costBenefitExportAsBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('costBenefitExportAsPanel');
+  });
+  document.querySelectorAll('#costBenefitExportAsPanel .kf-export-as-option').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      closeAllExportAsPanels();
+      var project = getCurrentProject();
+      var filenameBase = (project ? project.key : 'export') + '-cost-benefit-chart';
+      var svgEl = document.querySelector('#costBenefitInner svg');
+      if(!svgEl){ toast('Nothing to export.'); return; }
+      if(btn.getAttribute('data-export-type') === 'svg') exportSvgElementAsSvgFile(svgEl, filenameBase);
+      else exportSvgElementAsPng(svgEl, filenameBase, 4);
+    });
+  });
   document.getElementById('costBenefitOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'costBenefitOverlay') closeCostBenefitOverlay();
   });
@@ -8257,6 +8518,7 @@ function wireEvents(){
     else if(!document.getElementById('projectOverlay').classList.contains('hidden')) closeProjectModal();
     else if(!document.getElementById('teamOverlay').classList.contains('hidden')) closeTeamModal();
     else if(document.querySelector('.kf-tasktype-icon-panel:not(.hidden)')) closeAllTaskTypeIconPanels();
+    else if(document.querySelector('.kf-export-as-panel:not(.hidden)')) closeAllExportAsPanels();
     else if(!document.getElementById('taskTypesOverlay').classList.contains('hidden')) closeTaskTypesModal();
     else if(isReleasesOverlayOpen()) closeReleasesOverlay();
     else if(isDocumentsOverlayOpen()) closeDocumentsOverlay();
