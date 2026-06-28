@@ -1,6 +1,6 @@
 # Enkl.app
 
-Enkl ("en-klir" - from the Swedish word for 'simple') - a Kanban board and project management/planning for small teams - portable, single file, with no external dependencies
+Enkl ("en-kel" - from the Swedish word for 'simple') - a Kanban board and project management/planning for small teams - portable, single file, with no external dependencies
 
 #### Extended project management and governance modules
 - Principles
