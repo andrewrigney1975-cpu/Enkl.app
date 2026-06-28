@@ -699,6 +699,20 @@
   .kf-health-top-member-bar-fill{height:100%;background:#0c66e4;border-radius:4px;}
   .kf-health-top-member-count{width:30px;text-align:right;font-size:12px;font-weight:500;color:var(--kf-text-secondary);flex-shrink:0;}
   .kf-health-empty{padding:18px;text-align:center;color:var(--kf-text-faint);font-size:13px;}
+
+  /* Project Search */
+  .kf-search-group{margin-bottom:20px;}
+  .kf-search-group-title{font-size:13px;font-weight:500;color:var(--kf-text-secondary);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:6px;}
+  .kf-search-result-row{display:block;padding:10px 12px;border:1px solid var(--kf-border);border-radius:var(--kf-radius);margin-bottom:6px;}
+  .kf-search-result-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .kf-search-result-link{font-size:13px;font-weight:500;color:var(--kf-blue);text-decoration:none;cursor:pointer;}
+  .kf-search-result-link:hover{text-decoration:underline;}
+  .kf-search-archived-badge{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.03em;color:var(--kf-text-faint);background:var(--kf-column-bg);padding:1px 6px;border-radius:3px;}
+  .kf-search-result-snippet{margin-top:4px;font-size:12px;color:var(--kf-text-secondary);line-height:1.5;}
+  .kf-search-result-field-label{font-weight:500;color:var(--kf-text-faint);}
+  .kf-search-highlight{background:#fff3a0;color:#172b4d;border-radius:2px;padding:0 1px;}
+  .kf-search-more-note{font-size:12px;color:var(--kf-text-faint);padding:2px 12px;}
+  .kf-search-empty{padding:24px;text-align:center;color:var(--kf-text-faint);font-size:13px;}
   .kf-decision-status-pill{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;}
   .kf-decision-status-pill.open{color:var(--kf-text-secondary);background:var(--kf-column-bg);}
   .kf-decision-status-pill.in_review{color:var(--kf-blue);background:var(--kf-release-progress-bg);}
@@ -1113,6 +1127,7 @@
       <div class="kf-header-divider"></div>
       <div class="kf-project-picker">
         <select id="projectSelect" class="kf-select-dark" aria-label="Select project"></select>
+        <button class="kf-btn kf-btn-ghost" id="projectSearchBtn" title="Project Search" aria-label="Project Search"><span class="kf-icon" data-icon="search" data-size="16"></span></button>
         <button class="kf-header-btn" id="editProjectBtn" title="Edit project"><span class="kf-icon" data-icon="edit" data-size="14"></span>Edit</button>
         <button class="kf-header-btn" id="manageTeamBtn" title="Manage team members"><span class="kf-icon" data-icon="team" data-size="14"></span>Team</button>
         <button class="kf-header-btn" id="deleteProjectBtn" title="Delete project"><span class="kf-icon" data-icon="trash" data-size="14"></span>Delete</button>
@@ -2116,6 +2131,26 @@
   </div>
 </div>
 
+<!-- Project Search Modal -->
+<div class="kf-overlay hidden" id="projectSearchOverlay">
+  <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>Project Search</h2>
+      <button class="kf-btn kf-btn-ghost" id="projectSearchClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div class="kf-search" style="margin-bottom:14px;">
+        <span class="kf-icon" data-icon="search" data-size="14"></span>
+        <input type="text" id="projectSearchInput" placeholder="Search tasks, team members, principles, objectives, documents, risks, decisions...">
+      </div>
+      <div id="projectSearchResults"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-secondary" id="projectSearchDoneBtn">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Import Conflict Modal -->
 <div class="kf-overlay hidden" id="importConflictOverlay">
   <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
@@ -2209,7 +2244,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.36.20260628.0354';
+var APP_VERSION = '1.37.20260628.0937';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -3941,6 +3976,139 @@ function computeTopTeamMembers(project){
     return a.name.localeCompare(b.name);
   });
   return rows.slice(0, 5);
+}
+
+/* =========================================================
+   PROJECT SEARCH
+   Searches every listed field across each entity type, case-
+   insensitively. For an item matching in multiple fields, the
+   FIRST matching field in priority order (title first, then key,
+   then the rest) supplies the snippet — one row per matching item,
+   not one row per matching field. Principles/Objectives/Documents/
+   Risks/Decisions are only searched at all when that module is
+   enabled in App Settings; Tasks and Team Members are always searched.
+   ========================================================= */
+var PROJECT_SEARCH_MIN_CHARS = 2;
+var PROJECT_SEARCH_SNIPPET_CONTEXT = 50;
+var PROJECT_SEARCH_GROUP_CAP = 8;
+
+function findFirstSearchFieldMatch(term, fields){
+  var lowerTerm = term.toLowerCase();
+  for(var i = 0; i < fields.length; i++){
+    var f = fields[i];
+    if(f.value !== null && f.value !== undefined && String(f.value).toLowerCase().indexOf(lowerTerm) !== -1){
+      return f;
+    }
+  }
+  return null;
+}
+
+/* Builds the highlighted, context-windowed snippet HTML for a single
+   matched field's text. Short fields render in full (no ellipsis);
+   long fields are windowed to ~PROJECT_SEARCH_SNIPPET_CONTEXT
+   characters on each side of the match. All non-match text is HTML-
+   escaped, and the matched substring itself (escaped too) is wrapped
+   in a <mark> — so a title containing literal "<" or ">" can never
+   inject markup into the results list. */
+function buildSearchSnippetHTML(text, term){
+  text = String(text);
+  var lowerText = text.toLowerCase(), lowerTerm = term.toLowerCase();
+  var idx = lowerText.indexOf(lowerTerm);
+  if(idx === -1) return escapeHTML(text);
+  var ctx = PROJECT_SEARCH_SNIPPET_CONTEXT;
+  var start = Math.max(0, idx - ctx);
+  var end = Math.min(text.length, idx + term.length + ctx);
+  var prefix = (start > 0 ? '\u2026' : '') + text.slice(start, idx);
+  var match = text.slice(idx, idx + term.length);
+  var suffix = text.slice(idx + term.length, end) + (end < text.length ? '\u2026' : '');
+  return escapeHTML(prefix) + '<mark class="kf-search-highlight">' + escapeHTML(match) + '</mark>' + escapeHTML(suffix);
+}
+
+function buildProjectSearchGroups(project, term){
+  var visibility = normalizeHeaderButtonVisibility(project.headerButtonVisibility);
+  var groups = [];
+
+  function pushGroup(type, label, items, fieldsFn, sortKeyFn){
+    var results = [];
+    items.forEach(function(item){
+      var match = findFirstSearchFieldMatch(term, fieldsFn(item));
+      if(match) results.push({id: item.id, title: match.titleOverride || item.title || item.name, archived: !!item.archived, match: match, sortKey: sortKeyFn(item)});
+    });
+    results.sort(function(a, b){ return String(a.sortKey).localeCompare(String(b.sortKey), undefined, {numeric: true}); });
+    groups.push({type: type, label: label, total: results.length, results: results.slice(0, PROJECT_SEARCH_GROUP_CAP)});
+  }
+
+  pushGroup('tasks', 'Tasks', getTasksArray(project), function(t){
+    return [
+      {label: null, value: t.title},
+      {label: 'Key', value: t.key},
+      {label: 'Description', value: t.description}
+    ];
+  }, function(t){ return t.key; });
+
+  pushGroup('members', 'Team Members', project.members || [], function(m){
+    return [
+      {label: null, value: m.name},
+      {label: 'Role', value: m.role}
+    ];
+  }, function(m){ return m.name; });
+
+  if(visibility.principles){
+    pushGroup('principles', 'Principles', project.principles || [], function(p){
+      return [
+        {label: null, value: p.title},
+        {label: 'Key', value: p.key},
+        {label: 'Description', value: p.description},
+        {label: 'Document link', value: p.documentUrl}
+      ];
+    }, function(p){ return p.key; });
+  }
+
+  if(visibility.objectives){
+    pushGroup('objectives', 'Objectives', project.objectives || [], function(o){
+      return [
+        {label: null, value: o.title},
+        {label: 'Key', value: o.key},
+        {label: 'Description', value: o.description}
+      ];
+    }, function(o){ return o.key; });
+  }
+
+  if(visibility.documents){
+    pushGroup('documents', 'Documents', project.documents || [], function(d){
+      return [
+        {label: null, value: d.title},
+        {label: 'Key', value: d.key},
+        {label: 'Description', value: d.description},
+        {label: 'URL', value: d.url}
+      ];
+    }, function(d){ return d.key; });
+  }
+
+  if(visibility.risks){
+    pushGroup('risks', 'Risks', project.risks || [], function(r){
+      return [
+        {label: null, value: r.title},
+        {label: 'Key', value: r.key},
+        {label: 'Description', value: r.description},
+        {label: 'Mitigations', value: r.mitigations}
+      ];
+    }, function(r){ return r.key; });
+  }
+
+  if(visibility.decisions){
+    pushGroup('decisions', 'Decisions', project.decisions || [], function(dec){
+      return [
+        {label: null, value: dec.title},
+        {label: 'Key', value: dec.key},
+        {label: 'Description', value: dec.description},
+        {label: 'Outcome', value: dec.outcome},
+        {label: 'Approver', value: dec.approver}
+      ];
+    }, function(dec){ return dec.key; });
+  }
+
+  return groups;
 }
 
 /* ---- Dial gauge rendering ----
@@ -9475,6 +9643,96 @@ function deleteObjectiveFromModal(){
 }
 
 /* =========================================================
+   PROJECT SEARCH MODAL
+   ========================================================= */
+var projectSearchDebounceId = null;
+function openProjectSearchOverlay(){
+  var project = getCurrentProject();
+  if(!project){ toast('No project selected.'); return; }
+  document.getElementById('projectSearchInput').value = '';
+  renderProjectSearchResults('');
+  document.getElementById('projectSearchOverlay').classList.remove('hidden');
+  document.getElementById('projectSearchInput').focus();
+}
+function closeProjectSearchOverlay(){
+  clearTimeout(projectSearchDebounceId);
+  document.getElementById('projectSearchOverlay').classList.add('hidden');
+}
+function isProjectSearchOverlayOpen(){
+  return !document.getElementById('projectSearchOverlay').classList.contains('hidden');
+}
+
+var PROJECT_SEARCH_GROUP_ICONS = {
+  tasks: 'board', members: 'team', principles: 'compass', objectives: 'target',
+  documents: 'ty_document', risks: 'warning', decisions: 'ty_approve'
+};
+
+function renderProjectSearchResults(rawTerm){
+  var project = getCurrentProject();
+  var resultsEl = document.getElementById('projectSearchResults');
+  if(!project){ resultsEl.innerHTML = ''; return; }
+
+  var term = rawTerm.trim();
+  if(term.length < PROJECT_SEARCH_MIN_CHARS){
+    resultsEl.innerHTML = '<div class="kf-search-empty">Type at least ' + PROJECT_SEARCH_MIN_CHARS + ' characters to search.</div>';
+    return;
+  }
+
+  var groups = buildProjectSearchGroups(project, term).filter(function(g){ return g.results.length > 0; });
+  if(groups.length === 0){
+    resultsEl.innerHTML = '<div class="kf-search-empty">No results for \u201c' + escapeHTML(term) + '\u201d.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = groups.map(function(g){
+    var rowsHTML = g.results.map(function(r){
+      var fieldLabelHTML = r.match.label ? '<span class="kf-search-result-field-label">' + escapeHTML(r.match.label) + ':</span> ' : '';
+      var snippetHTML = buildSearchSnippetHTML(r.match.value, term);
+      return '<div class="kf-search-result-row" data-result-type="' + g.type + '" data-result-id="' + r.id + '">' +
+        '<div class="kf-search-result-top">' +
+          '<a class="kf-search-result-link" data-result-type="' + g.type + '" data-result-id="' + r.id + '">' + escapeHTML(r.title) + '</a>' +
+          (r.archived ? '<span class="kf-search-archived-badge">Archived</span>' : '') +
+        '</div>' +
+        '<div class="kf-search-result-snippet">' + fieldLabelHTML + snippetHTML + '</div>' +
+      '</div>';
+    }).join('');
+    var moreNote = g.total > g.results.length ? '<div class="kf-search-more-note">+' + (g.total - g.results.length) + ' more in ' + escapeHTML(g.label) + '</div>' : '';
+    return '<div class="kf-search-group">' +
+      '<h3 class="kf-search-group-title"><span class="kf-icon" data-icon="' + PROJECT_SEARCH_GROUP_ICONS[g.type] + '" data-size="13"></span>' + escapeHTML(g.label) + ' (' + g.total + ')</h3>' +
+      rowsHTML + moreNote +
+    '</div>';
+  }).join('');
+  hydrateIcons(resultsEl);
+}
+
+function openProjectSearchResult(type, id){
+  var project = getCurrentProject();
+  if(!project) return;
+  closeProjectSearchOverlay();
+  if(type === 'tasks'){
+    var task = project.tasks[id];
+    if(task) openTaskModal(id, task.columnId);
+  } else if(type === 'members'){
+    openTeamModal();
+  } else if(type === 'principles'){
+    openPrinciplesOverlay();
+    showPrinciplesFormView(id);
+  } else if(type === 'objectives'){
+    openObjectivesOverlay();
+    showObjectivesFormView(id);
+  } else if(type === 'documents'){
+    openDocumentsOverlay();
+    showDocumentsFormView(id);
+  } else if(type === 'risks'){
+    openRisksOverlay();
+    showRisksFormView(id);
+  } else if(type === 'decisions'){
+    openDecisionsOverlay();
+    showDecisionsFormView(id);
+  }
+}
+
+/* =========================================================
    SVG / PNG EXPORT (Dependency Map, Cost/Benefit Chart)
    These SVGs are styled with CSS custom properties (var(--kf-...))
    so they adapt to light/dark theme on screen, and their <text>
@@ -9803,6 +10061,26 @@ function wireEvents(){
   document.getElementById('objectiveFormCancelBtn').addEventListener('click', showObjectivesListView);
   document.getElementById('objectiveFormSaveBtn').addEventListener('click', saveObjectiveFromModal);
   document.getElementById('deleteObjectiveBtn').addEventListener('click', deleteObjectiveFromModal);
+
+  document.getElementById('projectSearchBtn').addEventListener('click', openProjectSearchOverlay);
+  document.getElementById('projectSearchClose').addEventListener('click', closeProjectSearchOverlay);
+  document.getElementById('projectSearchDoneBtn').addEventListener('click', closeProjectSearchOverlay);
+  document.getElementById('projectSearchOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'projectSearchOverlay') closeProjectSearchOverlay();
+  });
+  document.getElementById('projectSearchInput').addEventListener('input', function(e){
+    var value = e.target.value;
+    clearTimeout(projectSearchDebounceId);
+    projectSearchDebounceId = setTimeout(function(){ renderProjectSearchResults(value); }, 200);
+  });
+  document.getElementById('projectSearchResults').addEventListener('click', function(e){
+    var link = e.target.closest('.kf-search-result-link, .kf-search-result-row');
+    if(!link) return;
+    e.preventDefault();
+    var type = link.getAttribute('data-result-type');
+    var id = link.getAttribute('data-result-id');
+    if(type && id) openProjectSearchResult(type, id);
+  });
 
   document.getElementById('deleteProjectBtn').addEventListener('click', function(){
     var p = getCurrentProject();
@@ -10185,6 +10463,7 @@ function wireEvents(){
     else if(isDecisionsOverlayOpen()) closeDecisionsOverlay();
     else if(isPrinciplesOverlayOpen()) closePrinciplesOverlay();
     else if(isObjectivesOverlayOpen()) closeObjectivesOverlay();
+    else if(isProjectSearchOverlayOpen()) closeProjectSearchOverlay();
     else if(isHealthOverlayOpen()) closeHealthOverlay();
     else if(isAppSettingsOverlayOpen()) closeAppSettingsOverlay();
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
