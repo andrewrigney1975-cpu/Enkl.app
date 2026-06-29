@@ -231,6 +231,7 @@
   .kf-drawer-title{color:#fff;font-weight:700;font-size:15px;}
   .kf-drawer-backdrop{display:none;}
   .kf-drawer-views-section{display:none;}
+  .kf-drawer-more-section{display:none;}
   .kf-drawer-section-label{display:none;}
   .kf-drawer-view-slot{display:none;}
   /* On desktop, Views/Tools live in the side nav instead — the
@@ -278,6 +279,13 @@
     .kf-appsettings-label{display:inline;}
     .kf-header-controls .kf-theme-toggle::after{content:attr(data-mobile-label);}
     .kf-drawer-views-section{display:block;}
+    .kf-header-controls .kf-header-nav-movable{display:none;}
+    .kf-header-controls .kf-header-more-wrap{display:none;}
+    .kf-drawer-more-section{display:block;}
+    .kf-header-controls #healthBtn{
+      background:none;border:none;color:#fff;justify-content:flex-start;
+    }
+    .kf-header-controls #healthBtn:hover{background:none;text-decoration:underline;}
     .kf-drawer-section-label{
       display:block;color:rgba(255,255,255,.5);
       font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
@@ -612,6 +620,8 @@
   #principlesBtn.hidden{display:none;}
   #objectivesBtn.hidden{display:none;}
   #teamsCommitteesBtn.hidden{display:none;}
+  #headerMoreWrap.hidden{display:none;}
+  #drawerMoreList.hidden{display:none;}
   .kf-modal-footer.hidden{display:none;}
   .kf-tasktype-icon-grid{
     display:grid;grid-template-columns:repeat(6, 1fr);gap:4px;
@@ -820,6 +830,27 @@
   }
   .kf-export-as-option:hover{background:var(--kf-hover-tint);}
   .kf-export-as-panel.hidden{display:none;}
+  .kf-header-movable-group{display:flex;align-items:center;gap:6px;}
+  .kf-header-more-panel{min-width:180px;}
+  .kf-header-more-link{
+    display:block;width:100%;text-align:left;padding:8px 10px;
+    background:none;border:none;border-radius:3px;
+    color:var(--kf-blue);font-size:13px;font-weight:500;text-decoration:none;cursor:pointer;
+  }
+  .kf-header-more-link:hover{background:var(--kf-hover-tint);text-decoration:underline;}
+  .kf-drawer-more-toggle{
+    display:flex;align-items:center;gap:6px;width:100%;
+    background:none;border:none;color:#fff;font-size:13px;font-weight:500;
+    padding:6px 10px;cursor:pointer;text-align:left;
+  }
+  .kf-drawer-more-toggle:hover{text-decoration:underline;}
+  .kf-drawer-more-toggle .kf-icon{transition:transform .15s ease;}
+  .kf-drawer-more-toggle[aria-expanded="true"] .kf-icon{transform:rotate(90deg);}
+  .kf-drawer-more-list{display:flex;flex-direction:column;padding-left:20px;}
+  .kf-drawer-more-list a{
+    display:block;padding:6px 10px;color:rgba(255,255,255,.85);font-size:13px;font-weight:500;text-decoration:none;
+  }
+  .kf-drawer-more-list a:hover{text-decoration:underline;color:#fff;}
   .kf-modal-body{padding:18px 20px;overflow-y:auto;flex:1;}
   .kf-modal-footer{
     padding:14px 20px;border-top:1px solid var(--kf-border);
@@ -1158,13 +1189,25 @@
       </div>
       <div class="kf-header-divider"></div>
       <div class="kf-drawer-action-group">
-        <button class="kf-header-btn" id="principlesBtn" title="Principles"><span class="kf-icon" data-icon="compass" data-size="14"></span>Principles</button>
-        <button class="kf-header-btn" id="objectivesBtn" title="Objectives"><span class="kf-icon" data-icon="target" data-size="14"></span>Objectives</button>
         <button class="kf-header-btn" id="healthBtn" title="Health Dashboard"><span class="kf-icon" data-icon="heartPulse" data-size="14"></span>Health Dashboard</button>
-        <button class="kf-header-btn" id="documentsBtn" title="Documents"><span class="kf-icon" data-icon="ty_document" data-size="14"></span>Documents</button>
-        <button class="kf-header-btn" id="risksBtn" title="Risks"><span class="kf-icon" data-icon="warning" data-size="14"></span>Risks</button>
-        <button class="kf-header-btn" id="decisionsBtn" title="Decisions"><span class="kf-icon" data-icon="ty_approve" data-size="14"></span>Decisions</button>
-        <button class="kf-header-btn" id="teamsCommitteesBtn" title="Teams &amp; Committees"><span class="kf-icon" data-icon="orgChart" data-size="14"></span>Teams &amp; Committees</button>
+        <div class="kf-header-movable-group" id="headerMovableGroup">
+          <button class="kf-header-btn kf-header-nav-movable" id="principlesBtn" title="Principles"><span class="kf-icon" data-icon="compass" data-size="14"></span>Principles</button>
+          <button class="kf-header-btn kf-header-nav-movable" id="objectivesBtn" title="Objectives"><span class="kf-icon" data-icon="target" data-size="14"></span>Objectives</button>
+          <button class="kf-header-btn kf-header-nav-movable" id="documentsBtn" title="Documents"><span class="kf-icon" data-icon="ty_document" data-size="14"></span>Documents</button>
+          <button class="kf-header-btn kf-header-nav-movable" id="risksBtn" title="Risks"><span class="kf-icon" data-icon="warning" data-size="14"></span>Risks</button>
+          <button class="kf-header-btn kf-header-nav-movable" id="decisionsBtn" title="Decisions"><span class="kf-icon" data-icon="ty_approve" data-size="14"></span>Decisions</button>
+          <button class="kf-header-btn kf-header-nav-movable" id="teamsCommitteesBtn" title="Teams &amp; Committees"><span class="kf-icon" data-icon="orgChart" data-size="14"></span>Teams &amp; Committees</button>
+        </div>
+        <div class="kf-export-as-wrap kf-header-more-wrap hidden" id="headerMoreWrap">
+          <button class="kf-header-btn" id="headerMoreBtn" title="More"><span class="kf-icon" data-icon="chevronDown" data-size="14"></span>More...</button>
+          <div class="kf-export-as-panel hidden kf-header-more-panel" id="headerMorePanel"></div>
+        </div>
+        <div class="kf-drawer-more-section" id="drawerMoreSection">
+          <button type="button" class="kf-drawer-more-toggle" id="drawerMoreToggle" aria-expanded="false">
+            <span class="kf-icon" data-icon="chevronRight" data-size="14"></span>More
+          </button>
+          <div class="kf-drawer-more-list hidden" id="drawerMoreList"></div>
+        </div>
       </div>
       <div class="kf-drawer-views-section" id="drawerViewsSection">
         <div class="kf-header-divider"></div>
@@ -1977,6 +2020,11 @@
       <p style="margin:0 0 12px;color:var(--kf-text-faint);font-size:12px;line-height:1.5;">Choose which modules should be used in this Project</p>
       <div style="display:flex;flex-direction:column;gap:4px;">
         <label class="kf-risk-doc-picker-row">
+          <input type="checkbox" id="settingsShowHealthBtn">
+          <span class="kf-icon" data-icon="heartPulse" data-size="14"></span>
+          <span>Health Dashboard</span>
+        </label>
+        <label class="kf-risk-doc-picker-row">
           <input type="checkbox" id="settingsShowPrinciplesBtn">
           <span class="kf-icon" data-icon="compass" data-size="14"></span>
           <span>Principles</span>
@@ -1985,11 +2033,6 @@
           <input type="checkbox" id="settingsShowObjectivesBtn">
           <span class="kf-icon" data-icon="target" data-size="14"></span>
           <span>Objectives</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowHealthBtn">
-          <span class="kf-icon" data-icon="heartPulse" data-size="14"></span>
-          <span>Health Dashboard</span>
         </label>
         <label class="kf-risk-doc-picker-row">
           <input type="checkbox" id="settingsShowDocumentsBtn">
@@ -2335,7 +2378,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.39.20260629.0639';
+var APP_VERSION = '1.40.20260629.0739';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -7683,16 +7726,44 @@ function toast(message){
 /* =========================================================
    RENDERING
    ========================================================= */
+var HEADER_MOVABLE_NAV_ITEMS = [
+  {key: 'principles', id: 'principlesBtn', label: 'Principles'},
+  {key: 'objectives', id: 'objectivesBtn', label: 'Objectives'},
+  {key: 'documents', id: 'documentsBtn', label: 'Documents'},
+  {key: 'risks', id: 'risksBtn', label: 'Risks'},
+  {key: 'decisions', id: 'decisionsBtn', label: 'Decisions'},
+  {key: 'teamsCommittees', id: 'teamsCommitteesBtn', label: 'Teams & Committees'}
+];
 function applyHeaderButtonVisibility(){
   var project = getCurrentProject();
   var visibility = project ? normalizeHeaderButtonVisibility(project.headerButtonVisibility) : {documents:true, risks:true, decisions:true, health:true, principles:true, objectives:true, teamsCommittees:true};
-  document.getElementById('documentsBtn').classList.toggle('hidden', !visibility.documents);
-  document.getElementById('risksBtn').classList.toggle('hidden', !visibility.risks);
-  document.getElementById('decisionsBtn').classList.toggle('hidden', !visibility.decisions);
   document.getElementById('healthBtn').classList.toggle('hidden', !visibility.health);
-  document.getElementById('principlesBtn').classList.toggle('hidden', !visibility.principles);
-  document.getElementById('objectivesBtn').classList.toggle('hidden', !visibility.objectives);
-  document.getElementById('teamsCommitteesBtn').classList.toggle('hidden', !visibility.teamsCommittees);
+
+  var enabledItems = HEADER_MOVABLE_NAV_ITEMS.filter(function(item){ return visibility[item.key]; });
+  var useMoreMenu = enabledItems.length >= 3;
+
+  /* Desktop: either the 6 show individually (per their own App Settings
+     state, as before), or — once 3 or more are enabled — they're all
+     hidden and replaced by a single "More..." dropdown of text links
+     for just the enabled ones. */
+  document.getElementById('headerMoreWrap').classList.toggle('hidden', !useMoreMenu);
+  HEADER_MOVABLE_NAV_ITEMS.forEach(function(item){
+    var btn = document.getElementById(item.id);
+    btn.classList.toggle('hidden', useMoreMenu || !visibility[item.key]);
+  });
+  var morePanel = document.getElementById('headerMorePanel');
+  morePanel.innerHTML = useMoreMenu ? enabledItems.map(function(item){
+    return '<a href="#" class="kf-header-more-link" data-nav-target="' + item.id + '">' + escapeHTML(item.label) + '</a>';
+  }).join('') : '';
+
+  /* Mobile: regardless of how many are enabled, the 6 always live
+     inside the drawer's collapsible "More" section as text links —
+     never as standalone styled buttons there (those are forced
+     display:none for mobile via CSS regardless of this JS state). */
+  var drawerMoreList = document.getElementById('drawerMoreList');
+  drawerMoreList.innerHTML = enabledItems.map(function(item){
+    return '<a href="#" class="kf-drawer-more-link" data-nav-target="' + item.id + '">' + escapeHTML(item.label) + '</a>';
+  }).join('');
 }
 
 function openAppSettingsOverlay(){
@@ -10683,6 +10754,35 @@ function wireEvents(){
   document.getElementById('deleteObjectiveBtn').addEventListener('click', deleteObjectiveFromModal);
 
   document.getElementById('teamsCommitteesBtn').addEventListener('click', openTeamsCommitteesOverlay);
+
+  document.getElementById('headerMoreBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('headerMorePanel');
+  });
+  document.getElementById('headerMorePanel').addEventListener('click', function(e){
+    var link = e.target.closest('[data-nav-target]');
+    if(!link) return;
+    e.preventDefault();
+    closeAllExportAsPanels();
+    var target = document.getElementById(link.getAttribute('data-nav-target'));
+    if(target) target.click();
+  });
+  document.getElementById('drawerMoreToggle').addEventListener('click', function(){
+    var list = document.getElementById('drawerMoreList');
+    var expanded = list.classList.contains('hidden');
+    list.classList.toggle('hidden', !expanded);
+    this.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  });
+  document.getElementById('drawerMoreList').addEventListener('click', function(e){
+    var link = e.target.closest('[data-nav-target]');
+    if(!link) return;
+    e.preventDefault();
+    var target = document.getElementById(link.getAttribute('data-nav-target'));
+    if(target){
+      closeMobileDrawer();
+      target.click();
+    }
+  });
   document.getElementById('teamsCommitteesModalClose').addEventListener('click', closeTeamsCommitteesOverlay);
   document.getElementById('teamsCommitteesDoneBtn').addEventListener('click', closeTeamsCommitteesOverlay);
   document.getElementById('teamsCommitteesOverlay').addEventListener('mousedown', function(e){
