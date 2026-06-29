@@ -602,12 +602,16 @@
   #objectivesListView.hidden{display:none;}
   #objectivesFormView.hidden{display:none;}
   #deleteObjectiveBtn.hidden{display:none;}
+  #teamsCommitteesListView.hidden{display:none;}
+  #teamsCommitteesFormView.hidden{display:none;}
+  #deleteTeamCommitteeBtn.hidden{display:none;}
   #documentsBtn.hidden{display:none;}
   #risksBtn.hidden{display:none;}
   #decisionsBtn.hidden{display:none;}
   #healthBtn.hidden{display:none;}
   #principlesBtn.hidden{display:none;}
   #objectivesBtn.hidden{display:none;}
+  #teamsCommitteesBtn.hidden{display:none;}
   .kf-modal-footer.hidden{display:none;}
   .kf-tasktype-icon-grid{
     display:grid;grid-template-columns:repeat(6, 1fr);gap:4px;
@@ -645,6 +649,7 @@
   .kf-releases-empty{padding:30px 10px;text-align:center;color:var(--kf-text-faint);font-size:13px;}
   .kf-release-task-count{flex-shrink:0;}
   .kf-member-empty{color:var(--kf-text-faint);font-size:13px;text-align:center;padding:18px 0;}
+  .kf-member-teams-line{font-size:11px;color:var(--kf-text-faint);padding:0 8px 6px 46px;margin-top:-2px;}
 
   /* Risks */
   .kf-risk-status-pill{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;}
@@ -713,6 +718,22 @@
   .kf-search-highlight{background:#fff3a0;color:#172b4d;border-radius:2px;padding:0 1px;}
   .kf-search-more-note{font-size:12px;color:var(--kf-text-faint);padding:2px 12px;}
   .kf-search-empty{padding:24px;text-align:center;color:var(--kf-text-faint);font-size:13px;}
+
+  /* Teams & Committees */
+  .kf-tc-expand-row{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:10px;}
+  .kf-tc-expand-row a{color:var(--kf-blue);text-decoration:none;cursor:pointer;}
+  .kf-tc-expand-row a:hover{text-decoration:underline;}
+  .kf-tc-expand-row span{color:var(--kf-text-faint);}
+  .kf-tc-tree{display:flex;flex-direction:column;gap:4px;}
+  .kf-tc-node-row{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:var(--kf-radius);cursor:pointer;}
+  .kf-tc-node-row:hover{background:var(--kf-column-bg);}
+  .kf-tc-toggle-btn{width:18px;height:18px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;color:var(--kf-text-faint);background:none;border:none;cursor:pointer;padding:0;}
+  .kf-tc-toggle-spacer{width:18px;flex-shrink:0;}
+  .kf-tc-name{font-size:13px;font-weight:500;color:var(--kf-text);}
+  .kf-tc-member-count{font-size:11px;color:var(--kf-text-faint);}
+  .kf-tc-member-list{display:flex;flex-direction:column;gap:2px;padding:2px 0 4px;}
+  .kf-tc-member-item{font-size:12px;color:var(--kf-text-secondary);display:flex;align-items:center;gap:6px;}
+  .kf-tc-empty{padding:24px;text-align:center;color:var(--kf-text-faint);font-size:13px;}
   .kf-decision-status-pill{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;}
   .kf-decision-status-pill.open{color:var(--kf-text-secondary);background:var(--kf-column-bg);}
   .kf-decision-status-pill.in_review{color:var(--kf-blue);background:var(--kf-release-progress-bg);}
@@ -1140,6 +1161,7 @@
         <button class="kf-header-btn" id="documentsBtn" title="Documents"><span class="kf-icon" data-icon="ty_document" data-size="14"></span>Documents</button>
         <button class="kf-header-btn" id="risksBtn" title="Risks"><span class="kf-icon" data-icon="warning" data-size="14"></span>Risks</button>
         <button class="kf-header-btn" id="decisionsBtn" title="Decisions"><span class="kf-icon" data-icon="ty_approve" data-size="14"></span>Decisions</button>
+        <button class="kf-header-btn" id="teamsCommitteesBtn" title="Teams &amp; Committees"><span class="kf-icon" data-icon="orgChart" data-size="14"></span>Teams &amp; Committees</button>
       </div>
       <div class="kf-drawer-views-section" id="drawerViewsSection">
         <div class="kf-header-divider"></div>
@@ -1981,6 +2003,11 @@
           <span class="kf-icon" data-icon="ty_approve" data-size="14"></span>
           <span>Decisions</span>
         </label>
+        <label class="kf-risk-doc-picker-row">
+          <input type="checkbox" id="settingsShowTeamsCommitteesBtn">
+          <span class="kf-icon" data-icon="orgChart" data-size="14"></span>
+          <span>Teams &amp; Committees</span>
+        </label>
       </div>
     </div>
     <div class="kf-modal-footer">
@@ -2151,6 +2178,67 @@
   </div>
 </div>
 
+<!-- Teams & Committees Modal -->
+<div class="kf-overlay hidden" id="teamsCommitteesOverlay">
+  <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="teamsCommitteesModalTitle">Teams &amp; Committees</h2>
+      <button class="kf-btn kf-btn-ghost" id="teamsCommitteesModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div id="teamsCommitteesListView">
+        <button class="kf-btn kf-btn-secondary" id="addTeamCommitteeBtn" style="width:100%;justify-content:center;margin-bottom:14px;">
+          <span class="kf-icon" data-icon="plus" data-size="14"></span>New Team / Committee
+        </button>
+        <div class="kf-search" style="margin-bottom:10px;">
+          <span class="kf-icon" data-icon="search" data-size="14"></span>
+          <input type="text" id="teamsCommitteesSearchInput" placeholder="Search teams &amp; committees...">
+        </div>
+        <div class="kf-tc-expand-row">
+          <a href="#" id="tcExpandAllLink">Expand all</a>
+          <span>&middot;</span>
+          <a href="#" id="tcCollapseAllLink">Collapse all</a>
+        </div>
+        <div id="teamsCommitteesList" class="kf-tc-tree"></div>
+      </div>
+      <div id="teamsCommitteesFormView" class="hidden">
+        <div class="kf-field">
+          <label for="tcNameInput">Name</label>
+          <input type="text" id="tcNameInput" maxlength="120" placeholder="e.g. Engineering">
+        </div>
+        <div class="kf-field">
+          <label for="tcDescriptionInput">Description</label>
+          <textarea id="tcDescriptionInput" maxlength="2000" placeholder="Describe this team or committee..."></textarea>
+        </div>
+        <div class="kf-field">
+          <label for="tcTypeSelect">Type</label>
+          <select id="tcTypeSelect">
+            <option value="team">Team</option>
+            <option value="committee">Committee</option>
+          </select>
+        </div>
+        <div class="kf-field">
+          <label for="tcParentSelect">Parent team / committee</label>
+          <select id="tcParentSelect"></select>
+        </div>
+        <div class="kf-field">
+          <label>Members</label>
+          <div id="tcMemberPicker" class="kf-risk-doc-picker"></div>
+        </div>
+        <div class="kf-field" id="tcMetaDates" style="color:var(--kf-text-faint);font-size:12px;"></div>
+      </div>
+    </div>
+    <div class="kf-modal-footer" id="teamsCommitteesListFooter">
+      <button class="kf-btn kf-btn-secondary" id="teamsCommitteesDoneBtn">Done</button>
+    </div>
+    <div class="kf-modal-footer hidden" id="teamsCommitteesFormFooter">
+      <button class="kf-btn kf-btn-danger kf-footer-left" id="deleteTeamCommitteeBtn">Delete</button>
+      <button class="kf-btn kf-btn-secondary" id="tcFormCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="tcFormSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Import Conflict Modal -->
 <div class="kf-overlay hidden" id="importConflictOverlay">
   <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
@@ -2244,7 +2332,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.37.20260628.0937';
+var APP_VERSION = '1.38.20260629.0558';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -2287,6 +2375,7 @@ var ICON_PATHS = {
   zoomOut:     '<circle cx="11" cy="11" r="7"/><path d="M8 11h6"/><path d="M21 21l-4.35-4.35"/>',
   fit:         '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
   team:        '<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22.5 21v-2a4 4 0 0 0-3-3.87"/><path d="M16.5 3.13a4 4 0 0 1 0 7.75"/>',
+  orgChart:    '<rect x="9" y="3" width="6" height="6" rx="1"/><rect x="2" y="15" width="6" height="6" rx="1"/><rect x="16" y="15" width="6" height="6" rx="1"/><path d="M12 9v3M5 12h14M5 12v3M19 12v3"/>',
   sun:         '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/>',
   moon:        '<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/>',
 
@@ -2651,6 +2740,8 @@ function migrateDB(){
     if(typeof p.prinCounter !== 'number'){ p.prinCounter = 1; changed = true; }
     if(!Array.isArray(p.objectives)){ p.objectives = []; changed = true; }
     if(typeof p.objCounter !== 'number'){ p.objCounter = 1; changed = true; }
+    if(!Array.isArray(p.teamsCommittees)){ p.teamsCommittees = []; changed = true; }
+    if(typeof p.tcCounter !== 'number'){ p.tcCounter = 1; changed = true; }
     if(!Array.isArray(p.approvers)){ p.approvers = []; changed = true; }
     if(!Array.isArray(p.roles)){ p.roles = []; changed = true; }
     p.members.forEach(function(m){
@@ -2703,6 +2794,34 @@ function migrateDB(){
     getTasksArray(p).forEach(function(t){ validTaskIds[t.id] = true; });
     var validDocIds = {};
     p.documents.forEach(function(d){ validDocIds[d.id] = true; });
+
+    var validTcIds = {};
+    p.teamsCommittees.forEach(function(tc){ validTcIds[tc.id] = true; });
+    p.teamsCommittees.forEach(function(tc){
+      if(!TEAM_COMMITTEE_TYPES.hasOwnProperty(tc.type)){ tc.type = 'team'; changed = true; }
+      if(tc.description === undefined){ tc.description = ''; changed = true; }
+      if(tc.parentId === undefined){ tc.parentId = null; changed = true; }
+      else if(tc.parentId && (!validTcIds[tc.parentId] || tc.parentId === tc.id)){ tc.parentId = null; changed = true; }
+      if(!Array.isArray(tc.memberIds)){ tc.memberIds = []; changed = true; }
+      else {
+        var filteredTcMemberIds = tc.memberIds.filter(function(mid){ return validMemberIds[mid]; });
+        if(filteredTcMemberIds.length !== tc.memberIds.length){ tc.memberIds = filteredTcMemberIds; changed = true; }
+      }
+      if(!tc.dateCreated){ tc.dateCreated = epoch; changed = true; }
+      if(!tc.dateLastModified){ tc.dateLastModified = tc.dateCreated || epoch; changed = true; }
+    });
+    /* Break any cycle that might have survived from a corrupted or
+       hand-edited file — walk each node's ancestor chain and sever
+       the link the moment a node reappears in its own chain. */
+    p.teamsCommittees.forEach(function(tc){
+      var seen = {}; seen[tc.id] = true;
+      var current = tc.parentId ? getTeamCommitteeById(p, tc.parentId) : null;
+      while(current){
+        if(seen[current.id]){ tc.parentId = null; changed = true; break; }
+        seen[current.id] = true;
+        current = current.parentId ? getTeamCommitteeById(p, current.parentId) : null;
+      }
+    });
 
     p.documents.forEach(function(d){
       if(d.ownerId === undefined){ d.ownerId = null; changed = true; }
@@ -2838,7 +2957,8 @@ function normalizeHeaderButtonVisibility(value){
     decisions: v.decisions !== false,
     health: v.health !== false,
     principles: v.principles !== false,
-    objectives: v.objectives !== false
+    objectives: v.objectives !== false,
+    teamsCommittees: v.teamsCommittees !== false
   };
 }
 function createDefaultProject(name, key){
@@ -2863,6 +2983,8 @@ function createDefaultProject(name, key){
     prinCounter: 1,
     objectives: [],
     objCounter: 1,
+    teamsCommittees: [],
+    tcCounter: 1,
     approvers: [],
     roles: [],
     headerButtonVisibility: {documents: true, risks: true, decisions: true},
@@ -3116,6 +3238,7 @@ function removeMember(project, memberId){
   (project.decisions || []).forEach(function(d){
     if(d.ownerId === memberId) d.ownerId = null;
   });
+  removeMemberFromAllTeamsCommittees(project, memberId);
   saveDB();
   return unassignedCount;
 }
@@ -3724,6 +3847,141 @@ function deleteObjective(project, objectiveId){
   saveDB();
   return unlinkedCount;
 }
+
+/* =========================================================
+   TEAMS & COMMITTEES
+   A hierarchical org structure: each node is either a Team or a
+   Committee, has 0 or 1 parent, and 0+ Team Members. Membership is
+   stored in EXACTLY ONE place (memberIds on the team/committee) —
+   there is no separate, editable copy on the Team Member, so the two
+   views can never drift out of sync. The Team modal can only ever
+   show membership read-only; the team/committee's own form is the
+   single source of truth for editing it.
+   ========================================================= */
+var TEAM_COMMITTEE_TYPES = {team: 'Team', committee: 'Committee'};
+function normalizeTeamCommitteeType(value){
+  return value === 'committee' ? 'committee' : 'team';
+}
+function nextTeamCommitteeKey(project, type){
+  var n = project.tcCounter++;
+  var prefix = normalizeTeamCommitteeType(type) === 'committee' ? 'COMM' : 'TEAM';
+  return project.key + '-' + prefix + '-' + String(n).padStart(3, '0');
+}
+function getTeamCommitteeById(project, id){
+  if(!project || !id) return null;
+  return (project.teamsCommittees || []).filter(function(tc){ return tc.id === id; })[0] || null;
+}
+/* True if `candidateAncestorId` is anywhere in `id`'s ancestor chain
+   (or IS `id` itself) — used to reject a parent assignment that would
+   create a cycle. */
+function isTeamCommitteeAncestor(project, id, candidateAncestorId){
+  var current = getTeamCommitteeById(project, candidateAncestorId);
+  var guard = 0;
+  while(current && guard < 1000){
+    if(current.id === id) return true;
+    current = current.parentId ? getTeamCommitteeById(project, current.parentId) : null;
+    guard++;
+  }
+  return false;
+}
+function getTeamCommitteeChildren(project, parentId){
+  return (project.teamsCommittees || []).filter(function(tc){ return (tc.parentId || null) === (parentId || null); });
+}
+function addTeamCommittee(project, data){
+  var now = new Date().toISOString();
+  var type = normalizeTeamCommitteeType(data.type);
+  var parentId = data.parentId && getTeamCommitteeById(project, data.parentId) ? data.parentId : null;
+  var tc = {
+    id: uid('tc'),
+    key: nextTeamCommitteeKey(project, type),
+    name: (data.name || '').trim().slice(0, 120) || 'Untitled team',
+    description: (data.description || '').trim().slice(0, 2000),
+    type: type,
+    parentId: parentId,
+    memberIds: Array.isArray(data.memberIds) ? data.memberIds.slice() : [],
+    dateCreated: now,
+    dateLastModified: now
+  };
+  project.teamsCommittees.push(tc);
+  saveDB();
+  return tc;
+}
+function updateTeamCommittee(project, id, data){
+  var tc = getTeamCommitteeById(project, id);
+  if(!tc) return {ok: false, reason: 'not-found'};
+  var name = (data.name || '').trim().slice(0, 120);
+  var proposedParentId = data.parentId || null;
+  if(proposedParentId){
+    if(proposedParentId === id || !getTeamCommitteeById(project, proposedParentId)){
+      proposedParentId = null;
+    } else if(isTeamCommitteeAncestor(project, id, proposedParentId)){
+      return {ok: false, reason: 'cycle'};
+    }
+  }
+  tc.name = name || tc.name;
+  tc.description = (data.description || '').trim().slice(0, 2000);
+  tc.type = normalizeTeamCommitteeType(data.type);
+  tc.parentId = proposedParentId;
+  tc.memberIds = Array.isArray(data.memberIds) ? data.memberIds.slice() : [];
+  tc.dateLastModified = new Date().toISOString();
+  saveDB();
+  return {ok: true};
+}
+function deleteTeamCommittee(project, id){
+  var tc = getTeamCommitteeById(project, id);
+  if(!tc) return {orphanedCount: 0};
+  var orphanedCount = 0;
+  (project.teamsCommittees || []).forEach(function(child){
+    if(child.parentId === id){ child.parentId = null; orphanedCount++; }
+  });
+  project.teamsCommittees = project.teamsCommittees.filter(function(t){ return t.id !== id; });
+  saveDB();
+  return {orphanedCount: orphanedCount};
+}
+function removeMemberFromAllTeamsCommittees(project, memberId){
+  var removedCount = 0;
+  (project.teamsCommittees || []).forEach(function(tc){
+    if(tc.memberIds && tc.memberIds.indexOf(memberId) !== -1){
+      tc.memberIds = tc.memberIds.filter(function(mid){ return mid !== memberId; });
+      removedCount++;
+    }
+  });
+  return removedCount;
+}
+/* Read-only: which teams/committees a given member currently belongs
+   to, for display on their own row in the Team modal. */
+function getTeamsCommitteesForMember(project, memberId){
+  return (project.teamsCommittees || [])
+    .filter(function(tc){ return tc.memberIds && tc.memberIds.indexOf(memberId) !== -1; })
+    .sort(function(a, b){ return a.name.localeCompare(b.name); });
+}
+/* Builds the full tree, hierarchical-then-alphabetical at every
+   level (roots sorted alphabetically, each node's children sorted
+   alphabetically under it), as a flat list of {node, depth} entries
+   in display order — convenient for rendering without recursion in
+   the UI layer. */
+function buildTeamCommitteeTree(project){
+  var all = project.teamsCommittees || [];
+  var byParent = {};
+  all.forEach(function(tc){
+    var key = tc.parentId || '__root__';
+    if(!byParent[key]) byParent[key] = [];
+    byParent[key].push(tc);
+  });
+  Object.keys(byParent).forEach(function(key){
+    byParent[key].sort(function(a, b){ return a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}); });
+  });
+  var flat = [];
+  function walk(parentKey, depth){
+    (byParent[parentKey] || []).forEach(function(tc){
+      flat.push({node: tc, depth: depth});
+      walk(tc.id, depth + 1);
+    });
+  }
+  walk('__root__', 0);
+  return flat;
+}
+
 
 /* =========================================================
    PROJECT HEALTH DASHBOARD — data layer
@@ -4705,6 +4963,19 @@ function exportProjectJSON(project){
         dateLastModified: o.dateLastModified || null
       };
     }),
+    teamsCommittees: (project.teamsCommittees || []).map(function(tc){
+      return {
+        id: tc.id,
+        key: tc.key,
+        name: tc.name,
+        description: tc.description || '',
+        type: tc.type,
+        parentId: tc.parentId || null,
+        memberIds: tc.memberIds || [],
+        dateCreated: tc.dateCreated || null,
+        dateLastModified: tc.dateLastModified || null
+      };
+    }),
     decisions: (project.decisions || []).map(function(dec){
       var owner = getMemberById(project, dec.ownerId);
       return {
@@ -4943,6 +5214,8 @@ function buildProjectFromExportDoc(doc){
     prinCounter: 1,
     objectives: [],
     objCounter: 1,
+    teamsCommittees: [],
+    tcCounter: 1,
     approvers: [],
     roles: Array.isArray(doc.roles) ? doc.roles.filter(function(r){ return typeof r === 'string' && r.trim(); }).map(function(r){ return r.trim().slice(0,60); }) : [],
     headerButtonVisibility: normalizeHeaderButtonVisibility(doc.headerButtonVisibility),
@@ -5142,6 +5415,45 @@ function buildProjectFromExportDoc(doc){
         unresolvedDocRelated++;
       }
     });
+  });
+
+  var tcOldIdToNewId = {};
+  var unresolvedTcParents = 0, unresolvedTcMembers = 0;
+  var tcsNeedingParentResolution = [];
+  if(Array.isArray(doc.teamsCommittees)){
+    doc.teamsCommittees.forEach(function(tc){
+      if(!tc || typeof tc !== 'object') return;
+      var name = (typeof tc.name === 'string' && tc.name.trim()) ? tc.name.trim().slice(0,120) : null;
+      if(!name) return;
+      var memberIds = [];
+      if(Array.isArray(tc.memberIds)){
+        tc.memberIds.forEach(function(oldMemberId){
+          if(memberOldIdToNewId.hasOwnProperty(oldMemberId)) memberIds.push(memberOldIdToNewId[oldMemberId]);
+          else unresolvedTcMembers++;
+        });
+      }
+      var newTc = {
+        id: uid('tc'),
+        key: nextTeamCommitteeKey(project, tc.type),
+        name: name,
+        description: (typeof tc.description === 'string') ? tc.description.trim().slice(0,2000) : '',
+        type: normalizeTeamCommitteeType(tc.type),
+        parentId: null,
+        memberIds: memberIds,
+        dateCreated: typeof tc.dateCreated === 'string' ? tc.dateCreated : importedAt,
+        dateLastModified: typeof tc.dateLastModified === 'string' ? tc.dateLastModified : importedAt
+      };
+      project.teamsCommittees.push(newTc);
+      if(typeof tc.id === 'string') tcOldIdToNewId[tc.id] = newTc.id;
+      if(tc.parentId) tcsNeedingParentResolution.push({newTc: newTc, oldParentId: tc.parentId});
+    });
+  }
+  tcsNeedingParentResolution.forEach(function(entry){
+    if(tcOldIdToNewId.hasOwnProperty(entry.oldParentId) && tcOldIdToNewId[entry.oldParentId] !== entry.newTc.id){
+      entry.newTc.parentId = tcOldIdToNewId[entry.oldParentId];
+    } else {
+      unresolvedTcParents++;
+    }
   });
 
   var prinOldIdToNewId = {};
@@ -5345,6 +5657,8 @@ function buildProjectFromExportDoc(doc){
     unresolvedDocOwners: unresolvedDocOwners,
     unresolvedDocTasks: unresolvedDocTasks,
     unresolvedDocRelated: unresolvedDocRelated,
+    unresolvedTcParents: unresolvedTcParents,
+    unresolvedTcMembers: unresolvedTcMembers,
     unresolvedRiskOwners: unresolvedRiskOwners,
     unresolvedRiskTasks: unresolvedRiskTasks,
     unresolvedRiskDocs: unresolvedRiskDocs,
@@ -5423,6 +5737,12 @@ function overwriteProjectFromResult(existingId, result){
     var suffix = match ? match[1] : String(idx + 1).padStart(3, '0');
     o.key = fresh.key + '-OBJ-' + suffix;
   });
+  (fresh.teamsCommittees || []).forEach(function(tc, idx){
+    var match = /-(\d+)$/.exec(tc.key || '');
+    var suffix = match ? match[1] : String(idx + 1).padStart(3, '0');
+    var prefix = tc.type === 'committee' ? 'COMM' : 'TEAM';
+    tc.key = fresh.key + '-' + prefix + '-' + suffix;
+  });
   db.projects[existingId] = fresh;
   db.currentProjectId = existingId;
   saveDB();
@@ -5487,8 +5807,9 @@ function finaliseImport(result, wasOverwrite){
   var unresolvedDocLinks = (result.unresolvedDocOwners || 0) + (result.unresolvedDocTasks || 0) + (result.unresolvedDocRelated || 0) + (result.unresolvedRiskOwners || 0) + (result.unresolvedRiskTasks || 0) + (result.unresolvedRiskDocs || 0) +
     (result.unresolvedDecisionOwners || 0) + (result.unresolvedDecisionTasks || 0) + (result.unresolvedDecisionDocs || 0) + (result.unresolvedDecisionRisks || 0) +
     (result.unresolvedRiskPrinciples || 0) + (result.unresolvedRiskObjectives || 0) + (result.unresolvedObjectivePrinciples || 0) +
-    (result.unresolvedDecisionPrinciples || 0) + (result.unresolvedDecisionObjectives || 0);
-  if(unresolvedDocLinks > 0) msg += ' Skipped ' + unresolvedDocLinks + ' document/risk/decision/principle/objective reference(s) that could not be matched.';
+    (result.unresolvedDecisionPrinciples || 0) + (result.unresolvedDecisionObjectives || 0) +
+    (result.unresolvedTcParents || 0) + (result.unresolvedTcMembers || 0);
+  if(unresolvedDocLinks > 0) msg += ' Skipped ' + unresolvedDocLinks + ' document/risk/decision/principle/objective/team reference(s) that could not be matched.';
   toast(msg);
 }
 
@@ -7289,6 +7610,9 @@ var ui = {
   editingDecisionId: null,
   editingPrincipleId: null,
   editingObjectiveId: null,
+  editingTeamCommitteeId: null,
+  tcSearchTerm: '',
+  tcCollapsedIds: new Set(),
   healthGaugeAnimTimeoutId: null,
   healthGaugeAnimFrameId: null,
   documentsSearchTerm: '',
@@ -7327,13 +7651,14 @@ function toast(message){
    ========================================================= */
 function applyHeaderButtonVisibility(){
   var project = getCurrentProject();
-  var visibility = project ? normalizeHeaderButtonVisibility(project.headerButtonVisibility) : {documents:true, risks:true, decisions:true, health:true, principles:true, objectives:true};
+  var visibility = project ? normalizeHeaderButtonVisibility(project.headerButtonVisibility) : {documents:true, risks:true, decisions:true, health:true, principles:true, objectives:true, teamsCommittees:true};
   document.getElementById('documentsBtn').classList.toggle('hidden', !visibility.documents);
   document.getElementById('risksBtn').classList.toggle('hidden', !visibility.risks);
   document.getElementById('decisionsBtn').classList.toggle('hidden', !visibility.decisions);
   document.getElementById('healthBtn').classList.toggle('hidden', !visibility.health);
   document.getElementById('principlesBtn').classList.toggle('hidden', !visibility.principles);
   document.getElementById('objectivesBtn').classList.toggle('hidden', !visibility.objectives);
+  document.getElementById('teamsCommitteesBtn').classList.toggle('hidden', !visibility.teamsCommittees);
 }
 
 function openAppSettingsOverlay(){
@@ -7346,6 +7671,7 @@ function openAppSettingsOverlay(){
   document.getElementById('settingsShowHealthBtn').checked = visibility.health;
   document.getElementById('settingsShowPrinciplesBtn').checked = visibility.principles;
   document.getElementById('settingsShowObjectivesBtn').checked = visibility.objectives;
+  document.getElementById('settingsShowTeamsCommitteesBtn').checked = visibility.teamsCommittees;
   document.getElementById('appSettingsOverlay').classList.remove('hidden');
 }
 function closeAppSettingsOverlay(){
@@ -8267,6 +8593,14 @@ function renderMemberList(){
       );
     });
     listEl.appendChild(row);
+
+    var memberTeams = getTeamsCommitteesForMember(project, m.id);
+    if(memberTeams.length > 0){
+      var teamsLine = document.createElement('div');
+      teamsLine.className = 'kf-member-teams-line';
+      teamsLine.textContent = 'Member of: ' + memberTeams.map(function(tc){ return tc.name; }).join(', ');
+      listEl.appendChild(teamsLine);
+    }
   });
 }
 function addMemberFromModal(){
@@ -8871,6 +9205,25 @@ function getCheckedItemIdsFrom(wrapId){
     return cb.getAttribute('data-item-id');
   });
 }
+function renderMemberPickerInto(wrapId, members, selectedIds){
+  var wrap = document.getElementById(wrapId);
+  wrap.innerHTML = '';
+  var sorted = (members || []).slice().sort(function(a, b){ return a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}); });
+  if(sorted.length === 0){
+    wrap.innerHTML = '<div class="kf-risk-doc-picker-empty">No team members in this project yet.</div>';
+    return;
+  }
+  sorted.forEach(function(m){
+    var row = document.createElement('label');
+    row.className = 'kf-risk-doc-picker-row';
+    var checked = selectedIds.indexOf(m.id) !== -1;
+    row.innerHTML =
+      '<input type="checkbox" data-item-id="' + m.id + '" ' + (checked ? 'checked' : '') + '>' +
+      '<span class="kf-avatar kf-avatar-sm" style="background:' + m.color + ';">' + escapeHTML(memberInitials(m.name)) + '</span>' +
+      '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(m.name) + '</span>';
+    wrap.appendChild(row);
+  });
+}
 function renderRiskDocumentPicker(project, selectedDocIds){
   renderDocumentPickerInto('riskDocumentPicker', project, selectedDocIds);
 }
@@ -9184,7 +9537,15 @@ function populateVocabularyDatalist(datalistId, values){
   });
 }
 function populateApproverOptions(project){
-  populateVocabularyDatalist('decisionApproverOptions', project.approvers);
+  var committeeNames = (project.teamsCommittees || [])
+    .filter(function(tc){ return tc.type === 'committee'; })
+    .map(function(tc){ return tc.name; });
+  var combined = (project.approvers || []).slice();
+  committeeNames.forEach(function(name){
+    var exists = combined.some(function(a){ return a.toLowerCase() === name.toLowerCase(); });
+    if(!exists) combined.push(name);
+  });
+  populateVocabularyDatalist('decisionApproverOptions', combined);
 }
 function populateRoleOptions(project){
   populateVocabularyDatalist('memberRoleOptions', project.roles);
@@ -9643,6 +10004,214 @@ function deleteObjectiveFromModal(){
 }
 
 /* =========================================================
+   TEAMS & COMMITTEES MODAL
+   ========================================================= */
+function openTeamsCommitteesOverlay(){
+  var project = getCurrentProject();
+  if(!project){ toast('No project selected.'); return; }
+  ui.tcSearchTerm = '';
+  document.getElementById('teamsCommitteesSearchInput').value = '';
+  ui.tcCollapsedIds = new Set();
+  showTeamsCommitteesListView();
+  document.getElementById('teamsCommitteesOverlay').classList.remove('hidden');
+}
+function closeTeamsCommitteesOverlay(){
+  document.getElementById('teamsCommitteesOverlay').classList.add('hidden');
+}
+function isTeamsCommitteesOverlayOpen(){
+  return !document.getElementById('teamsCommitteesOverlay').classList.contains('hidden');
+}
+
+function showTeamsCommitteesListView(){
+  ui.editingTeamCommitteeId = null;
+  document.getElementById('teamsCommitteesModalTitle').textContent = 'Teams & Committees';
+  document.getElementById('teamsCommitteesListView').classList.remove('hidden');
+  document.getElementById('teamsCommitteesFormView').classList.add('hidden');
+  document.getElementById('teamsCommitteesListFooter').classList.remove('hidden');
+  document.getElementById('teamsCommitteesFormFooter').classList.add('hidden');
+  renderTeamsCommitteesList();
+}
+
+function renderTeamsCommitteesList(){
+  var project = getCurrentProject();
+  var listEl = document.getElementById('teamsCommitteesList');
+  listEl.innerHTML = '';
+  if(!project) return;
+
+  var all = project.teamsCommittees || [];
+  if(all.length === 0){
+    listEl.innerHTML = '<div class="kf-tc-empty">No teams or committees yet. Add one above to start mapping your org structure.</div>';
+    return;
+  }
+
+  var flat = buildTeamCommitteeTree(project);
+  var term = ui.tcSearchTerm.trim().toLowerCase();
+
+  var visibleIds = null;
+  if(term){
+    visibleIds = {};
+    flat.forEach(function(entry){
+      var hay = (entry.node.name + ' ' + (entry.node.description || '')).toLowerCase();
+      if(hay.indexOf(term) === -1) return;
+      var current = entry.node;
+      visibleIds[current.id] = true;
+      while(current.parentId){
+        visibleIds[current.parentId] = true;
+        current = getTeamCommitteeById(project, current.parentId);
+      }
+    });
+    if(Object.keys(visibleIds).length === 0){
+      listEl.innerHTML = '<div class="kf-tc-empty">No teams or committees match \u201c' + escapeHTML(ui.tcSearchTerm.trim()) + '\u201d.</div>';
+      return;
+    }
+  }
+
+  var html = '';
+  flat.forEach(function(entry){
+    var node = entry.node, depth = entry.depth;
+    if(visibleIds && !visibleIds[node.id]) return;
+
+    if(!term){
+      var current = node, hiddenByCollapse = false;
+      while(current.parentId){
+        var parent = getTeamCommitteeById(project, current.parentId);
+        if(parent && ui.tcCollapsedIds.has(parent.id)){ hiddenByCollapse = true; break; }
+        current = parent;
+      }
+      if(hiddenByCollapse) return;
+    }
+
+    var hasChildren = getTeamCommitteeChildren(project, node.id).length > 0;
+    var isExpanded = term ? true : !ui.tcCollapsedIds.has(node.id);
+    var members = (node.memberIds || []).map(function(id){ return getMemberById(project, id); }).filter(Boolean)
+      .sort(function(a, b){ return a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}); });
+
+    var toggleHTML = hasChildren
+      ? '<button class="kf-tc-toggle-btn" data-tc-toggle-id="' + node.id + '" aria-label="' + (isExpanded ? 'Collapse' : 'Expand') + '">' + iconSvg(isExpanded ? 'chevronDown' : 'chevronRight', 14) + '</button>'
+      : '<span class="kf-tc-toggle-spacer"></span>';
+
+    html += '<div class="kf-tc-node-row" data-tc-id="' + node.id + '" style="padding-left:' + (8 + depth * 20) + 'px;">' +
+      toggleHTML +
+      '<span class="kf-decision-type-pill">' + escapeHTML(TEAM_COMMITTEE_TYPES[node.type]) + '</span>' +
+      '<span class="kf-tc-name">' + escapeHTML(node.name) + '</span>' +
+      '<span class="kf-tc-member-count">' + members.length + ' member' + (members.length === 1 ? '' : 's') + '</span>' +
+    '</div>';
+
+    if(isExpanded && members.length > 0){
+      html += '<div class="kf-tc-member-list" style="padding-left:' + (8 + (depth + 1) * 20 + 18) + 'px;">' +
+        members.map(function(m){
+          return '<div class="kf-tc-member-item"><span class="kf-avatar kf-avatar-sm" style="background:' + m.color + ';">' + escapeHTML(memberInitials(m.name)) + '</span>' + escapeHTML(m.name) + (m.role ? ' <span class="kf-health-top-member-role">' + escapeHTML(m.role) + '</span>' : '') + '</div>';
+        }).join('') +
+      '</div>';
+    }
+  });
+
+  listEl.innerHTML = html;
+
+  listEl.querySelectorAll('[data-tc-toggle-id]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var id = btn.getAttribute('data-tc-toggle-id');
+      if(ui.tcCollapsedIds.has(id)) ui.tcCollapsedIds.delete(id); else ui.tcCollapsedIds.add(id);
+      renderTeamsCommitteesList();
+    });
+  });
+  listEl.querySelectorAll('.kf-tc-node-row').forEach(function(row){
+    row.addEventListener('click', function(){ showTeamCommitteeFormView(row.getAttribute('data-tc-id')); });
+  });
+}
+
+function populateTcParentSelect(project, excludeId){
+  var select = document.getElementById('tcParentSelect');
+  select.innerHTML = '<option value="">No parent (top level)</option>';
+  var flat = buildTeamCommitteeTree(project);
+  flat.forEach(function(entry){
+    if(entry.node.id === excludeId) return;
+    if(excludeId && isTeamCommitteeAncestor(project, excludeId, entry.node.id)) return; /* would create a cycle */
+    var opt = document.createElement('option');
+    opt.value = entry.node.id;
+    opt.textContent = '\u00a0\u00a0'.repeat(entry.depth) + entry.node.name;
+    select.appendChild(opt);
+  });
+}
+
+function showTeamCommitteeFormView(id){
+  var project = getCurrentProject();
+  if(!project) return;
+  ui.editingTeamCommitteeId = id || null;
+  var tc = id ? getTeamCommitteeById(project, id) : null;
+
+  document.getElementById('teamsCommitteesModalTitle').textContent = tc ? 'Edit Team / Committee' : 'New Team / Committee';
+  document.getElementById('teamsCommitteesListView').classList.add('hidden');
+  document.getElementById('teamsCommitteesFormView').classList.remove('hidden');
+  document.getElementById('teamsCommitteesListFooter').classList.add('hidden');
+  document.getElementById('teamsCommitteesFormFooter').classList.remove('hidden');
+  document.getElementById('deleteTeamCommitteeBtn').classList.toggle('hidden', !tc);
+
+  document.getElementById('tcNameInput').value = tc ? tc.name : '';
+  document.getElementById('tcDescriptionInput').value = tc ? tc.description : '';
+  document.getElementById('tcTypeSelect').value = tc ? tc.type : 'team';
+  populateTcParentSelect(project, tc ? tc.id : null);
+  document.getElementById('tcParentSelect').value = tc && tc.parentId ? tc.parentId : '';
+  renderMemberPickerInto('tcMemberPicker', project.members || [], tc ? tc.memberIds : []);
+
+  var metaEl = document.getElementById('tcMetaDates');
+  if(tc){
+    metaEl.textContent = 'Added ' + utcISOToLocalDisplayDate(tc.dateCreated) +
+      (tc.dateLastModified && tc.dateLastModified !== tc.dateCreated ? ' \u00b7 Last changed ' + utcISOToLocalDisplayDate(tc.dateLastModified) : '');
+    metaEl.style.display = '';
+  } else {
+    metaEl.textContent = '';
+    metaEl.style.display = 'none';
+  }
+  document.getElementById('tcNameInput').focus();
+}
+
+function saveTeamCommitteeFromModal(){
+  var project = getCurrentProject();
+  if(!project) return;
+  var name = document.getElementById('tcNameInput').value.trim();
+  if(!name){ toast('Please enter a name.'); return; }
+
+  var data = {
+    name: name,
+    description: document.getElementById('tcDescriptionInput').value,
+    type: document.getElementById('tcTypeSelect').value,
+    parentId: document.getElementById('tcParentSelect').value || null,
+    memberIds: getCheckedItemIdsFrom('tcMemberPicker')
+  };
+
+  if(ui.editingTeamCommitteeId){
+    var result = updateTeamCommittee(project, ui.editingTeamCommitteeId, data);
+    if(!result.ok){
+      toast('Couldn\u2019t set that parent \u2014 it would create a circular hierarchy.');
+      return;
+    }
+    toast('Saved.');
+  } else {
+    addTeamCommittee(project, data);
+    toast('Created.');
+  }
+  showTeamsCommitteesListView();
+}
+
+function deleteTeamCommitteeFromModal(){
+  var project = getCurrentProject();
+  if(!project || !ui.editingTeamCommitteeId) return;
+  var tc = getTeamCommitteeById(project, ui.editingTeamCommitteeId);
+  if(!tc) return;
+  confirmDialog(
+    'Delete ' + tc.name + '?',
+    'Any child teams/committees will be promoted to top level rather than deleted.',
+    function(){
+      var result = deleteTeamCommittee(project, tc.id);
+      toast('Deleted ' + tc.name + (result.orphanedCount > 0 ? ' \u2014 ' + result.orphanedCount + ' child team(s) moved to top level.' : '.'));
+      showTeamsCommitteesListView();
+    }
+  );
+}
+
+/* =========================================================
    PROJECT SEARCH MODAL
    ========================================================= */
 var projectSearchDebounceId = null;
@@ -10062,6 +10631,32 @@ function wireEvents(){
   document.getElementById('objectiveFormSaveBtn').addEventListener('click', saveObjectiveFromModal);
   document.getElementById('deleteObjectiveBtn').addEventListener('click', deleteObjectiveFromModal);
 
+  document.getElementById('teamsCommitteesBtn').addEventListener('click', openTeamsCommitteesOverlay);
+  document.getElementById('teamsCommitteesModalClose').addEventListener('click', closeTeamsCommitteesOverlay);
+  document.getElementById('teamsCommitteesDoneBtn').addEventListener('click', closeTeamsCommitteesOverlay);
+  document.getElementById('teamsCommitteesOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'teamsCommitteesOverlay') closeTeamsCommitteesOverlay();
+  });
+  document.getElementById('addTeamCommitteeBtn').addEventListener('click', function(){ showTeamCommitteeFormView(null); });
+  document.getElementById('teamsCommitteesSearchInput').addEventListener('input', function(e){
+    ui.tcSearchTerm = e.target.value;
+    renderTeamsCommitteesList();
+  });
+  document.getElementById('tcExpandAllLink').addEventListener('click', function(e){
+    e.preventDefault();
+    ui.tcCollapsedIds = new Set();
+    renderTeamsCommitteesList();
+  });
+  document.getElementById('tcCollapseAllLink').addEventListener('click', function(e){
+    e.preventDefault();
+    var project = getCurrentProject();
+    if(project) ui.tcCollapsedIds = new Set((project.teamsCommittees || []).map(function(tc){ return tc.id; }));
+    renderTeamsCommitteesList();
+  });
+  document.getElementById('tcFormCancelBtn').addEventListener('click', showTeamsCommitteesListView);
+  document.getElementById('tcFormSaveBtn').addEventListener('click', saveTeamCommitteeFromModal);
+  document.getElementById('deleteTeamCommitteeBtn').addEventListener('click', deleteTeamCommitteeFromModal);
+
   document.getElementById('projectSearchBtn').addEventListener('click', openProjectSearchOverlay);
   document.getElementById('projectSearchClose').addEventListener('click', closeProjectSearchOverlay);
   document.getElementById('projectSearchDoneBtn').addEventListener('click', closeProjectSearchOverlay);
@@ -10350,6 +10945,9 @@ function wireEvents(){
   document.getElementById('settingsShowObjectivesBtn').addEventListener('change', function(e){
     updateHeaderButtonVisibilitySetting('objectives', e.target.checked);
   });
+  document.getElementById('settingsShowTeamsCommitteesBtn').addEventListener('change', function(e){
+    updateHeaderButtonVisibilitySetting('teamsCommittees', e.target.checked);
+  });
 
   document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileDrawer);
   document.getElementById('drawerCloseBtn').addEventListener('click', closeMobileDrawer);
@@ -10464,6 +11062,7 @@ function wireEvents(){
     else if(isPrinciplesOverlayOpen()) closePrinciplesOverlay();
     else if(isObjectivesOverlayOpen()) closeObjectivesOverlay();
     else if(isProjectSearchOverlayOpen()) closeProjectSearchOverlay();
+    else if(isTeamsCommitteesOverlayOpen()) closeTeamsCommitteesOverlay();
     else if(isHealthOverlayOpen()) closeHealthOverlay();
     else if(isAppSettingsOverlayOpen()) closeAppSettingsOverlay();
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
