@@ -274,7 +274,8 @@
     .kf-header-controls .kf-header-divider{width:100%;height:1px;margin:10px 0;}
     .kf-header-controls .kf-project-picker{flex-direction:column;align-items:stretch;gap:8px;}
     .kf-header-controls .kf-drawer-action-group{display:flex;flex-direction:column;gap:8px;}
-    .kf-header-controls .kf-header-movable-group{display:flex;flex-direction:column;align-items:stretch;gap:8px;}
+    .kf-header-controls .kf-header-movable-group{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin:0;padding:0;width:259px;}
+    .kf-header-controls .kf-header-movable-group .kf-header-btn{margin:0;padding:6px 10px;}
     .kf-header-controls .kf-select-dark{max-width:100%;}
     .kf-header-controls .kf-header-btn{width:100%;justify-content:flex-start;}
     .kf-header-controls .kf-header-spacer{display:block;}
@@ -285,7 +286,6 @@
     .kf-header-controls .kf-header-more-wrap{display:none;}
     .kf-header-controls .kf-header-btn{border:none;}
     .kf-header-controls .kf-header-btn.kf-header-consolidated{display:flex;}
-    .kf-header-controls .kf-header-btn.kf-header-consolidated{display:flex;}
     .kf-header-controls .kf-header-nav-projectaction{display:flex;}
     .kf-header-controls .kf-projects-menu-wrap{display:none;}
     .kf-drawer-section-label{
@@ -295,10 +295,12 @@
     }
     .kf-drawer-view-slot{display:flex;flex-direction:column;gap:8px;}
     .kf-drawer-view-slot .kf-btn{width:100%;justify-content:flex-start;}
+    .kf-header-controls .kf-toolbar-view-buttons{flex-direction:column;align-items:stretch;flex-wrap:nowrap;gap:8px;}
     .kf-header-controls .kf-btn-secondary{
       background:transparent;
       border:none;
       color:#fff;
+      padding:6px 10px;
     }
     .kf-header-controls .kf-btn-secondary:hover{background:rgba(255,255,255,.12);}
     .kf-drawer-backdrop{
@@ -2368,7 +2370,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.43.20260629.1728';
+var APP_VERSION = '1.45.20260629.1801';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
