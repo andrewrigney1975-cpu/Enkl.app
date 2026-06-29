@@ -650,6 +650,9 @@
   .kf-release-task-count{flex-shrink:0;}
   .kf-member-empty{color:var(--kf-text-faint);font-size:13px;text-align:center;padding:18px 0;}
   .kf-member-teams-line{font-size:11px;color:var(--kf-text-faint);padding:0 8px 6px 46px;margin-top:-2px;}
+  .kf-member-reportsto-row{display:flex;align-items:center;gap:8px;padding:0 8px 6px 46px;margin-top:-2px;font-size:12px;}
+  .kf-member-reportsto-row label{color:var(--kf-text-faint);white-space:nowrap;}
+  .kf-member-reportsto-select{font-size:12px;color:var(--kf-text);background:var(--kf-bg);border:1px solid var(--kf-border);border-radius:3px;padding:2px 6px;max-width:220px;}
 
   /* Risks */
   .kf-risk-status-pill{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;}
@@ -2332,7 +2335,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.38.20260629.0558';
+var APP_VERSION = '1.39.20260629.0639';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -2747,6 +2750,8 @@ function migrateDB(){
     p.members.forEach(function(m){
       if(m.role === undefined){ m.role = null; changed = true; }
       else if(m.role !== null && typeof m.role !== 'string'){ m.role = null; changed = true; }
+      if(m.reportsToId === undefined){ m.reportsToId = null; changed = true; }
+      else if(m.reportsToId !== null && typeof m.reportsToId !== 'string'){ m.reportsToId = null; changed = true; }
     });
     if(!p.headerButtonVisibility || typeof p.headerButtonVisibility !== 'object' ||
        typeof p.headerButtonVisibility.documents !== 'boolean' ||
@@ -2790,6 +2795,11 @@ function migrateDB(){
 
     var validMemberIds = {};
     p.members.forEach(function(m){ validMemberIds[m.id] = true; });
+    p.members.forEach(function(m){
+      if(m.reportsToId && (m.reportsToId === m.id || !validMemberIds[m.reportsToId])){
+        m.reportsToId = null; changed = true;
+      }
+    });
     var validTaskIds = {};
     getTasksArray(p).forEach(function(t){ validTaskIds[t.id] = true; });
     var validDocIds = {};
@@ -3201,7 +3211,7 @@ function deleteProject(projectId){
 function addMember(project, name){
   var trimmed = (name || '').trim().slice(0, 60);
   if(!trimmed) return null;
-  var member = {id: uid('member'), name: trimmed, color: memberColorForIndex(project.members.length), role: null};
+  var member = {id: uid('member'), name: trimmed, color: memberColorForIndex(project.members.length), role: null, reportsToId: null};
   project.members.push(member);
   saveDB();
   return member;
@@ -3219,6 +3229,16 @@ function setMemberRole(project, memberId, role){
   if(!member) return;
   var trimmed = (role || '').trim();
   member.role = trimmed ? registerRole(project, trimmed) : null;
+  saveDB();
+}
+function setMemberReportsTo(project, memberId, reportsToId){
+  var member = getMemberById(project, memberId);
+  if(!member) return;
+  if(!reportsToId || reportsToId === memberId || !getMemberById(project, reportsToId)){
+    member.reportsToId = null;
+  } else {
+    member.reportsToId = reportsToId;
+  }
   saveDB();
 }
 function removeMember(project, memberId){
@@ -3239,6 +3259,9 @@ function removeMember(project, memberId){
     if(d.ownerId === memberId) d.ownerId = null;
   });
   removeMemberFromAllTeamsCommittees(project, memberId);
+  project.members.forEach(function(m){
+    if(m.reportsToId === memberId) m.reportsToId = null;
+  });
   saveDB();
   return unassignedCount;
 }
@@ -4885,7 +4908,7 @@ function exportProjectJSON(project){
     exportedAt: exportedAt,
     appVersion: APP_VERSION,
     totalTasks: Object.keys(project.tasks).length,
-    members: (project.members || []).map(function(m){ return {id: m.id, name: m.name, color: m.color, role: m.role || null}; }),
+    members: (project.members || []).map(function(m){ return {id: m.id, name: m.name, color: m.color, role: m.role || null, reportsToId: m.reportsToId || null}; }),
     releases: (project.releases || []).map(function(r){
       var owner = getMemberById(project, r.ownerId);
       return {
@@ -5228,6 +5251,8 @@ function buildProjectFromExportDoc(doc){
 
   var memberOldIdToNewId = {};
   var memberNameToNewId = {};
+  var unresolvedMemberReportsTo = 0;
+  var membersNeedingReportsToResolution = [];
   if(Array.isArray(doc.members)){
     doc.members.forEach(function(m){
       if(!m || typeof m !== 'object') return;
@@ -5235,12 +5260,20 @@ function buildProjectFromExportDoc(doc){
       if(!name) return;
       var color = (typeof m.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(m.color)) ? m.color : memberColorForIndex(project.members.length);
       var role = (typeof m.role === 'string' && m.role.trim()) ? registerRole(project, m.role) : null;
-      var newMember = {id: uid('member'), name: name, color: color, role: role};
+      var newMember = {id: uid('member'), name: name, color: color, role: role, reportsToId: null};
       project.members.push(newMember);
       if(typeof m.id === 'string') memberOldIdToNewId[m.id] = newMember.id;
       if(!memberNameToNewId.hasOwnProperty(name)) memberNameToNewId[name] = newMember.id;
+      if(m.reportsToId) membersNeedingReportsToResolution.push({newMember: newMember, oldReportsToId: m.reportsToId});
     });
   }
+  membersNeedingReportsToResolution.forEach(function(entry){
+    if(memberOldIdToNewId.hasOwnProperty(entry.oldReportsToId) && memberOldIdToNewId[entry.oldReportsToId] !== entry.newMember.id){
+      entry.newMember.reportsToId = memberOldIdToNewId[entry.oldReportsToId];
+    } else {
+      unresolvedMemberReportsTo++;
+    }
+  });
 
   var releaseOldIdToNewId = {};
   var releaseNameToNewId = {};
@@ -5659,6 +5692,7 @@ function buildProjectFromExportDoc(doc){
     unresolvedDocRelated: unresolvedDocRelated,
     unresolvedTcParents: unresolvedTcParents,
     unresolvedTcMembers: unresolvedTcMembers,
+    unresolvedMemberReportsTo: unresolvedMemberReportsTo,
     unresolvedRiskOwners: unresolvedRiskOwners,
     unresolvedRiskTasks: unresolvedRiskTasks,
     unresolvedRiskDocs: unresolvedRiskDocs,
@@ -5808,7 +5842,7 @@ function finaliseImport(result, wasOverwrite){
     (result.unresolvedDecisionOwners || 0) + (result.unresolvedDecisionTasks || 0) + (result.unresolvedDecisionDocs || 0) + (result.unresolvedDecisionRisks || 0) +
     (result.unresolvedRiskPrinciples || 0) + (result.unresolvedRiskObjectives || 0) + (result.unresolvedObjectivePrinciples || 0) +
     (result.unresolvedDecisionPrinciples || 0) + (result.unresolvedDecisionObjectives || 0) +
-    (result.unresolvedTcParents || 0) + (result.unresolvedTcMembers || 0);
+    (result.unresolvedTcParents || 0) + (result.unresolvedTcMembers || 0) + (result.unresolvedMemberReportsTo || 0);
   if(unresolvedDocLinks > 0) msg += ' Skipped ' + unresolvedDocLinks + ' document/risk/decision/principle/objective/team reference(s) that could not be matched.';
   toast(msg);
 }
@@ -8593,6 +8627,23 @@ function renderMemberList(){
       );
     });
     listEl.appendChild(row);
+
+    var reportsToRow = document.createElement('div');
+    reportsToRow.className = 'kf-member-reportsto-row';
+    var otherMembers = project.members.filter(function(other){ return other.id !== m.id; })
+      .sort(function(a, b){ return a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}); });
+    var optionsHTML = '<option value="">No one</option>' + otherMembers.map(function(other){
+      return '<option value="' + other.id + '"' + (m.reportsToId === other.id ? ' selected' : '') + '>' + escapeHTML(other.name) + '</option>';
+    }).join('');
+    reportsToRow.innerHTML =
+      '<label for="reportsTo-' + m.id + '">Reports to</label>' +
+      '<select id="reportsTo-' + m.id + '" class="kf-member-reportsto-select" aria-label="' + escapeHTML(m.name) + ' reports to">' + optionsHTML + '</select>';
+    var reportsToSelect = reportsToRow.querySelector('select');
+    reportsToSelect.addEventListener('change', function(){
+      setMemberReportsTo(project, m.id, reportsToSelect.value || null);
+      renderMemberList();
+    });
+    listEl.appendChild(reportsToRow);
 
     var memberTeams = getTeamsCommitteesForMember(project, m.id);
     if(memberTeams.length > 0){
