@@ -232,6 +232,7 @@
   .kf-drawer-backdrop{display:none;}
   .kf-drawer-views-section{display:none;}
   .kf-drawer-more-section{display:none;}
+  .kf-header-nav-projectaction{display:none;}
   .kf-drawer-section-label{display:none;}
   .kf-drawer-view-slot{display:none;}
   /* On desktop, Views/Tools live in the side nav instead — the
@@ -286,6 +287,8 @@
       background:none;border:none;color:#fff;justify-content:flex-start;
     }
     .kf-header-controls #healthBtn:hover{background:none;text-decoration:underline;}
+    .kf-header-controls .kf-header-nav-projectaction{display:flex;}
+    .kf-header-controls .kf-projects-menu-wrap{display:none;}
     .kf-drawer-section-label{
       display:block;color:rgba(255,255,255,.5);
       font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
@@ -1221,9 +1224,17 @@
       </div>
       <div class="kf-header-spacer"></div>
       <div class="kf-drawer-action-group">
-        <button class="kf-header-btn" id="newProjectBtn" title="New Project"><span class="kf-icon" data-icon="plus" data-size="14"></span>New Project</button>
-        <button class="kf-header-btn" id="importProjectBtn" title="Import a project from an Enkl export file"><span class="kf-icon" data-icon="upload" data-size="14"></span>Import Project</button>
-        <button class="kf-header-btn" id="exportBtn" title="Export the current project"><span class="kf-icon" data-icon="download" data-size="14"></span>Export Project</button>
+        <button class="kf-header-btn kf-header-nav-projectaction" id="newProjectBtn" title="New Project"><span class="kf-icon" data-icon="plus" data-size="14"></span>New Project</button>
+        <button class="kf-header-btn kf-header-nav-projectaction" id="importProjectBtn" title="Import a project from an Enkl export file"><span class="kf-icon" data-icon="upload" data-size="14"></span>Import Project</button>
+        <button class="kf-header-btn kf-header-nav-projectaction" id="exportBtn" title="Export the current project"><span class="kf-icon" data-icon="download" data-size="14"></span>Export Project</button>
+        <div class="kf-export-as-wrap kf-projects-menu-wrap" id="projectsMenuWrap">
+          <button class="kf-header-btn" id="projectsMenuBtn" title="Projects"><span class="kf-icon" data-icon="chevronDown" data-size="14"></span>Projects...</button>
+          <div class="kf-export-as-panel hidden kf-header-more-panel" id="projectsMenuPanel">
+            <a href="#" class="kf-header-more-link" data-nav-target="newProjectBtn">New Project</a>
+            <a href="#" class="kf-header-more-link" data-nav-target="importProjectBtn">Import Project</a>
+            <a href="#" class="kf-header-more-link" data-nav-target="exportBtn">Export Project</a>
+          </div>
+        </div>
       </div>
       <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
       <div class="kf-header-divider"></div>
@@ -2378,7 +2389,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.40.20260629.0739';
+var APP_VERSION = '1.41.20260629.0812';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -10782,6 +10793,18 @@ function wireEvents(){
       closeMobileDrawer();
       target.click();
     }
+  });
+  document.getElementById('projectsMenuBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('projectsMenuPanel');
+  });
+  document.getElementById('projectsMenuPanel').addEventListener('click', function(e){
+    var link = e.target.closest('[data-nav-target]');
+    if(!link) return;
+    e.preventDefault();
+    closeAllExportAsPanels();
+    var target = document.getElementById(link.getAttribute('data-nav-target'));
+    if(target) target.click();
   });
   document.getElementById('teamsCommitteesModalClose').addEventListener('click', closeTeamsCommitteesOverlay);
   document.getElementById('teamsCommitteesDoneBtn').addEventListener('click', closeTeamsCommitteesOverlay);
