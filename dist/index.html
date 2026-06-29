@@ -231,7 +231,8 @@
   .kf-drawer-title{color:#fff;font-weight:700;font-size:15px;}
   .kf-drawer-backdrop{display:none;}
   .kf-drawer-views-section{display:none;}
-  .kf-drawer-more-section{display:none;}
+  .kf-header-consolidated{display:none;}
+  .kf-header-consolidated{display:none;}
   .kf-header-nav-projectaction{display:none;}
   .kf-drawer-section-label{display:none;}
   .kf-drawer-view-slot{display:none;}
@@ -273,6 +274,7 @@
     .kf-header-controls .kf-header-divider{width:100%;height:1px;margin:10px 0;}
     .kf-header-controls .kf-project-picker{flex-direction:column;align-items:stretch;gap:8px;}
     .kf-header-controls .kf-drawer-action-group{display:flex;flex-direction:column;gap:8px;}
+    .kf-header-controls .kf-header-movable-group{display:flex;flex-direction:column;align-items:stretch;gap:8px;}
     .kf-header-controls .kf-select-dark{max-width:100%;}
     .kf-header-controls .kf-header-btn{width:100%;justify-content:flex-start;}
     .kf-header-controls .kf-header-spacer{display:block;}
@@ -280,13 +282,10 @@
     .kf-appsettings-label{display:inline;}
     .kf-header-controls .kf-theme-toggle::after{content:attr(data-mobile-label);}
     .kf-drawer-views-section{display:block;}
-    .kf-header-controls .kf-header-nav-movable{display:none;}
     .kf-header-controls .kf-header-more-wrap{display:none;}
-    .kf-drawer-more-section{display:block;}
-    .kf-header-controls #healthBtn{
-      background:none;border:none;color:#fff;justify-content:flex-start;
-    }
-    .kf-header-controls #healthBtn:hover{background:none;text-decoration:underline;}
+    .kf-header-controls .kf-header-btn{border:none;}
+    .kf-header-controls .kf-header-btn.kf-header-consolidated{display:flex;}
+    .kf-header-controls .kf-header-btn.kf-header-consolidated{display:flex;}
     .kf-header-controls .kf-header-nav-projectaction{display:flex;}
     .kf-header-controls .kf-projects-menu-wrap{display:none;}
     .kf-drawer-section-label{
@@ -298,7 +297,7 @@
     .kf-drawer-view-slot .kf-btn{width:100%;justify-content:flex-start;}
     .kf-header-controls .kf-btn-secondary{
       background:transparent;
-      border:1px solid rgba(255,255,255,.35);
+      border:none;
       color:#fff;
     }
     .kf-header-controls .kf-btn-secondary:hover{background:rgba(255,255,255,.12);}
@@ -624,7 +623,6 @@
   #objectivesBtn.hidden{display:none;}
   #teamsCommitteesBtn.hidden{display:none;}
   #headerMoreWrap.hidden{display:none;}
-  #drawerMoreList.hidden{display:none;}
   .kf-modal-footer.hidden{display:none;}
   .kf-tasktype-icon-grid{
     display:grid;grid-template-columns:repeat(6, 1fr);gap:4px;
@@ -841,19 +839,6 @@
     color:var(--kf-blue);font-size:13px;font-weight:500;text-decoration:none;cursor:pointer;
   }
   .kf-header-more-link:hover{background:var(--kf-hover-tint);text-decoration:underline;}
-  .kf-drawer-more-toggle{
-    display:flex;align-items:center;gap:6px;width:100%;
-    background:none;border:none;color:#fff;font-size:13px;font-weight:500;
-    padding:6px 10px;cursor:pointer;text-align:left;
-  }
-  .kf-drawer-more-toggle:hover{text-decoration:underline;}
-  .kf-drawer-more-toggle .kf-icon{transition:transform .15s ease;}
-  .kf-drawer-more-toggle[aria-expanded="true"] .kf-icon{transform:rotate(90deg);}
-  .kf-drawer-more-list{display:flex;flex-direction:column;padding-left:20px;}
-  .kf-drawer-more-list a{
-    display:block;padding:6px 10px;color:rgba(255,255,255,.85);font-size:13px;font-weight:500;text-decoration:none;
-  }
-  .kf-drawer-more-list a:hover{text-decoration:underline;color:#fff;}
   .kf-modal-body{padding:18px 20px;overflow-y:auto;flex:1;}
   .kf-modal-footer{
     padding:14px 20px;border-top:1px solid var(--kf-border);
@@ -1194,22 +1179,16 @@
       <div class="kf-drawer-action-group">
         <button class="kf-header-btn" id="healthBtn" title="Health Dashboard"><span class="kf-icon" data-icon="heartPulse" data-size="14"></span>Health Dashboard</button>
         <div class="kf-header-movable-group" id="headerMovableGroup">
-          <button class="kf-header-btn kf-header-nav-movable" id="principlesBtn" title="Principles"><span class="kf-icon" data-icon="compass" data-size="14"></span>Principles</button>
-          <button class="kf-header-btn kf-header-nav-movable" id="objectivesBtn" title="Objectives"><span class="kf-icon" data-icon="target" data-size="14"></span>Objectives</button>
-          <button class="kf-header-btn kf-header-nav-movable" id="documentsBtn" title="Documents"><span class="kf-icon" data-icon="ty_document" data-size="14"></span>Documents</button>
-          <button class="kf-header-btn kf-header-nav-movable" id="risksBtn" title="Risks"><span class="kf-icon" data-icon="warning" data-size="14"></span>Risks</button>
-          <button class="kf-header-btn kf-header-nav-movable" id="decisionsBtn" title="Decisions"><span class="kf-icon" data-icon="ty_approve" data-size="14"></span>Decisions</button>
-          <button class="kf-header-btn kf-header-nav-movable" id="teamsCommitteesBtn" title="Teams &amp; Committees"><span class="kf-icon" data-icon="orgChart" data-size="14"></span>Teams &amp; Committees</button>
+          <button class="kf-header-btn" id="principlesBtn" title="Principles"><span class="kf-icon" data-icon="compass" data-size="14"></span>Principles</button>
+          <button class="kf-header-btn" id="objectivesBtn" title="Objectives"><span class="kf-icon" data-icon="target" data-size="14"></span>Objectives</button>
+          <button class="kf-header-btn" id="documentsBtn" title="Documents"><span class="kf-icon" data-icon="ty_document" data-size="14"></span>Documents</button>
+          <button class="kf-header-btn" id="risksBtn" title="Risks"><span class="kf-icon" data-icon="warning" data-size="14"></span>Risks</button>
+          <button class="kf-header-btn" id="decisionsBtn" title="Decisions"><span class="kf-icon" data-icon="ty_approve" data-size="14"></span>Decisions</button>
+          <button class="kf-header-btn" id="teamsCommitteesBtn" title="Teams &amp; Committees"><span class="kf-icon" data-icon="orgChart" data-size="14"></span>Teams &amp; Committees</button>
         </div>
         <div class="kf-export-as-wrap kf-header-more-wrap hidden" id="headerMoreWrap">
           <button class="kf-header-btn" id="headerMoreBtn" title="More"><span class="kf-icon" data-icon="chevronDown" data-size="14"></span>More...</button>
           <div class="kf-export-as-panel hidden kf-header-more-panel" id="headerMorePanel"></div>
-        </div>
-        <div class="kf-drawer-more-section" id="drawerMoreSection">
-          <button type="button" class="kf-drawer-more-toggle" id="drawerMoreToggle" aria-expanded="false">
-            <span class="kf-icon" data-icon="chevronRight" data-size="14"></span>More
-          </button>
-          <div class="kf-drawer-more-list hidden" id="drawerMoreList"></div>
         </div>
       </div>
       <div class="kf-drawer-views-section" id="drawerViewsSection">
@@ -2389,7 +2368,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.41.20260629.0812';
+var APP_VERSION = '1.43.20260629.1728';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -7760,21 +7739,18 @@ function applyHeaderButtonVisibility(){
   document.getElementById('headerMoreWrap').classList.toggle('hidden', !useMoreMenu);
   HEADER_MOVABLE_NAV_ITEMS.forEach(function(item){
     var btn = document.getElementById(item.id);
-    btn.classList.toggle('hidden', useMoreMenu || !visibility[item.key]);
+    btn.classList.toggle('hidden', !visibility[item.key]);
+    /* Desktop-only: once 3+ are enabled, the 6 are visually tucked
+       into the "More..." dropdown via this dedicated class (not
+       .hidden, which mobile also respects) — mobile CSS overrides it
+       back to visible regardless, since the mobile menu always shows
+       everything flat with no consolidation. */
+    btn.classList.toggle('kf-header-consolidated', useMoreMenu);
   });
   var morePanel = document.getElementById('headerMorePanel');
   morePanel.innerHTML = useMoreMenu ? enabledItems.map(function(item){
     return '<a href="#" class="kf-header-more-link" data-nav-target="' + item.id + '">' + escapeHTML(item.label) + '</a>';
   }).join('') : '';
-
-  /* Mobile: regardless of how many are enabled, the 6 always live
-     inside the drawer's collapsible "More" section as text links —
-     never as standalone styled buttons there (those are forced
-     display:none for mobile via CSS regardless of this JS state). */
-  var drawerMoreList = document.getElementById('drawerMoreList');
-  drawerMoreList.innerHTML = enabledItems.map(function(item){
-    return '<a href="#" class="kf-drawer-more-link" data-nav-target="' + item.id + '">' + escapeHTML(item.label) + '</a>';
-  }).join('');
 }
 
 function openAppSettingsOverlay(){
@@ -10777,22 +10753,6 @@ function wireEvents(){
     closeAllExportAsPanels();
     var target = document.getElementById(link.getAttribute('data-nav-target'));
     if(target) target.click();
-  });
-  document.getElementById('drawerMoreToggle').addEventListener('click', function(){
-    var list = document.getElementById('drawerMoreList');
-    var expanded = list.classList.contains('hidden');
-    list.classList.toggle('hidden', !expanded);
-    this.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-  });
-  document.getElementById('drawerMoreList').addEventListener('click', function(e){
-    var link = e.target.closest('[data-nav-target]');
-    if(!link) return;
-    e.preventDefault();
-    var target = document.getElementById(link.getAttribute('data-nav-target'));
-    if(target){
-      closeMobileDrawer();
-      target.click();
-    }
   });
   document.getElementById('projectsMenuBtn').addEventListener('click', function(e){
     e.stopPropagation();
