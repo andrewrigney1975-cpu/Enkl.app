@@ -2370,7 +2370,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-var APP_VERSION = '1.45.20260629.1801';
+var APP_VERSION = '1.46.20260630.0100';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -4422,6 +4422,27 @@ function buildProjectSearchGroups(project, term){
         {label: 'Approver', value: dec.approver}
       ];
     }, function(dec){ return dec.key; });
+  }
+
+  if(visibility.teamsCommittees){
+    var tcResults = [];
+    (project.teamsCommittees || []).forEach(function(tc){
+      var match = findFirstSearchFieldMatch(term, [
+        {label: null, value: tc.name},
+        {label: 'Key', value: tc.key},
+        {label: 'Description', value: tc.description}
+      ]);
+      if(!match) return;
+      var parent = tc.parentId ? getTeamCommitteeById(project, tc.parentId) : null;
+      var members = (tc.memberIds || [])
+        .map(function(mid){ return getMemberById(project, mid); })
+        .filter(Boolean)
+        .sort(function(a, b){ return a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}); });
+      tcResults.push({id: tc.id, title: tc.name, archived: false, match: match, sortKey: tc.key,
+        tcType: tc.type, parentName: parent ? parent.name : null, members: members});
+    });
+    tcResults.sort(function(a, b){ return String(a.sortKey).localeCompare(String(b.sortKey), undefined, {numeric: true}); });
+    groups.push({type: 'teamsCommittees', label: 'Teams & Committees', total: tcResults.length, results: tcResults.slice(0, PROJECT_SEARCH_GROUP_CAP)});
   }
 
   return groups;
@@ -10344,7 +10365,8 @@ function isProjectSearchOverlayOpen(){
 
 var PROJECT_SEARCH_GROUP_ICONS = {
   tasks: 'board', members: 'team', principles: 'compass', objectives: 'target',
-  documents: 'ty_document', risks: 'warning', decisions: 'ty_approve'
+  documents: 'ty_document', risks: 'warning', decisions: 'ty_approve',
+  teamsCommittees: 'orgChart'
 };
 
 function renderProjectSearchResults(rawTerm){
@@ -10366,6 +10388,23 @@ function renderProjectSearchResults(rawTerm){
 
   resultsEl.innerHTML = groups.map(function(g){
     var rowsHTML = g.results.map(function(r){
+      if(g.type === 'teamsCommittees'){
+        var typePill = '<span class="kf-decision-type-pill">' + escapeHTML(TEAM_COMMITTEE_TYPES[r.tcType] || r.tcType) + '</span>';
+        var parentLine = r.parentName ? '<div class="kf-search-result-snippet"><span class="kf-search-result-field-label">Parent:</span> ' + escapeHTML(r.parentName) + '</div>' : '';
+        var membersLine = r.members.length > 0
+          ? '<div class="kf-search-result-snippet"><span class="kf-search-result-field-label">Members:</span> ' + r.members.map(function(m){ return escapeHTML(m.name); }).join(', ') + '</div>'
+          : '<div class="kf-search-result-snippet" style="color:var(--kf-text-faint);">No members</div>';
+        var descSnippet = (r.match.label && r.match.label !== null)
+          ? '<div class="kf-search-result-snippet"><span class="kf-search-result-field-label">' + escapeHTML(r.match.label) + ':</span> ' + buildSearchSnippetHTML(r.match.value, term) + '</div>'
+          : '';
+        return '<div class="kf-search-result-row" data-result-type="teamsCommittees" data-result-id="' + r.id + '">' +
+          '<div class="kf-search-result-top">' +
+            '<a class="kf-search-result-link" data-result-type="teamsCommittees" data-result-id="' + r.id + '">' + escapeHTML(r.title) + '</a>' +
+            typePill +
+          '</div>' +
+          parentLine + membersLine + descSnippet +
+        '</div>';
+      }
       var fieldLabelHTML = r.match.label ? '<span class="kf-search-result-field-label">' + escapeHTML(r.match.label) + ':</span> ' : '';
       var snippetHTML = buildSearchSnippetHTML(r.match.value, term);
       return '<div class="kf-search-result-row" data-result-type="' + g.type + '" data-result-id="' + r.id + '">' +
@@ -10409,6 +10448,9 @@ function openProjectSearchResult(type, id){
   } else if(type === 'decisions'){
     openDecisionsOverlay();
     showDecisionsFormView(id);
+  } else if(type === 'teamsCommittees'){
+    openTeamsCommitteesOverlay();
+    showTeamCommitteeFormView(id);
   }
 }
 
