@@ -73,7 +73,7 @@ export function renderObjectivesList(){
   });
 
   if(allObjectives.length === 0){
-    listEl.innerHTML = '<div class="kf-releases-empty">No objectives yet. Add one above to start tracking this project’s goals.</div>';
+    listEl.innerHTML = '<div class="kf-releases-empty">No objectives yet. Add one above to start tracking this project\'s goals.</div>';
     return;
   }
 

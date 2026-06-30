@@ -349,7 +349,7 @@ export function buildTaskListGroupHeader(project, groupKey, groupTasks, collapse
       '<span class="kf-release-status-pill ' + normalizeReleaseStatus(release.status) + '">' + escapeHTML(statusMeta.label) + '</span>' +
       (dateRangeText ? '<span class="kf-tasklist-group-dates">' + escapeHTML(dateRangeText) + '</span>' : '') +
       '<span class="kf-tasklist-group-right">' +
-        '<span class="kf-valueprop-pill ' + vpClass + '" title="Aggregate Value Proposition: total Business Value ÷ total Task Cost across this release’s tasks">' + formatValueProp(vp) + '</span>' +
+        '<span class="kf-valueprop-pill ' + vpClass + '" title="Aggregate Value Proposition: total Business Value ÷ total Task Cost across this release\'s tasks">' + formatValueProp(vp) + '</span>' +
         '<span class="kf-tasklist-group-count">' + count + ' task' + (count === 1 ? '' : 's') + '</span>' +
       '</span>';
   } else {

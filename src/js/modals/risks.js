@@ -105,7 +105,7 @@ export function renderRisksList(){
   });
 
   if(allRisks.length === 0){
-    listEl.innerHTML = '<div class="kf-releases-empty">No risks yet. Add one above to start this project's risk register.</div>';
+    listEl.innerHTML = '<div class="kf-releases-empty">No risks yet. Add one above to start this project\'s risk register.</div>';
     return;
   }
 

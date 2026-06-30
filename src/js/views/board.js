@@ -207,7 +207,7 @@ export function renderTeamFilterChips(){
     var row = document.createElement('label');
     row.className = 'kf-dropdown-filter-row' + (hasTasks ? '' : ' kf-team-filter-empty');
     var checked = ui.activeTeams.has(tc.id);
-    row.title = hasTasks ? '' : 'No tasks currently assigned to this team’s members';
+    row.title = hasTasks ? '' : 'No tasks currently assigned to this team\'s members';
     row.innerHTML =
       '<input type="checkbox" ' + (checked ? 'checked' : '') + '>' +
       '<span class="kf-dropdown-filter-name">' + escapeHTML(tc.name) + '</span>';

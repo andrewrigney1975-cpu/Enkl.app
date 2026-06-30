@@ -162,7 +162,7 @@ export var RISK_LIKELIHOOD_META = {
   5: {label: 'Almost certain', description: 'Sure to happen and/or have major consequences'}
 };
 export var RISK_IMPACT_META = {
-  1: {label: 'Insignificant', description: 'Won’t cause serious harm or delays'},
+  1: {label: 'Insignificant', description: 'Won\'t cause serious harm or delays'},
   2: {label: 'Minor', description: 'Can cause harm or delays, only to a mild extent'},
   3: {label: 'Significant', description: 'Can cause harm or delays that will require additional treatments'},
   4: {label: 'Major', description: 'Can cause major harm or delays that will require significant treatment or changes to the project'},

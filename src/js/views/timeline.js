@@ -232,7 +232,7 @@ export function renderTimeline(){
     alertBanner.classList.remove('hidden');
     alertBanner.innerHTML = iconHTML('warning', 16) +
       '<span>' + escapeHTML(overrunTask.key) + ' “' + escapeHTML(overrunTask.title) + '” is scheduled to finish ' +
-      escapeHTML(utcISOToLocalDisplayDate(overrunTask.endDate)) + ' — after the project’s end date of ' +
+      escapeHTML(utcISOToLocalDisplayDate(overrunTask.endDate)) + ' — after the project\'s end date of ' +
       escapeHTML(utcISOToLocalDisplayDate(project.endDate)) + '.</span>';
   }
 

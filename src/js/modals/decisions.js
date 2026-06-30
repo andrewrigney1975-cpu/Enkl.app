@@ -101,7 +101,7 @@ export function renderDecisionsList(){
   });
 
   if(allDecisions.length === 0){
-    listEl.innerHTML = '<div class="kf-releases-empty">No decisions yet. Add one above to start this project's decision log.</div>';
+    listEl.innerHTML = '<div class="kf-releases-empty">No decisions yet. Add one above to start this project\'s decision log.</div>';
     return;
   }
 

@@ -116,8 +116,8 @@ function checkDefaultScoreAlert(){
 
   unscoredTasks.sort(function(a, b){ return a.key.localeCompare(b.key, undefined, {numeric: true}); });
 
-  var msg = '“' + project.name + '” has ' + unscoredTasks.length + ' task' +
-            (unscoredTasks.length === 1 ? ‘’ : ‘s’) + ‘ that ‘ + (unscoredTasks.length === 1 ? ‘has not’ : ‘have not’) + ‘ been scored — ‘ +
+  var msg = project.name + ' has ' + unscoredTasks.length + ' task' +
+            (unscoredTasks.length === 1 ? '' : 's') + ' that ' + (unscoredTasks.length === 1 ? 'has not' : 'have not') + ' been scored — ' +
             'Business Value and Task Cost are still at the default of 1.';
   document.getElementById('defaultScoreAlertMessage').textContent = msg;
 

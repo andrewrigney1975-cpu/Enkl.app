@@ -109,7 +109,7 @@ export function renderDocumentsList(){
   });
 
   if(allDocs.length === 0){
-    listEl.innerHTML = '<div class="kf-releases-empty">No documents yet. Add one above to start building this project’s document register.</div>';
+    listEl.innerHTML = '<div class="kf-releases-empty">No documents yet. Add one above to start building this project\'s document register.</div>';
     return;
   }
 

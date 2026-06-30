@@ -4,7 +4,8 @@ import { getCurrentProject } from '../store.js';
 import { getTasksArray } from '../utils.js';
 import { PRIORITY_ORDER, TASK_SCORE_MIN, TASK_SCORE_MAX, PRIORITY_META } from '../config.js';
 import { clampTaskScore, utcISOToLocalDateValue, localDateValueToUTCISO } from '../date-utils.js';
-import { moveTaskToColumn, saveDB } from '../mutations.js';
+import { moveTaskToColumn } from '../mutations.js';
+import { saveDB } from "../storage.js";
 import { escapeHTML, renderBoard } from '../views/board.js';
 
 function buildEl(tag, className, innerHTML){ var el = document.createElement(tag); if(className) el.className = className; if(innerHTML !== undefined) el.innerHTML = innerHTML; return el; }

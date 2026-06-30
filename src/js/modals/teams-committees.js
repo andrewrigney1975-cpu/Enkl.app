@@ -188,7 +188,7 @@ export function saveTeamCommitteeFromModal(){
   if(ui.editingTeamCommitteeId){
     var result = updateTeamCommittee(project, ui.editingTeamCommitteeId, data);
     if(!result.ok){
-      toast(‘Could not set that parent — it would create a circular hierarchy.’);
+      toast('Could not set that parent — it would create a circular hierarchy.');
       return;
     }
     toast('Saved.');
