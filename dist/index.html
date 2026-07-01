@@ -10512,7 +10512,7 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
-  var SVG_EXPORT_BAKED_PROPS = ["fill", "stroke", "color", "opacity", "stroke-width", "stroke-opacity", "fill-opacity", "font-family"];
+  var SVG_EXPORT_BAKED_PROPS = ["fill", "stroke", "color", "opacity", "stroke-width", "stroke-opacity", "fill-opacity", "font-family", "paint-order"];
   function cloneSvgWithBakedStyles(svgEl) {
     var clone = svgEl.cloneNode(true);
     var liveAll = [svgEl].concat(Array.prototype.slice.call(svgEl.querySelectorAll("*")));

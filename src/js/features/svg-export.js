@@ -12,7 +12,7 @@ export function downloadBlob(blob, filename){
   URL.revokeObjectURL(url);
 }
 
-export var SVG_EXPORT_BAKED_PROPS = ['fill', 'stroke', 'color', 'opacity', 'stroke-width', 'stroke-opacity', 'fill-opacity', 'font-family'];
+export var SVG_EXPORT_BAKED_PROPS = ['fill', 'stroke', 'color', 'opacity', 'stroke-width', 'stroke-opacity', 'fill-opacity', 'font-family', 'paint-order'];
 
 export function cloneSvgWithBakedStyles(svgEl){
   var clone = svgEl.cloneNode(true);
