@@ -5,7 +5,7 @@ import { escapeHTML } from '../views/board.js';
 import { memberInitials, utcISOToLocalDateValue, localDateValueToUTCISO, utcISOToLocalDisplayDate } from '../date-utils.js';
 import { getMemberById, getRiskById } from '../utils.js';
 import { RISK_LIKELIHOOD_META, RISK_IMPACT_META } from '../config.js';
-import { addRisk, updateRisk, deleteRisk, normalizeRiskStatus, getRiskStatusMeta, riskScore, riskScoreBand, clampRiskScoreValue } from '../mutations.js';
+import { addRisk, updateRisk, deleteRisk, normalizeRiskStatus, getRiskStatusMeta, riskScore, riskScoreBand, clampRiskScoreValue, buildRiskMatrixSvg } from '../mutations.js';
 import { renderDocumentPickerInto, renderItemPickerInto, getCheckedDocumentIdsFrom, getCheckedItemIdsFrom } from './pickers.js';
 import { populateOwnerSelect, populateTaskSelect } from './documents.js';
 import { confirmDialog } from './confirm.js';
@@ -106,6 +106,7 @@ export function renderRisksList(){
 
   if(allRisks.length === 0){
     listEl.innerHTML = '<div class="kf-releases-empty">No risks yet. Add one above to start this project\'s risk register.</div>';
+    renderRisksMatrix(allRisks);
     return;
   }
 
@@ -118,6 +119,7 @@ export function renderRisksList(){
 
   if(risks.length === 0){
     listEl.innerHTML = '<div class="kf-releases-empty">No risks match "' + escapeHTML(ui.risksSearchTerm.trim()) + '".</div>';
+    renderRisksMatrix(allRisks);
     return;
   }
 
@@ -159,6 +161,29 @@ export function renderRisksList(){
     row.addEventListener('click', function(){ showRisksFormView(r.id); });
     listEl.appendChild(row);
   });
+
+  renderRisksMatrix(allRisks);
+}
+
+/* The matrix always plots every risk in the project — unaffected by
+   the list's search filter above — so it stays a stable at-a-glance
+   overview rather than shrinking as the user types. */
+function renderRisksMatrix(allRisks){
+  var chartEl = document.getElementById('risksMatrixChart');
+  var noDataEl = document.getElementById('risksMatrixNoData');
+  var legendEl = document.getElementById('risksMatrixLegend');
+  if(allRisks.length === 0){
+    chartEl.innerHTML = '';
+    legendEl.innerHTML = '';
+    noDataEl.classList.remove('hidden');
+    noDataEl.textContent = 'No risks logged yet — add one above to plot it here.';
+    return;
+  }
+  noDataEl.classList.add('hidden');
+  chartEl.innerHTML = buildRiskMatrixSvg(allRisks, 560);
+  legendEl.innerHTML =
+    '<span class="kf-health-legend-item"><span class="kf-health-legend-swatch" style="background:#1b2a4a;border-radius:50%;width:8px;height:8px;"></span>Solid marker = open/in review risk</span>' +
+    '<span class="kf-health-legend-item kf-risk-matrix-point-faded" style="opacity:0.55;"><span class="kf-health-legend-swatch" style="background:#1b2a4a;border-radius:50%;width:8px;height:8px;"></span>Faded marker = closed risk</span>';
 }
 
 export function saveRiskFromModal(){

@@ -19,7 +19,7 @@ async function build() {
   const bundledJs = result.outputFiles[0].text;
 
   // Read CSS and HTML template
-  const css = readFileSync(join(__dirname, 'src/css/styles.min.css'), 'utf8');
+  const css = readFileSync(join(__dirname, 'src/css/styles.css'), 'utf8');
   const html = readFileSync(join(__dirname, 'src/index.html'), 'utf8');
 
   // Inline CSS

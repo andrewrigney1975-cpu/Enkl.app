@@ -659,6 +659,21 @@ function wireEvents(){
       else exportSvgElementAsPng(svgEl, filenameBase, 4);
     });
   });
+  document.getElementById('risksMatrixExportAsBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('risksMatrixExportAsPanel');
+  });
+  document.querySelectorAll('#risksMatrixExportAsPanel .kf-export-as-option').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      closeAllExportAsPanels();
+      var project = getCurrentProject();
+      var filenameBase = (project ? project.key : 'export') + '-risk-matrix';
+      var svgEl = document.querySelector('#risksMatrixChart svg');
+      if(!svgEl){ toast('Nothing to export.'); return; }
+      if(btn.getAttribute('data-export-type') === 'svg') exportSvgElementAsSvgFile(svgEl, filenameBase);
+      else exportSvgElementAsPng(svgEl, filenameBase, 4);
+    });
+  });
   document.getElementById('costBenefitOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'costBenefitOverlay') closeCostBenefitOverlay();
   });
