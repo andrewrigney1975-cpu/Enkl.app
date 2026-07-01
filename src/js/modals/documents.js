@@ -8,6 +8,7 @@ import { getMemberById, getTasksArray, getDocumentById } from '../utils.js';
 import { addDocument, updateDocument, deleteDocument, normalizeDocumentationUrl } from '../mutations.js';
 import { renderDocumentPickerInto, getCheckedDocumentIdsFrom } from './pickers.js';
 import { confirmDialog } from './confirm.js';
+import { scheduleDocumentSuggestions, disposeDocumentSuggestionWorker } from '../features/document-suggestions.js';
 
 /* =========================================================
    DOCUMENT RELATIONSHIP MAP
@@ -278,6 +279,7 @@ export function openDocumentsOverlay(){
   document.getElementById('documentsOverlay').classList.remove('hidden');
 }
 export function closeDocumentsOverlay(){
+  disposeDocumentSuggestionWorker();
   document.getElementById('documentsOverlay').classList.add('hidden');
 }
 export function isDocumentsOverlayOpen(){
@@ -285,6 +287,7 @@ export function isDocumentsOverlayOpen(){
 }
 
 export function showDocumentsListView(){
+  disposeDocumentSuggestionWorker();
   ui.editingDocumentId = null;
   document.getElementById('documentsModalTitle').textContent = 'Documents';
   document.getElementById('documentsListView').classList.remove('hidden');
@@ -314,6 +317,7 @@ export function showDocumentsFormView(docId){
   populateOwnerSelect(document.getElementById('documentOwnerSelect'), project, doc ? doc.ownerId : null);
   populateTaskSelect(document.getElementById('documentTaskSelect'), project, doc ? doc.taskId : null);
   renderDocumentPickerInto('documentRelatedPicker', project, doc ? doc.relatedDocumentIds : [], docId || null);
+  scheduleDocumentSuggestions(project, docId || null);
 
   var metaEl = document.getElementById('documentMetaDates');
   if(doc){

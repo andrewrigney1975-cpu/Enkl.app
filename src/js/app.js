@@ -35,6 +35,7 @@ import { openTeamModal, closeTeamModal, addMemberFromModal } from './modals/team
 import { openTaskTypesModal, closeTaskTypesModal, addTaskTypeFromModal } from './modals/task-types.js';
 import { openReleasesOverlay, closeReleasesOverlay, isReleasesOverlayOpen, showReleasesFormView, showReleasesListView, saveReleaseFromModal, deleteReleaseFromModal } from './modals/releases.js';
 import { openDocumentsOverlay, closeDocumentsOverlay, isDocumentsOverlayOpen, showDocumentsFormView, showDocumentsListView, renderDocumentsList, saveDocumentFromModal, deleteDocumentFromModal, updateDocUrlOpenButtonVisibilityFor, openUrlInputInNewTab } from './modals/documents.js';
+import { scheduleDocumentSuggestions } from './features/document-suggestions.js';
 import { openRisksOverlay, closeRisksOverlay, isRisksOverlayOpen, showRisksFormView, showRisksListView, renderRisksList, saveRiskFromModal, deleteRiskFromModal, updateRiskScorePreview } from './modals/risks.js';
 import { openHealthOverlay, closeHealthOverlay, isHealthOverlayOpen, cancelHealthGaugeAnimation } from './modals/health.js';
 import { openDecisionsOverlay, closeDecisionsOverlay, isDecisionsOverlayOpen, showDecisionsFormView, showDecisionsListView, renderDecisionsList, saveDecisionFromModal, deleteDecisionFromModal } from './modals/decisions.js';
@@ -342,6 +343,12 @@ function wireEvents(){
     updateDocUrlOpenButtonVisibilityFor('documentUrlInput', 'documentUrlOpenBtn');
   });
   document.getElementById('documentUrlOpenBtn').addEventListener('click', function(){ openUrlInputInNewTab('documentUrlInput'); });
+  document.getElementById('documentTitleInput').addEventListener('input', function(){
+    scheduleDocumentSuggestions(getCurrentProject(), ui.editingDocumentId);
+  });
+  document.getElementById('documentDescriptionInput').addEventListener('input', function(){
+    scheduleDocumentSuggestions(getCurrentProject(), ui.editingDocumentId);
+  });
   document.getElementById('documentsMapExportAsBtn').addEventListener('click', function(e){
     e.stopPropagation();
     toggleExportAsPanel('documentsMapExportAsPanel');

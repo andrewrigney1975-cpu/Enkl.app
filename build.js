@@ -18,9 +18,10 @@ async function build() {
 
   const bundledJs = result.outputFiles[0].text;
 
-  // Read CSS and HTML template
+  // Read CSS, HTML template, and the keyword-matching web worker's source
   const css = readFileSync(join(__dirname, 'src/css/styles.css'), 'utf8');
   const html = readFileSync(join(__dirname, 'src/index.html'), 'utf8');
+  const keywordWorkerSrc = readFileSync(join(__dirname, 'src/js/workers/keyword-worker.js'), 'utf8');
 
   // Inline CSS
   let output = html.replace(
@@ -28,10 +29,13 @@ async function build() {
     `<style>\n${css}\n  </style>`
   );
 
-  // Inline JS
+  // Inline JS. The worker has no fetchable file to load from in this single-file
+  // build, so its source is embedded as inert text (an unrecognized script type,
+  // never executed by the browser) and turned into a real Worker at runtime via
+  // a Blob URL — see src/js/features/document-suggestions.js.
   output = output.replace(
     '<script type="module" src="js/app.js"></script>',
-    `<script>\n${bundledJs}\n  </script>`
+    `<script type="javascript/worker" id="keywordWorkerSource">\n${keywordWorkerSrc}\n  </script>\n  <script>\n${bundledJs}\n  </script>`
   );
 
   writeFileSync(join(__dirname, 'dist/index.html'), output, 'utf8');
