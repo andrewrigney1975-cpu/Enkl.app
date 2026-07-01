@@ -1779,13 +1779,15 @@
     margin-bottom: 24px;
   }
 
-  #risksMatrixSection {
+  #risksMatrixSection,
+  #documentsMapSection {
     margin-top: 2em;
   }
 
   #healthBurndownChart,
   #healthRiskMatrixChart,
-  #risksMatrixChart {
+  #risksMatrixChart,
+  #documentsMapChart {
     text-align: center;
     max-width: 1000px;
     margin: auto;
@@ -3120,6 +3122,28 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+
+  /* Document Map */
+  .kf-docmap-node rect.kf-docmap-node-box {
+    transition: stroke .1s, stroke-width .1s;
+  }
+
+  .kf-docmap-node {
+    cursor: pointer;
+  }
+
+  .kf-docmap-node:hover rect.kf-docmap-node-box {
+    stroke: var(--kf-blue);
+    stroke-width: 2;
+  }
+
+  .kf-docmap-node-isolated {
+    opacity: 0.6;
+  }
+
+  .kf-docmap-node-isolated:hover {
+    opacity: 0.85;
   }
 
   /* Cost/Benefit Chart */

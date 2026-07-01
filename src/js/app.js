@@ -342,6 +342,26 @@ function wireEvents(){
     updateDocUrlOpenButtonVisibilityFor('documentUrlInput', 'documentUrlOpenBtn');
   });
   document.getElementById('documentUrlOpenBtn').addEventListener('click', function(){ openUrlInputInNewTab('documentUrlInput'); });
+  document.getElementById('documentsMapExportAsBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('documentsMapExportAsPanel');
+  });
+  document.querySelectorAll('#documentsMapExportAsPanel .kf-export-as-option').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      closeAllExportAsPanels();
+      var project = getCurrentProject();
+      var filenameBase = (project ? project.key : 'export') + '-document-map';
+      var svgEl = document.querySelector('#documentsMapChart svg');
+      if(!svgEl){ toast('Nothing to export.'); return; }
+      if(btn.getAttribute('data-export-type') === 'svg') exportSvgElementAsSvgFile(svgEl, filenameBase);
+      else exportSvgElementAsPng(svgEl, filenameBase, 4);
+    });
+  });
+  document.getElementById('documentsMapChart').addEventListener('click', function(e){
+    var node = e.target.closest('.kf-docmap-node');
+    if(!node) return;
+    showDocumentsFormView(node.getAttribute('data-document-id'));
+  });
 
   document.getElementById('risksBtn').addEventListener('click', openRisksOverlay);
   document.getElementById('risksModalClose').addEventListener('click', closeRisksOverlay);

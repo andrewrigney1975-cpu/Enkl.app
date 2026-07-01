@@ -686,6 +686,22 @@
           <input type="text" id="documentsSearchInput" placeholder="Search documents...">
         </div>
         <div id="documentsList" class="kf-releases-list"></div>
+
+        <div class="kf-health-section" id="documentsMapSection">
+          <div class="kf-health-section-header-row">
+            <h3 class="kf-health-section-title">Document Map</h3>
+            <div class="kf-export-as-wrap">
+              <button class="kf-btn kf-btn-ghost" id="documentsMapExportAsBtn" title="Export As..."><span class="kf-icon" data-icon="download" data-size="14"></span>Export As...</button>
+              <div class="kf-export-as-panel hidden" id="documentsMapExportAsPanel">
+                <button type="button" class="kf-export-as-option" data-export-type="svg">Export as SVG</button>
+                <button type="button" class="kf-export-as-option" data-export-type="png">Export as PNG (4x resolution)</button>
+              </div>
+            </div>
+          </div>
+          <div id="documentsMapChart"></div>
+          <div id="documentsMapNoData" class="kf-health-no-data hidden"></div>
+          <div id="documentsMapLegend" class="kf-health-legend"></div>
+        </div>
       </div>
       <div id="documentsFormView" class="hidden">
         <div class="kf-field">
