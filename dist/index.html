@@ -3634,7 +3634,7 @@
       <div class="kf-header-divider"></div>
       <div class="kf-project-picker">
         <select id="projectSelect" class="kf-select-dark" aria-label="Select project"></select>
-        <button class="kf-btn kf-btn-ghost" id="projectSearchBtn" title="Project Search" aria-label="Project Search"><span class="kf-icon" data-icon="search" data-size="16"></span></button>
+        <button class="kf-btn kf-btn-ghost" id="projectSearchBtn" title="Project Search" aria-label="Project Search"><span class="kf-icon" data-icon="search" data-size="16"></span>Find</button>
         <button class="kf-header-btn" id="editProjectBtn" title="Edit project"><span class="kf-icon" data-icon="edit" data-size="14"></span>Edit</button>
         <button class="kf-header-btn" id="manageTeamBtn" title="Manage team members"><span class="kf-icon" data-icon="team" data-size="14"></span>Team</button>
         <button class="kf-header-btn" id="deleteProjectBtn" title="Delete project"><span class="kf-icon" data-icon="trash" data-size="14"></span>Delete</button>
@@ -3698,8 +3698,7 @@
         <button type="button" class="kf-side-nav-item" id="navTimelineBtn" title="Timeline"><span class="kf-icon" data-icon="timeline" data-size="18"></span><span class="kf-side-nav-text">Timeline</span></button>
         <button type="button" class="kf-side-nav-item" id="navDepMapBtn" title="Dependency Map"><span class="kf-icon" data-icon="graph" data-size="18"></span><span class="kf-side-nav-text">Dependency Map</span></button>
         <button type="button" class="kf-side-nav-item" id="navCostBenefitBtn" title="Cost/Benefit Chart"><span class="kf-icon" data-icon="quadrant" data-size="18"></span><span class="kf-side-nav-text">Cost/Benefit Chart</span></button>
-        <button type="button" class="kf-side-nav-item" id="navOrgChartBtn" title="Org Chart"><span class="kf-icon" data-icon="orgChart" data-size="18"></span><span class="kf-side-nav-text">Org Chart</span></button>
-        <button type="button" class="kf-side-nav-item" id="navWorkflowBtn" title="Workflow"><span class="kf-icon" data-icon="workflow" data-size="18"></span><span class="kf-side-nav-text">Workflow</span></button>
+        <button type="button" class="kf-side-nav-item" id="navOrgChartBtn" title="Org Chart"><span class="kf-icon" data-icon="orgChart" data-size="18"></span><span class="kf-side-nav-text">Org Chart</span></button>   
       </div>
       <div class="kf-side-nav-section">
         <div class="kf-side-nav-label">Tools</div>
@@ -3707,6 +3706,7 @@
         <button type="button" class="kf-side-nav-item" id="navArchivedBtn" title="Archived"><span class="kf-icon" data-icon="archive" data-size="18"></span><span class="kf-side-nav-text">Archived</span><span id="navArchivedCountBadge" class="kf-count-badge kf-archived-count-badge kf-vis-hidden"></span></button>
         <button type="button" class="kf-side-nav-item" id="navTaskTypesBtn" title="Task Types"><span class="kf-icon" data-icon="tag" data-size="18"></span><span class="kf-side-nav-text">Task Types</span></button>
         <button type="button" class="kf-side-nav-item" id="navReleasesBtn" title="Releases"><span class="kf-icon" data-icon="rocket" data-size="18"></span><span class="kf-side-nav-text">Releases</span></button>
+        <button type="button" class="kf-side-nav-item" id="navWorkflowBtn" title="Workflow"><span class="kf-icon" data-icon="workflow" data-size="18"></span><span class="kf-side-nav-text">Workflow</span></button>
       </div>
     </nav>
 
@@ -3750,6 +3750,7 @@
       <button class="kf-btn kf-btn-secondary" id="archivedTasksBtn"><span class="kf-icon" data-icon="archive" data-size="14"></span>Archived<span id="archivedCountBadge" class="kf-count-badge kf-archived-count-badge kf-vis-hidden"></span></button>
       <button class="kf-btn kf-btn-secondary" id="taskTypesBtn"><span class="kf-icon" data-icon="tag" data-size="14"></span>Task Types</button>
       <button class="kf-btn kf-btn-secondary" id="releasesBtn"><span class="kf-icon" data-icon="rocket" data-size="14"></span>Releases</button>
+      <button class="kf-btn kf-btn-secondary" id="workflowBtn"><span class="kf-icon" data-icon="workflow" data-size="14"></span>Workflow</button>
     </div>
   </div>
   <div class="kf-toolbar kf-toolbar-row2" id="toolbarRow2">
@@ -3759,7 +3760,6 @@
       <button class="kf-btn kf-btn-secondary" id="depMapBtn"><span class="kf-icon" data-icon="graph" data-size="14"></span>Dependency Map</button>
       <button class="kf-btn kf-btn-secondary" id="costBenefitBtn"><span class="kf-icon" data-icon="quadrant" data-size="14"></span>Cost/Benefit Chart</button>
       <button class="kf-btn kf-btn-secondary" id="orgChartBtn"><span class="kf-icon" data-icon="orgChart" data-size="14"></span>Org Chart</button>
-      <button class="kf-btn kf-btn-secondary" id="workflowBtn"><span class="kf-icon" data-icon="workflow" data-size="14"></span>Workflow</button>
     </div>
     <div class="kf-toolbar-spacer"></div>
     <button class="kf-btn kf-btn-secondary" id="addColumnTopBtn"><span class="kf-icon" data-icon="plus" data-size="14"></span>Column</button>
@@ -4046,8 +4046,8 @@
     </div>
     <div class="kf-depmap-legend" id="workflowLegend">
       <span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-good-fg);"></span>Allowed transition</span>
+      <span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-overdue-fg);"></span>Conditionally Allowed transition</span>
       <span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-danger);"></span>Disallowed transition</span>
-      <span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-overdue-fg);"></span>Conditional Allow transition</span>
       <span class="kf-legend-item">Drag a column box to reposition it</span>
     </div>
     <div class="kf-depmap-scroll" id="workflowScroll">
@@ -4063,8 +4063,8 @@
     <label for="workflowEdgeTypeSelect">Type</label>
     <select id="workflowEdgeTypeSelect">
       <option value="allowed">Allowed</option>
+      <option value="conditional">Conditionally Allowed</option>
       <option value="disallowed">Disallowed</option>
-      <option value="conditional">Conditional Allow</option>
     </select>
   </div>
   <div class="kf-field-row hidden" id="workflowEdgeConditionRow">
