@@ -687,6 +687,31 @@
     color: var(--kf-text);
   }
 
+  .kf-search-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .kf-search-row .kf-search {
+    flex: 1;
+  }
+
+  .kf-filter-select {
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 7px 8px;
+    background: var(--kf-bg);
+    color: var(--kf-text);
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .kf-filter-select:focus {
+    outline: none;
+    border-color: var(--kf-blue);
+  }
+
   .kf-filter-chips {
     display: flex;
     gap: 6px;

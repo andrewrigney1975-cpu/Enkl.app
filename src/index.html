@@ -842,9 +842,24 @@
         <button class="kf-btn kf-btn-secondary" id="addRiskBtn" style="width:100%;justify-content:center;margin-bottom:14px;">
           <span class="kf-icon" data-icon="plus" data-size="14"></span>New Risk
         </button>
-        <div class="kf-search" style="margin-bottom:10px;">
-          <span class="kf-icon" data-icon="search" data-size="14"></span>
-          <input type="text" id="risksSearchInput" placeholder="Search risks...">
+        <div class="kf-search-row" style="margin-bottom:10px;">
+          <div class="kf-search">
+            <span class="kf-icon" data-icon="search" data-size="14"></span>
+            <input type="text" id="risksSearchInput" placeholder="Search risks...">
+          </div>
+          <select id="risksSeverityFilter" class="kf-filter-select">
+            <option value="">All Severities</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+          <select id="risksStatusFilter" class="kf-filter-select">
+            <option value="">All Statuses</option>
+            <option value="new">New</option>
+            <option value="in_review">In Review</option>
+            <option value="closed">Closed</option>
+          </select>
         </div>
         <div id="risksList" class="kf-releases-list"></div>
 
@@ -953,9 +968,28 @@
         <button class="kf-btn kf-btn-secondary" id="addDecisionBtn" style="width:100%;justify-content:center;margin-bottom:14px;">
           <span class="kf-icon" data-icon="plus" data-size="14"></span>New Decision
         </button>
-        <div class="kf-search" style="margin-bottom:10px;">
-          <span class="kf-icon" data-icon="search" data-size="14"></span>
-          <input type="text" id="decisionsSearchInput" placeholder="Search decisions...">
+        <div class="kf-search-row" style="margin-bottom:10px;">
+          <div class="kf-search">
+            <span class="kf-icon" data-icon="search" data-size="14"></span>
+            <input type="text" id="decisionsSearchInput" placeholder="Search decisions...">
+          </div>
+          <select id="decisionsTypeFilter" class="kf-filter-select">
+            <option value="">All Types</option>
+            <option value="strategy">Strategy</option>
+            <option value="policy">Policy</option>
+            <option value="budgetary">Budgetary</option>
+            <option value="financial">Financial</option>
+            <option value="functional">Functional</option>
+            <option value="technical">Technical</option>
+            <option value="process">Process</option>
+            <option value="operational">Operational</option>
+          </select>
+          <select id="decisionsStatusFilter" class="kf-filter-select">
+            <option value="">All Statuses</option>
+            <option value="open">Open</option>
+            <option value="in_review">In Review</option>
+            <option value="completed">Completed</option>
+          </select>
         </div>
         <div id="decisionsList" class="kf-releases-list"></div>
       </div>

@@ -387,6 +387,14 @@ function wireEvents(){
     ui.risksSearchTerm = e.target.value;
     renderRisksList();
   });
+  document.getElementById('risksSeverityFilter').addEventListener('change', function(e){
+    ui.risksSeverityFilter = e.target.value;
+    renderRisksList();
+  });
+  document.getElementById('risksStatusFilter').addEventListener('change', function(e){
+    ui.risksStatusFilter = e.target.value;
+    renderRisksList();
+  });
   document.getElementById('riskFormCancelBtn').addEventListener('click', showRisksListView);
   document.getElementById('riskFormSaveBtn').addEventListener('click', saveRiskFromModal);
   document.getElementById('deleteRiskBtn').addEventListener('click', deleteRiskFromModal);
@@ -407,6 +415,14 @@ function wireEvents(){
   document.getElementById('addDecisionBtn').addEventListener('click', function(){ showDecisionsFormView(null); });
   document.getElementById('decisionsSearchInput').addEventListener('input', function(e){
     ui.decisionsSearchTerm = e.target.value;
+    renderDecisionsList();
+  });
+  document.getElementById('decisionsTypeFilter').addEventListener('change', function(e){
+    ui.decisionsTypeFilter = e.target.value;
+    renderDecisionsList();
+  });
+  document.getElementById('decisionsStatusFilter').addEventListener('change', function(e){
+    ui.decisionsStatusFilter = e.target.value;
     renderDecisionsList();
   });
   document.getElementById('decisionFormCancelBtn').addEventListener('click', showDecisionsListView);

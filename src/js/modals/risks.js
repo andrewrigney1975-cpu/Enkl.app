@@ -42,7 +42,11 @@ export function openRisksOverlay(){
   var project = getCurrentProject();
   if(!project){ toast('No project selected.'); return; }
   ui.risksSearchTerm = '';
+  ui.risksSeverityFilter = '';
+  ui.risksStatusFilter = '';
   document.getElementById('risksSearchInput').value = '';
+  document.getElementById('risksSeverityFilter').value = '';
+  document.getElementById('risksStatusFilter').value = '';
   showRisksListView();
   document.getElementById('risksOverlay').classList.remove('hidden');
 }
@@ -112,24 +116,26 @@ export function renderRisksList(){
 
   var term = ui.risksSearchTerm.trim().toLowerCase();
   var statusMatch = /^status:\s*(.*)$/.exec(term);
-  var risks;
-  if(statusMatch){
-    var statusQuery = statusMatch[1].trim().replace(/_/g, ' ');
-    risks = allRisks.filter(function(r){
+  var severityFilter = ui.risksSeverityFilter;
+  var statusFilter = ui.risksStatusFilter;
+
+  var risks = allRisks.filter(function(r){
+    if(severityFilter && riskScoreBand(riskScore(r)) !== severityFilter) return false;
+    if(statusFilter && normalizeRiskStatus(r.status) !== statusFilter) return false;
+    if(statusMatch){
+      var statusQuery = statusMatch[1].trim().replace(/_/g, ' ');
       return getRiskStatusMeta(r.status).label.toLowerCase().indexOf(statusQuery) !== -1;
-    });
-  } else if(term){
-    risks = allRisks.filter(function(r){
+    }
+    if(term){
       var owner = getMemberById(project, r.ownerId);
       var hay = [r.key, r.title, r.description, r.mitigations, owner ? owner.name : ''].join(' ').toLowerCase();
       return hay.indexOf(term) !== -1;
-    });
-  } else {
-    risks = allRisks;
-  }
+    }
+    return true;
+  });
 
   if(risks.length === 0){
-    listEl.innerHTML = '<div class="kf-releases-empty">No risks match "' + escapeHTML(ui.risksSearchTerm.trim()) + '".</div>';
+    listEl.innerHTML = '<div class="kf-releases-empty">No risks match the current filters.</div>';
     renderRisksMatrix(allRisks);
     return;
   }

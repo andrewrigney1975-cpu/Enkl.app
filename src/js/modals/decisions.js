@@ -30,7 +30,11 @@ export function openDecisionsOverlay(){
   var project = getCurrentProject();
   if(!project){ toast('No project selected.'); return; }
   ui.decisionsSearchTerm = '';
+  ui.decisionsTypeFilter = '';
+  ui.decisionsStatusFilter = '';
   document.getElementById('decisionsSearchInput').value = '';
+  document.getElementById('decisionsTypeFilter').value = '';
+  document.getElementById('decisionsStatusFilter').value = '';
   showDecisionsListView();
   document.getElementById('decisionsOverlay').classList.remove('hidden');
 }
@@ -106,14 +110,22 @@ export function renderDecisionsList(){
   }
 
   var term = ui.decisionsSearchTerm.trim().toLowerCase();
-  var decisions = term ? allDecisions.filter(function(dec){
-    var owner = getMemberById(project, dec.ownerId);
-    var hay = [dec.key, dec.title, dec.description, dec.outcome, dec.approver || '', owner ? owner.name : ''].join(' ').toLowerCase();
-    return hay.indexOf(term) !== -1;
-  }) : allDecisions;
+  var typeFilter = ui.decisionsTypeFilter;
+  var statusFilter = ui.decisionsStatusFilter;
+
+  var decisions = allDecisions.filter(function(dec){
+    if(typeFilter && normalizeDecisionType(dec.type) !== typeFilter) return false;
+    if(statusFilter && normalizeDecisionStatus(dec.status) !== statusFilter) return false;
+    if(term){
+      var owner = getMemberById(project, dec.ownerId);
+      var hay = [dec.key, dec.title, dec.description, dec.outcome, dec.approver || '', owner ? owner.name : ''].join(' ').toLowerCase();
+      if(hay.indexOf(term) === -1) return false;
+    }
+    return true;
+  });
 
   if(decisions.length === 0){
-    listEl.innerHTML = '<div class="kf-releases-empty">No decisions match "' + escapeHTML(ui.decisionsSearchTerm.trim()) + '".</div>';
+    listEl.innerHTML = '<div class="kf-releases-empty">No decisions match the current filters.</div>';
     return;
   }
 
