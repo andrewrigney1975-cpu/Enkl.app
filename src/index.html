@@ -103,6 +103,7 @@
       <div class="kf-header-divider"></div>
       <button class="kf-header-btn kf-theme-toggle" id="themeToggleBtn" title="Switch to dark theme" aria-label="Switch to dark theme"></button>
       <button class="kf-header-btn" id="appSettingsBtn" title="Project Settings" aria-label="Project Settings"><span class="kf-icon" data-icon="ty_configure" data-size="16"></span><span class="kf-appsettings-label">Project Settings</span></button>
+      <button class="kf-header-btn" id="aboutBtn" title="About" aria-label="About"><span class="kf-icon" data-icon="help" data-size="16"></span></button>
     </div>
   </header>
   <div class="kf-drawer-backdrop" id="drawerBackdrop"></div>
@@ -1164,6 +1165,37 @@
     </div>
     <div class="kf-modal-footer">
       <button class="kf-btn kf-btn-secondary" id="appSettingsDoneBtn">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- About Modal -->
+<div class="kf-overlay hidden" id="aboutOverlay">
+  <div class="kf-modal kf-modal-md" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>About</h2>
+      <button class="kf-btn kf-btn-ghost" id="aboutModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div class="kf-about-hero">
+        <div class="kf-about-header-row">
+          <span class="kf-icon kf-about-logo" id="aboutLogoIcon"></span>
+          <div class="kf-about-name">Enkl</div>
+        </div>
+        <div class="kf-about-tagline">Simplified task-oriented project management and governance</div>
+        <div class="kf-about-version" id="aboutVersion"></div>
+      </div>
+      <p class="kf-about-blurb">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Enkl brings your tasks, decisions, risks and governance artefacts together in one streamlined workspace — sed do eiusmod tempor incididunt ut labore et dolore magna aliqua, so your team can move fast without losing sight of why.</p>
+
+      <div class="kf-about-subheading">Current Projects</div>
+      <div id="aboutProjectsList" class="kf-about-projects-list"></div>
+
+      <div class="kf-about-links">
+        <a class="kf-btn kf-btn-secondary" href="/site" target="_blank" rel="noopener"><span class="kf-icon" data-icon="externalLink" data-size="14"></span>Web</a>
+        <a class="kf-btn kf-btn-secondary" href="/help" target="_blank" rel="noopener"><span class="kf-icon" data-icon="externalLink" data-size="14"></span>Help</a>
+      </div>
+
+      <div class="kf-about-company-placeholder">Company info &amp; logo coming soon</div>
     </div>
   </div>
 </div>

@@ -45,6 +45,7 @@ import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen,
 import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen, showObjectivesFormView, showObjectivesListView, renderObjectivesList, saveObjectiveFromModal, deleteObjectiveFromModal } from './modals/objectives.js';
 import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitteesOverlayOpen, showTeamCommitteeFormView, showTeamsCommitteesListView, renderTeamsCommitteesList, saveTeamCommitteeFromModal, deleteTeamCommitteeFromModal } from './modals/teams-committees.js';
 import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick } from './modals/project-search.js';
+import { openAboutModal, closeAboutModal, isAboutModalOpen } from './modals/about.js';
 import { openUfoModal, closeUfoModal, isUfoModalOpen } from './modals/ufo.js';
 import { randomise } from './features/randomise.js';
 
@@ -978,6 +979,11 @@ function wireEvents(){
   document.getElementById('appSettingsOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'appSettingsOverlay') closeAppSettingsOverlay();
   });
+  document.getElementById('aboutBtn').addEventListener('click', openAboutModal);
+  document.getElementById('aboutModalClose').addEventListener('click', closeAboutModal);
+  document.getElementById('aboutOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'aboutOverlay') closeAboutModal();
+  });
   document.getElementById('settingsShowDocumentsBtn').addEventListener('change', function(e){
     updateHeaderButtonVisibilitySetting('documents', e.target.checked);
   });
@@ -1126,6 +1132,7 @@ function wireEvents(){
     else if(isTeamsCommitteesOverlayOpen()) closeTeamsCommitteesOverlay();
     else if(isHealthOverlayOpen()){ cancelHealthGaugeAnimation(); closeHealthOverlay(); }
     else if(isAppSettingsOverlayOpen()) closeAppSettingsOverlay();
+    else if(isAboutModalOpen()) closeAboutModal();
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
     else if(!document.getElementById('importConflictOverlay').classList.contains('hidden')) closeImportConflictModal();
     else if(!document.getElementById('overdueAlertOverlay').classList.contains('hidden')) closeOverdueAlert();

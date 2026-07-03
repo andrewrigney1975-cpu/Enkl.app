@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>enkl — Lean project management, kept simple</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+<style>
+
+  :root{
+    --paper:#F7F5F0;
+    --paper-alt:#EFEAE0;
+    --ink:#1C1F1D;
+    --ink-soft:#565C54;
+    --fjord:#2B6777;
+    --fjord-deep:#173C46;
+    --moss:#8FA381;
+    --amber:#E2A039;
+    --line:#DBD5C6;
+    --card:#FFFFFF;
+    --radius:14px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display-font{
+    font-family:'Space Grotesk',sans-serif;
+    letter-spacing:-0.02em;
+  }
+  .mono{
+    font-family:'IBM Plex Mono',monospace;
+  }
+  a{color:var(--fjord);}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--fjord);
+    font-weight:500;
+  }
+  .btn-fjord{
+    background:var(--fjord);
+    border:1px solid var(--fjord);
+    color:#fff;
+    font-weight:600;
+    padding:0.75rem 1.6rem;
+    border-radius:999px;
+    transition:all .2s ease;
+  }
+  .btn-fjord:hover{
+    background:var(--fjord-deep);
+    border-color:var(--fjord-deep);
+    color:#fff;
+  }
+  .btn-outline-ink{
+    border:1px solid var(--ink);
+    color:var(--ink);
+    font-weight:600;
+    padding:0.75rem 1.6rem;
+    border-radius:999px;
+    background:transparent;
+    transition:all .2s ease;
+  }
+  .btn-outline-ink:hover{
+    background:var(--ink);
+    color:var(--paper);
+  }
+
+  /* NAV */
+  .navbar-enkl{
+    background:rgba(247,245,240,0.92);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand-mark{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.4rem;
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    gap:.4rem;
+  }
+  .brand-mark .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:var(--amber);
+    display:inline-block;
+  }
+  .nav-link-enkl{
+    color:var(--ink-soft);
+    font-weight:500;
+    font-size:0.95rem;
+    margin:0 0.9rem;
+  }
+  .nav-link-enkl:hover{color:var(--fjord);}
+
+  /* HERO */
+  .hero{
+    padding:6.5rem 0 4rem;
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+  }
+  .hero h1{
+    font-size:3.2rem;
+    font-weight:700;
+    line-height:1.05;
+    margin-bottom:1.4rem;
+  }
+  .hero p.lead{
+    color:var(--ink-soft);
+    font-size:1.15rem;
+    max-width:480px;
+    margin-bottom:2rem;
+  }
+  .trust-line{
+    font-size:0.85rem;
+    color:var(--ink-soft);
+    margin-top:1rem;
+  }
+  .hero-visual{
+    position:relative;
+  }
+  .float-shadow{
+    filter:drop-shadow(0 18px 30px rgba(28,31,29,0.14));
+  }
+
+  /* SECTIONS */
+  section{padding:5.5rem 0;}
+  .section-title{
+    font-size:2.1rem;
+    font-weight:700;
+    max-width:620px;
+  }
+  .section-sub{
+    color:var(--ink-soft);
+    max-width:560px;
+    font-size:1.05rem;
+  }
+
+  .feature-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:1.8rem 1.8rem 2rem;
+    height:100%;
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .feature-card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 16px 32px rgba(28,31,29,0.08);
+  }
+  .feature-card h3{
+    font-size:1.15rem;
+    font-weight:600;
+    margin:1.1rem 0 0.5rem;
+  }
+  .feature-card p{
+    color:var(--ink-soft);
+    font-size:0.95rem;
+    margin-bottom:0;
+  }
+  .feature-icon-wrap{
+    background:var(--paper-alt);
+    border-radius:10px;
+    padding:0.6rem;
+  }
+
+  /* HOW IT FLOWS */
+  .flow-step{
+    display:flex;
+    gap:1.2rem;
+    padding:1.6rem 0;
+    border-top:1px solid var(--line);
+  }
+  .flow-step:last-child{border-bottom:1px solid var(--line);}
+  .flow-num{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.95rem;
+    color:var(--fjord);
+    font-weight:600;
+    min-width:2.4rem;
+  }
+  .flow-step h3{
+    font-size:1.15rem;
+    font-weight:600;
+    margin-bottom:0.3rem;
+  }
+  .flow-step p{
+    color:var(--ink-soft);
+    margin-bottom:0;
+    max-width:520px;
+  }
+
+  /* ANALYTICS BAND */
+  .analytics-band{
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:24px;
+    margin:0 auto;
+    padding:4rem 3rem;
+  }
+  .analytics-band h2{color:#fff;}
+  .analytics-band .section-sub{color:#B9BDB4;}
+  .analytics-list li{
+    padding:0.6rem 0;
+    border-top:1px solid rgba(255,255,255,0.14);
+    color:#DCDFD6;
+    font-size:0.95rem;
+  }
+  .analytics-list li:last-child{border-bottom:1px solid rgba(255,255,255,0.14);}
+  .analytics-list .mono{color:var(--amber);margin-right:0.6rem;}
+
+  /* INTEGRATIONS */
+  .chip{
+    border:1px solid var(--line);
+    background:var(--card);
+    border-radius:12px;
+    padding:1.1rem 0.8rem;
+    text-align:center;
+    height:100%;
+  }
+  .chip .chip-icon{
+    width:38px;height:38px;
+    margin:0 auto 0.6rem;
+  }
+  .chip span{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    font-weight:500;
+  }
+
+  /* CTA */
+  .cta-banner{
+    background:var(--fjord);
+    border-radius:24px;
+    padding:3.5rem 3rem;
+    color:#fff;
+    text-align:center;
+  }
+  .cta-banner h2{color:#fff;font-size:2rem;margin-bottom:1rem;}
+  .cta-banner p{color:#DDEAE9;margin-bottom:2rem;}
+  .btn-amber{
+    background:var(--amber);
+    border:1px solid var(--amber);
+    color:var(--ink);
+    font-weight:700;
+    padding:0.85rem 2rem;
+    border-radius:999px;
+  }
+  .btn-amber:hover{
+    background:#f0ae4b;
+    color:var(--ink);
+  }
+
+  /* FOOTER */
+  footer{
+    border-top:1px solid var(--line);
+    padding:3.5rem 0 2rem;
+    font-size:0.9rem;
+    color:var(--ink-soft);
+  }
+  footer h6{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:0.85rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--ink);
+    margin-bottom:1rem;
+  }
+  footer a{
+    color:var(--ink-soft);
+    text-decoration:none;
+    display:block;
+    margin-bottom:0.55rem;
+  }
+  footer a:hover{color:var(--fjord);}
+
+  @media (max-width:767px){
+    .hero{padding:5rem 0 3rem;text-align:left;}
+    .hero h1{font-size:2.3rem;}
+    .analytics-band{padding:2.5rem 1.5rem;border-radius:16px;}
+    .cta-banner{padding:2.5rem 1.5rem;border-radius:16px;}
+    section{padding:3.5rem 0;}
+  }
+
+  :focus-visible{
+    outline:2px solid var(--fjord);
+    outline-offset:3px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="navbar navbar-expand-lg navbar-enkl fixed-top py-3">
+  <div class="container">
+    <a class="brand-mark" href="#top"><span class="dot"></span>enkl</a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navMain">
+      <div class="d-flex flex-column flex-lg-row align-items-lg-center mt-3 mt-lg-0">
+        <a class="nav-link-enkl" href="#features">Features</a>
+        <a class="nav-link-enkl" href="#flow">How it flows</a>
+        <a class="nav-link-enkl" href="#analytics">Analytics</a>
+        <a class="nav-link-enkl" href="#integrations">Integrations</a>
+        <a class="nav-link-enkl" href="https://kanbanflow.com/login">Log in</a>
+        <a class="btn btn-fjord mt-2 mt-lg-0 ms-lg-3" href="https://enkl.app">Start free</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero" id="top">
+  <div class="container">
+    <div class="row align-items-center gy-5">
+      <div class="col-lg-6">
+        <div class="eyebrow mb-3">Lean project management</div>
+        <h1>Plan the work.<br>Watch it flow.</h1>
+        <p class="lead">enkl is a kanban board built for teams who want less overhead and more finished work — with built‑in focus timers, live collaboration, and analytics that show exactly where things slow down.</p>
+        <div class="d-flex flex-wrap gap-3">
+          <a href="https://enkl.app" class="btn btn-fjord">Start free</a>
+          <a href="#flow" class="btn btn-outline-ink">See how it works</a>
+        </div>
+        <div class="trust-line mono">No credit card · Free for small teams · Set up in 2 minutes</div>
+      </div>
+      <div class="col-lg-6">
+        <div class="hero-visual">
+          <!-- HERO KANBAN MOCKUP SVG -->
+          <svg viewBox="0 0 560 430" class="w-100 float-shadow" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="4" width="552" height="392" rx="16" fill="#FFFFFF" stroke="#DBD5C6"/>
+            <rect x="4" y="4" width="552" height="42" rx="16" fill="#F2EFE7"/>
+            <rect x="4" y="30" width="552" height="16" fill="#F2EFE7"/>
+            <circle cx="30" cy="25" r="5" fill="#E2A039"/>
+            <circle cx="48" cy="25" r="5" fill="#8FA381"/>
+            <circle cx="66" cy="25" r="5" fill="#2B6777"/>
+            <text x="270" y="30" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="#565C54">Product Launch Board</text>
+
+            <!-- column headers -->
+            <text x="34" y="76" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="14" fill="#1C1F1D">Backlog</text>
+            <text x="204" y="76" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="14" fill="#1C1F1D">Doing</text>
+            <rect x="252" y="62" width="42" height="20" rx="10" fill="#FBEBD3"/>
+            <text x="273" y="76" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#B4791B">4/5</text>
+            <text x="374" y="76" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="14" fill="#1C1F1D">Done</text>
+
+            <line x1="192" y1="62" x2="192" y2="382" stroke="#EAE5D8" stroke-width="1"/>
+            <line x1="362" y1="62" x2="362" y2="382" stroke="#EAE5D8" stroke-width="1"/>
+
+            <!-- Backlog cards -->
+            <g>
+              <rect x="30" y="90" width="150" height="66" rx="10" fill="#FFFFFF" stroke="#E4DFD2"/>
+              <rect x="30" y="90" width="150" height="5" rx="2.5" fill="#2B6777"/>
+              <text x="42" y="114" font-family="Inter, sans-serif" font-size="12" fill="#1C1F1D">Design new logo</text>
+              <text x="42" y="140" font-family="IBM Plex Mono, monospace" font-size="10" fill="#8B9188">2/3</text>
+              <circle cx="164" cy="138" r="9" fill="#E2A039"/>
+              <text x="164" y="141.5" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#fff">MK</text>
+            </g>
+            <g>
+              <rect x="30" y="166" width="150" height="66" rx="10" fill="#FFFFFF" stroke="#E4DFD2"/>
+              <rect x="30" y="166" width="150" height="5" rx="2.5" fill="#8FA381"/>
+              <text x="42" y="190" font-family="Inter, sans-serif" font-size="12" fill="#1C1F1D">User interviews</text>
+              <text x="42" y="216" font-family="IBM Plex Mono, monospace" font-size="10" fill="#8B9188">0/4</text>
+              <circle cx="164" cy="214" r="9" fill="#2B6777"/>
+              <text x="164" y="217.5" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#fff">JL</text>
+            </g>
+            <g>
+              <rect x="30" y="242" width="150" height="56" rx="10" fill="#FFFFFF" stroke="#E4DFD2"/>
+              <rect x="30" y="242" width="150" height="5" rx="2.5" fill="#E2A039"/>
+              <text x="42" y="266" font-family="Inter, sans-serif" font-size="12" fill="#1C1F1D">Update docs</text>
+              <circle cx="164" cy="284" r="9" fill="#8FA381"/>
+              <text x="164" y="287.5" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#fff">TS</text>
+            </g>
+
+            <!-- Doing cards -->
+            <g>
+              <rect x="200" y="90" width="150" height="60" rx="10" fill="#FFFFFF" stroke="#E4DFD2"/>
+              <rect x="200" y="90" width="150" height="5" rx="2.5" fill="#2B6777"/>
+              <text x="212" y="114" font-family="Inter, sans-serif" font-size="12" fill="#1C1F1D">Fix login bug</text>
+              <text x="212" y="138" font-family="IBM Plex Mono, monospace" font-size="10" fill="#8B9188">#128</text>
+              <circle cx="334" cy="132" r="9" fill="#2B6777"/>
+              <text x="334" y="135.5" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#fff">AR</text>
+            </g>
+            <!-- mid-drag card, tilted with drop shadow -->
+            <g transform="rotate(-4 275 205)">
+              <rect x="200" y="176" width="150" height="60" rx="10" fill="#FFFFFF" stroke="#2B6777" stroke-width="1.5" filter="url(#cardShadow)"/>
+              <rect x="200" y="176" width="150" height="5" rx="2.5" fill="#E2A039"/>
+              <text x="212" y="200" font-family="Inter, sans-serif" font-size="12" fill="#1C1F1D">Sprint retro notes</text>
+              <text x="212" y="224" font-family="IBM Plex Mono, monospace" font-size="10" fill="#8B9188">#131</text>
+              <circle cx="334" cy="218" r="9" fill="#E2A039"/>
+              <text x="334" y="221.5" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#fff">MK</text>
+            </g>
+
+            <!-- Done cards -->
+            <g opacity="0.85">
+              <rect x="370" y="90" width="150" height="56" rx="10" fill="#FFFFFF" stroke="#E4DFD2"/>
+              <rect x="370" y="90" width="150" height="5" rx="2.5" fill="#8FA381"/>
+              <text x="382" y="114" font-family="Inter, sans-serif" font-size="12" fill="#1C1F1D">Onboarding flow</text>
+              <path d="M382 132 l4 4 l8 -8" stroke="#8FA381" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <g opacity="0.85">
+              <rect x="370" y="166" width="150" height="56" rx="10" fill="#FFFFFF" stroke="#E4DFD2"/>
+              <rect x="370" y="166" width="150" height="5" rx="2.5" fill="#2B6777"/>
+              <text x="382" y="190" font-family="Inter, sans-serif" font-size="12" fill="#1C1F1D">QA pass v1.4</text>
+              <path d="M382 208 l4 4 l8 -8" stroke="#8FA381" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+
+            <defs>
+              <filter id="cardShadow" x="-30%" y="-30%" width="160%" height="180%">
+                <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#1C1F1D" flood-opacity="0.18"/>
+              </filter>
+            </defs>
+          </svg>
+
+          <!-- floating pomodoro badge -->
+          <svg viewBox="0 0 150 90" class="float-shadow" style="position:absolute; left:-30px; bottom:-30px; width:190px;" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="146" height="86" rx="14" fill="#1C1F1D"/>
+            <circle cx="42" cy="45" r="26" fill="none" stroke="#3A403A" stroke-width="6"/>
+            <circle cx="42" cy="45" r="26" fill="none" stroke="#E2A039" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="55" stroke-linecap="round" transform="rotate(-90 42 45)"/>
+            <path d="M38 36 l14 9 l-14 9 z" fill="#F7F5F0"/>
+            <text x="82" y="40" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#F7F5F0">24:59</text>
+            <text x="82" y="58" font-family="Inter, sans-serif" font-size="10" fill="#B9BDB4">Focus session</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="row mb-5">
+      <div class="col-lg-7">
+        <div class="eyebrow mb-2">Features</div>
+        <h2 class="section-title">Everything a lean team needs, nothing it doesn't.</h2>
+        <p class="section-sub mt-3">Six tools that cover planning, focus, and visibility — without the setup tax of heavier project software.</p>
+      </div>
+    </div>
+
+    <div class="row g-4">
+
+      <!-- Feature 1: Kanban + WIP -->
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon-wrap d-inline-block">
+            <svg viewBox="0 0 220 150" width="100%" height="120" xmlns="http://www.w3.org/2000/svg">
+              <rect x="8" y="8" width="60" height="18" rx="4" fill="#2B6777"/>
+              <rect x="80" y="8" width="60" height="18" rx="4" fill="#2B6777"/>
+              <rect x="152" y="8" width="60" height="18" rx="4" fill="#8FA381"/>
+              <rect x="8" y="34" width="60" height="98" rx="8" fill="#fff" stroke="#DBD5C6"/>
+              <rect x="80" y="34" width="60" height="98" rx="8" fill="#fff" stroke="#E2A039" stroke-width="2"/>
+              <rect x="152" y="34" width="60" height="98" rx="8" fill="#fff" stroke="#DBD5C6"/>
+              <rect x="16" y="44" width="44" height="8" rx="3" fill="#E4DFD2"/>
+              <rect x="16" y="58" width="30" height="8" rx="3" fill="#E4DFD2"/>
+              <rect x="88" y="44" width="44" height="8" rx="3" fill="#FBEBD3"/>
+              <rect x="88" y="58" width="44" height="8" rx="3" fill="#FBEBD3"/>
+              <rect x="88" y="72" width="30" height="8" rx="3" fill="#FBEBD3"/>
+              <circle cx="200" cy="43" r="10" fill="#FBEBD3"/>
+              <text x="200" y="47" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#B4791B">3/3</text>
+              <rect x="160" y="52" width="44" height="8" rx="3" fill="#EAF0E7"/>
+            </svg>
+          </div>
+          <h3>Kanban boards with WIP limits</h3>
+          <p>Drag work through columns you define, and cap how much can sit "in progress" so bottlenecks show up before they cost you.</p>
+        </div>
+      </div>
+
+      <!-- Feature 2: Pomodoro -->
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon-wrap d-inline-block">
+            <svg viewBox="0 0 220 150" width="100%" height="120" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="75" cy="75" r="52" fill="none" stroke="#EAE5D8" stroke-width="10"/>
+              <circle cx="75" cy="75" r="52" fill="none" stroke="#2B6777" stroke-width="10" stroke-dasharray="327" stroke-dashoffset="90" stroke-linecap="round" transform="rotate(-90 75 75)"/>
+              <path d="M66 58 l24 17 l-24 17 z" fill="#1C1F1D"/>
+              <text x="150" y="60" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#1C1F1D">18:24</text>
+              <text x="150" y="80" font-family="Inter, sans-serif" font-size="11" fill="#8B9188">Deep work</text>
+              <rect x="150" y="94" width="52" height="6" rx="3" fill="#EAE5D8"/>
+              <rect x="150" y="94" width="34" height="6" rx="3" fill="#E2A039"/>
+            </svg>
+          </div>
+          <h3>Built‑in Pomodoro timers</h3>
+          <p>Attach focus sessions right to a task so time tracking happens as work gets done, not in a separate spreadsheet after.</p>
+        </div>
+      </div>
+
+      <!-- Feature 3: Analytics -->
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon-wrap d-inline-block">
+            <svg viewBox="0 0 220 150" width="100%" height="120" xmlns="http://www.w3.org/2000/svg">
+              <polyline points="8,120 8,20" stroke="#DBD5C6" stroke-width="1"/>
+              <polyline points="8,120 212,120" stroke="#DBD5C6" stroke-width="1"/>
+              <path d="M8,110 C40,105 60,90 90,80 C120,70 150,55 212,30 L212,120 L8,120 Z" fill="#2B6777" opacity="0.85"/>
+              <path d="M8,118 C40,116 70,108 100,98 C140,86 170,70 212,50 L212,120 L8,120 Z" fill="#8FA381" opacity="0.85"/>
+              <path d="M8,10 C60,26 130,44 212,20" stroke="#E2A039" stroke-width="2.5" fill="none" stroke-dasharray="6 5"/>
+            </svg>
+          </div>
+          <h3>Flow &amp; forecast analytics</h3>
+          <p>Cumulative flow, burndown, throughput and cycle‑time charts, plus Monte Carlo forecasts to predict realistic delivery dates.</p>
+        </div>
+      </div>
+
+      <!-- Feature 4: Swimlanes -->
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon-wrap d-inline-block">
+            <svg viewBox="0 0 220 150" width="100%" height="120" xmlns="http://www.w3.org/2000/svg">
+              <rect x="8" y="14" width="204" height="34" rx="8" fill="#fff" stroke="#DBD5C6"/>
+              <circle cx="26" cy="31" r="9" fill="#2B6777"/>
+              <rect x="44" y="24" width="60" height="7" rx="3" fill="#E4DFD2"/>
+              <rect x="112" y="20" width="34" height="20" rx="5" fill="#EAF0E7"/>
+              <rect x="152" y="20" width="34" height="20" rx="5" fill="#FBEBD3"/>
+              <rect x="8" y="58" width="204" height="34" rx="8" fill="#fff" stroke="#DBD5C6"/>
+              <circle cx="26" cy="75" r="9" fill="#E2A039"/>
+              <rect x="44" y="68" width="80" height="7" rx="3" fill="#E4DFD2"/>
+              <rect x="132" y="64" width="34" height="20" rx="5" fill="#EAF0E7"/>
+              <rect x="8" y="102" width="204" height="34" rx="8" fill="#fff" stroke="#DBD5C6"/>
+              <circle cx="26" cy="119" r="9" fill="#8FA381"/>
+              <rect x="44" y="112" width="50" height="7" rx="3" fill="#E4DFD2"/>
+              <rect x="102" y="108" width="34" height="20" rx="5" fill="#FBEBD3"/>
+              <rect x="142" y="108" width="34" height="20" rx="5" fill="#EAF0E7"/>
+            </svg>
+          </div>
+          <h3>Swimlanes &amp; custom fields</h3>
+          <p>Split boards by team, product or priority, and capture the details unique to your workflow with fields you define.</p>
+        </div>
+      </div>
+
+      <!-- Feature 5: Realtime -->
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon-wrap d-inline-block">
+            <svg viewBox="0 0 220 150" width="100%" height="120" xmlns="http://www.w3.org/2000/svg">
+              <rect x="20" y="30" width="180" height="90" rx="10" fill="#fff" stroke="#DBD5C6"/>
+              <rect x="34" y="46" width="90" height="8" rx="4" fill="#E4DFD2"/>
+              <rect x="34" y="62" width="60" height="8" rx="4" fill="#E4DFD2"/>
+              <circle cx="150" cy="50" r="13" fill="#2B6777"/>
+              <text x="150" y="54" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#fff">SL</text>
+              <circle cx="172" cy="60" r="13" fill="#E2A039"/>
+              <text x="172" y="64" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#fff">JD</text>
+              <path d="M120 90 l8 18 l6 -7 l9 9" stroke="#8FA381" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="141" cy="108" r="3" fill="#8FA381"/>
+              <circle cx="185" cy="34" r="4" fill="#E2635A"/>
+            </svg>
+          </div>
+          <h3>Real‑time collaboration</h3>
+          <p>Everyone sees moves, comments and edits the instant they happen — no refresh, no "who has the latest version".</p>
+        </div>
+      </div>
+
+      <!-- Feature 6: Mobile -->
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon-wrap d-inline-block">
+            <svg viewBox="0 0 220 150" width="100%" height="120" xmlns="http://www.w3.org/2000/svg">
+              <rect x="78" y="6" width="64" height="138" rx="14" fill="#1C1F1D"/>
+              <rect x="84" y="20" width="52" height="106" rx="4" fill="#F7F5F0"/>
+              <rect x="90" y="28" width="40" height="16" rx="4" fill="#2B6777"/>
+              <rect x="90" y="50" width="40" height="16" rx="4" fill="#fff" stroke="#DBD5C6"/>
+              <rect x="90" y="72" width="40" height="16" rx="4" fill="#fff" stroke="#DBD5C6"/>
+              <rect x="90" y="94" width="40" height="16" rx="4" fill="#EAF0E7"/>
+              <rect x="102" y="132" width="16" height="4" rx="2" fill="#565C54"/>
+            </svg>
+          </div>
+          <h3>Mobile web app</h3>
+          <p>Add it to your home screen and check in from anywhere — swipe between columns, drag cards, and catch up on comments.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT FLOWS -->
+<section id="flow" class="bg-white border-top border-bottom" style="border-color:var(--line) !important;">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-5">
+        <div class="eyebrow mb-2">How it flows</div>
+        <h2 class="section-title">Three steps, then the board runs itself.</h2>
+        <p class="section-sub mt-3">enkl is deliberately shallow to learn. Most teams are moving real work within their first session.</p>
+        <a href="https://enkl.app" class="btn btn-fjord mt-3">Start free</a>
+      </div>
+      <div class="col-lg-7">
+        <div class="flow-step">
+          <div class="flow-num">01</div>
+          <div>
+            <h3>Create your board</h3>
+            <p>Set up columns that match how your team actually works, add swimlanes if you split by product or person, and set WIP limits where it matters.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">02</div>
+          <div>
+            <h3>Move work forward</h3>
+            <p>Drag tasks across the board, start a focus timer while you work, and leave comments and files right where the context lives.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">03</div>
+          <div>
+            <h3>See the whole flow</h3>
+            <p>Open the cumulative flow or burndown chart to spot where work is piling up, and forecast delivery dates with Monte Carlo simulation.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ANALYTICS -->
+<section id="analytics">
+  <div class="container">
+    <div class="analytics-band">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6">
+          <div class="eyebrow mb-2" style="color:#E2A039;">Analytics</div>
+          <h2>See bottlenecks before they cost you.</h2>
+          <p class="section-sub mt-3">enkl turns every move on the board into data — so you're reacting to what's actually happening, not what a status meeting remembers.</p>
+          <ul class="list-unstyled analytics-list mt-4">
+            <li><span class="mono">CFD</span>Cumulative flow diagrams that show exactly where work queues up.</li>
+            <li><span class="mono">BRN</span>Burndown charts tracking remaining work against your timeline.</li>
+            <li><span class="mono">THR</span>Throughput &amp; cycle‑time reports for realistic planning.</li>
+            <li><span class="mono">MCS</span>Monte Carlo forecasting to predict delivery dates with a confidence range.</li>
+          </ul>
+        </div>
+        <div class="col-lg-6">
+          <svg viewBox="0 0 420 280" width="100%" xmlns="http://www.w3.org/2000/svg">
+            <line x1="30" y1="20" x2="30" y2="240" stroke="#3A403A" stroke-width="1"/>
+            <line x1="30" y1="240" x2="400" y2="240" stroke="#3A403A" stroke-width="1"/>
+            <path d="M30,220 C90,214 140,195 190,175 C250,150 320,110 400,60 L400,240 L30,240 Z" fill="#2B6777" opacity="0.9"/>
+            <path d="M30,232 C100,225 160,205 220,185 C280,165 340,140 400,100 L400,240 L30,240 Z" fill="#8FA381" opacity="0.9"/>
+            <path d="M30,238 C120,233 200,222 260,208 C320,196 360,182 400,168 L400,240 L30,240 Z" fill="#E2A039" opacity="0.9"/>
+            <path d="M30,30 C110,55 180,80 250,95 C310,108 360,95 400,70" stroke="#F7F5F0" stroke-width="2" fill="none" stroke-dasharray="6 6"/>
+            <text x="340" y="60" font-family="IBM Plex Mono, monospace" font-size="11" fill="#F7F5F0">forecast</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<section id="integrations">
+  <div class="container">
+    <div class="row mb-5">
+      <div class="col-lg-7">
+        <div class="eyebrow mb-2">Integrations</div>
+        <h2 class="section-title">Connects with the rest of your stack.</h2>
+        <p class="section-sub mt-3">Pipe tasks in and out with automations, or wire up your own workflow with the open API and webhooks.</p>
+      </div>
+    </div>
+    <div class="row g-3 row-cols-3 row-cols-md-6">
+      <div class="col">
+        <div class="chip">
+          <svg class="chip-icon" viewBox="0 0 40 40"><polygon points="21,3 8,23 18,23 15,37 33,17 22,17" fill="#2B6777"/></svg>
+          <span>Automation</span>
+        </div>
+      </div>
+      <div class="col">
+        <div class="chip">
+          <svg class="chip-icon" viewBox="0 0 40 40"><rect x="7" y="9" width="26" height="21" rx="3" fill="none" stroke="#2B6777" stroke-width="2.5"/><line x1="7" y1="16" x2="33" y2="16" stroke="#2B6777" stroke-width="2.5"/><line x1="13" y1="6" x2="13" y2="12" stroke="#2B6777" stroke-width="2.5"/><line x1="27" y1="6" x2="27" y2="12" stroke="#2B6777" stroke-width="2.5"/></svg>
+          <span>Calendar</span>
+        </div>
+      </div>
+      <div class="col">
+        <div class="chip">
+          <svg class="chip-icon" viewBox="0 0 40 40"><path d="M7 10h26v16H17l-6 6v-6H7z" fill="none" stroke="#2B6777" stroke-width="2.5" stroke-linejoin="round"/></svg>
+          <span>Chat</span>
+        </div>
+      </div>
+      <div class="col">
+        <div class="chip">
+          <svg class="chip-icon" viewBox="0 0 40 40"><circle cx="12" cy="20" r="5" fill="none" stroke="#2B6777" stroke-width="2.5"/><circle cx="28" cy="20" r="5" fill="none" stroke="#2B6777" stroke-width="2.5"/><line x1="17" y1="20" x2="23" y2="20" stroke="#2B6777" stroke-width="2.5"/></svg>
+          <span>Webhooks</span>
+        </div>
+      </div>
+      <div class="col">
+        <div class="chip">
+          <svg class="chip-icon" viewBox="0 0 40 40"><rect x="6" y="11" width="28" height="18" rx="3" fill="none" stroke="#2B6777" stroke-width="2.5"/><path d="M7 13l13 9 13-9" fill="none" stroke="#2B6777" stroke-width="2.5" stroke-linejoin="round"/></svg>
+          <span>Email</span>
+        </div>
+      </div>
+      <div class="col">
+        <div class="chip">
+          <svg class="chip-icon" viewBox="0 0 40 40"><text x="20" y="26" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" fill="#2B6777">&lt;/&gt;</text></svg>
+          <span>API</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section>
+  <div class="container">
+    <div class="cta-banner">
+      <h2>Start your first board in under two minutes.</h2>
+      <p>Free for small teams. No credit card required.</p>
+      <a href="https://enkl.app" class="btn btn-amber">Create free account</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <a class="brand-mark mb-3" href="#top"><span class="dot"></span>enkl</a>
+        <p class="mt-2" style="max-width:260px;">Lean project management. Simplified.</p>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6>Product</h6>
+        <a href="#features">Features</a>
+        <a href="#analytics">Analytics</a>
+        <a href="#integrations">Integrations</a>
+        <a href="https://kanbanflow.com/mobile-app">Mobile app</a>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6>Company</h6>
+        <a href="#">About</a>
+        <a href="#">Blog</a>
+        <a href="#">Contact</a>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6>Resources</h6>
+        <a href="#">Help center</a>
+        <a href="#">API docs</a>
+        <a href="https://kanbanflow.com/login">Log in</a>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6>Legal</h6>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+      </div>
+    </div>
+    <div class="d-flex justify-content-between flex-wrap mt-5 pt-4 border-top mono" style="border-color:var(--line) !important; font-size:0.8rem;">
+      <span>© 2026 enkl. All rights reserved.</span>
+      <span>enkl.app</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
