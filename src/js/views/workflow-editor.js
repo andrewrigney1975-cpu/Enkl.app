@@ -160,25 +160,26 @@ export function renderWorkflowEditor(){
     if(!fromPos || !toPos) return '';
     var d = edgePathD(fromPos, toPos);
     var color = WORKFLOW_EDGE_COLOR[e.type] || WORKFLOW_EDGE_COLOR.allowed;
+    var dashAttr = e.type === 'conditional' ? ' stroke-dasharray="5,5"' : '';
     var titleText = e.type === 'conditional' ? describeWorkflowCondition(e.condition) + (e.message ? ' — ' + e.message : '') : e.message;
     return (
       '<g class="kf-wfedge-group" data-edge-id="' + e.id + '">' +
         (titleText ? '<title>' + escapeHTML(titleText) + '</title>' : '') +
-        '<path class="kf-wfedge" d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2.5" marker-start="url(#kf-wf-dot-start-' + e.type + ')" marker-end="url(#kf-wf-dot-end-' + e.type + ')"></path>' +
+        '<path class="kf-wfedge" d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2.5"' + dashAttr + ' marker-start="url(#kf-wf-dot-start-' + e.type + ')" marker-end="url(#kf-wf-dot-end-' + e.type + ')"></path>' +
         '<path class="kf-wfedge-hit" data-edge-id="' + e.id + '" d="' + d + '" fill="none" stroke="transparent" stroke-width="16"></path>' +
       '</g>'
     );
   }).join('');
 
-  var nodesHTML = project.columns.map(function(col){
+  var nodesHTML = project.columns.map(function(col, idx){
     var pos = layout.positions[col.id];
-    var name = col.name.length > 24 ? col.name.slice(0, 23) + '…' : col.name;
-    var textX = col.done ? 28 : 16;
+    var label = (idx + 1) + '. ' + col.name;
+    var displayLabel = label.length > 24 ? label.slice(0, 23) + '…' : label;
     return (
       '<g class="kf-wfnode" data-column-id="' + col.id + '" transform="translate(' + pos.x + ',' + pos.y + ')">' +
         '<rect class="kf-wfnode-box" x="0" y="0" width="' + WORKFLOW_NODE_W + '" height="' + WORKFLOW_NODE_H + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border-strong);" stroke-width="1.5"></rect>' +
-        (col.done ? '<circle cx="16" cy="' + (WORKFLOW_NODE_H / 2) + '" r="4" fill="#22a06b"></circle>' : '') +
-        '<text x="' + textX + '" y="' + (WORKFLOW_NODE_H / 2 + 5) + '" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML(col.name) + '</title>' + escapeHTML(name) + '</text>' +
+        (col.done ? '<rect x="0" y="0" width="5" height="' + WORKFLOW_NODE_H + '" rx="2" fill="#22a06b"></rect>' : '') +
+        '<text x="16" y="' + (WORKFLOW_NODE_H / 2 + 5) + '" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML(label) + '</title>' + escapeHTML(displayLabel) + '</text>' +
       '</g>'
     );
   }).join('');

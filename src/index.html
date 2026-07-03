@@ -444,8 +444,8 @@
         <div class="kf-workflow-mode-group">
           <button class="kf-btn kf-btn-ghost kf-workflow-mode-btn" id="workflowModeSelectBtn" data-mode="select" title="Select, move, and edit nodes/connectors">Select</button>
           <button class="kf-btn kf-btn-ghost kf-workflow-mode-btn" id="workflowModeAllowedBtn" data-mode="allowed" title="Drag from one column to another to mark the transition Allowed">Draw Allowed</button>
+          <button class="kf-btn kf-btn-ghost kf-workflow-mode-btn kf-workflow-mode-btn-conditional" id="workflowModeConditionalBtn" data-mode="conditional" title="Drag from one column to another to mark the transition Conditional Allow">Draw Conditionally Allowed</button>
           <button class="kf-btn kf-btn-ghost kf-workflow-mode-btn" id="workflowModeDisallowedBtn" data-mode="disallowed" title="Drag from one column to another to mark the transition Disallowed">Draw Disallowed</button>
-          <button class="kf-btn kf-btn-ghost kf-workflow-mode-btn kf-workflow-mode-btn-conditional" id="workflowModeConditionalBtn" data-mode="conditional" title="Drag from one column to another to mark the transition Conditional Allow">Draw Conditional</button>
         </div>
         <div class="kf-header-divider-light"></div>
         <button class="kf-btn kf-btn-ghost" id="workflowZoomOutBtn" title="Zoom out"><span class="kf-icon" data-icon="zoomOut" data-size="16"></span></button>
@@ -466,7 +466,7 @@
     </div>
     <div class="kf-depmap-legend" id="workflowLegend">
       <span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-good-fg);"></span>Allowed transition</span>
-      <span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-overdue-fg);"></span>Conditionally Allowed transition</span>
+      <span class="kf-legend-item"><svg class="kf-legend-swatch" width="20" height="3" viewBox="0 0 20 3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="var(--kf-overdue-fg)" stroke-width="3" stroke-dasharray="5,5"/></svg>Conditionally Allowed transition</span>
       <span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-danger);"></span>Disallowed transition</span>
       <span class="kf-legend-item">Drag a column box to reposition it</span>
     </div>

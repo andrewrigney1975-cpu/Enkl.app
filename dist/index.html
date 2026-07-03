@@ -4024,8 +4024,8 @@
         <div class="kf-workflow-mode-group">
           <button class="kf-btn kf-btn-ghost kf-workflow-mode-btn" id="workflowModeSelectBtn" data-mode="select" title="Select, move, and edit nodes/connectors">Select</button>
           <button class="kf-btn kf-btn-ghost kf-workflow-mode-btn" id="workflowModeAllowedBtn" data-mode="allowed" title="Drag from one column to another to mark the transition Allowed">Draw Allowed</button>
+          <button class="kf-btn kf-btn-ghost kf-workflow-mode-btn kf-workflow-mode-btn-conditional" id="workflowModeConditionalBtn" data-mode="conditional" title="Drag from one column to another to mark the transition Conditional Allow">Draw Conditionally Allowed</button>
           <button class="kf-btn kf-btn-ghost kf-workflow-mode-btn" id="workflowModeDisallowedBtn" data-mode="disallowed" title="Drag from one column to another to mark the transition Disallowed">Draw Disallowed</button>
-          <button class="kf-btn kf-btn-ghost kf-workflow-mode-btn kf-workflow-mode-btn-conditional" id="workflowModeConditionalBtn" data-mode="conditional" title="Drag from one column to another to mark the transition Conditional Allow">Draw Conditional</button>
         </div>
         <div class="kf-header-divider-light"></div>
         <button class="kf-btn kf-btn-ghost" id="workflowZoomOutBtn" title="Zoom out"><span class="kf-icon" data-icon="zoomOut" data-size="16"></span></button>
@@ -4046,7 +4046,7 @@
     </div>
     <div class="kf-depmap-legend" id="workflowLegend">
       <span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-good-fg);"></span>Allowed transition</span>
-      <span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-overdue-fg);"></span>Conditionally Allowed transition</span>
+      <span class="kf-legend-item"><svg class="kf-legend-swatch" width="20" height="3" viewBox="0 0 20 3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="var(--kf-overdue-fg)" stroke-width="3" stroke-dasharray="5,5"/></svg>Conditionally Allowed transition</span>
       <span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-danger);"></span>Disallowed transition</span>
       <span class="kf-legend-item">Drag a column box to reposition it</span>
     </div>
@@ -9295,14 +9295,15 @@ self.onmessage = function(e) {
       if (!fromPos || !toPos) return "";
       var d = edgePathD(fromPos, toPos);
       var color = WORKFLOW_EDGE_COLOR[e.type] || WORKFLOW_EDGE_COLOR.allowed;
+      var dashAttr = e.type === "conditional" ? ' stroke-dasharray="5,5"' : "";
       var titleText = e.type === "conditional" ? describeWorkflowCondition(e.condition) + (e.message ? " \u2014 " + e.message : "") : e.message;
-      return '<g class="kf-wfedge-group" data-edge-id="' + e.id + '">' + (titleText ? "<title>" + escapeHTML6(titleText) + "</title>" : "") + '<path class="kf-wfedge" d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2.5" marker-start="url(#kf-wf-dot-start-' + e.type + ')" marker-end="url(#kf-wf-dot-end-' + e.type + ')"></path><path class="kf-wfedge-hit" data-edge-id="' + e.id + '" d="' + d + '" fill="none" stroke="transparent" stroke-width="16"></path></g>';
+      return '<g class="kf-wfedge-group" data-edge-id="' + e.id + '">' + (titleText ? "<title>" + escapeHTML6(titleText) + "</title>" : "") + '<path class="kf-wfedge" d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2.5"' + dashAttr + ' marker-start="url(#kf-wf-dot-start-' + e.type + ')" marker-end="url(#kf-wf-dot-end-' + e.type + ')"></path><path class="kf-wfedge-hit" data-edge-id="' + e.id + '" d="' + d + '" fill="none" stroke="transparent" stroke-width="16"></path></g>';
     }).join("");
-    var nodesHTML = project.columns.map(function(col) {
+    var nodesHTML = project.columns.map(function(col, idx) {
       var pos = layout.positions[col.id];
-      var name = col.name.length > 24 ? col.name.slice(0, 23) + "\u2026" : col.name;
-      var textX = col.done ? 28 : 16;
-      return '<g class="kf-wfnode" data-column-id="' + col.id + '" transform="translate(' + pos.x + "," + pos.y + ')"><rect class="kf-wfnode-box" x="0" y="0" width="' + WORKFLOW_NODE_W + '" height="' + WORKFLOW_NODE_H + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border-strong);" stroke-width="1.5"></rect>' + (col.done ? '<circle cx="16" cy="' + WORKFLOW_NODE_H / 2 + '" r="4" fill="#22a06b"></circle>' : "") + '<text x="' + textX + '" y="' + (WORKFLOW_NODE_H / 2 + 5) + '" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML6(col.name) + "</title>" + escapeHTML6(name) + "</text></g>";
+      var label = idx + 1 + ". " + col.name;
+      var displayLabel = label.length > 24 ? label.slice(0, 23) + "\u2026" : label;
+      return '<g class="kf-wfnode" data-column-id="' + col.id + '" transform="translate(' + pos.x + "," + pos.y + ')"><rect class="kf-wfnode-box" x="0" y="0" width="' + WORKFLOW_NODE_W + '" height="' + WORKFLOW_NODE_H + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border-strong);" stroke-width="1.5"></rect>' + (col.done ? '<rect x="0" y="0" width="5" height="' + WORKFLOW_NODE_H + '" rx="2" fill="#22a06b"></rect>' : "") + '<text x="16" y="' + (WORKFLOW_NODE_H / 2 + 5) + '" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML6(label) + "</title>" + escapeHTML6(displayLabel) + "</text></g>";
     }).join("");
     var svgHTML = '<svg width="' + layout.width + '" height="' + layout.height + '" viewBox="0 0 ' + layout.width + " " + layout.height + '" xmlns="http://www.w3.org/2000/svg">' + defsHTML + edgesHTML + nodesHTML + "</svg>";
     inner.innerHTML = svgHTML;
