@@ -2451,6 +2451,19 @@
     gap: 8px;
   }
 
+  .kf-ufo-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
+  .kf-ufo-iframe {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
   .kf-modal-footer .kf-footer-left {
     margin-right: auto;
   }

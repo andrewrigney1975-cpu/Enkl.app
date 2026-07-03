@@ -44,6 +44,7 @@ import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen,
 import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen, showObjectivesFormView, showObjectivesListView, renderObjectivesList, saveObjectiveFromModal, deleteObjectiveFromModal } from './modals/objectives.js';
 import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitteesOverlayOpen, showTeamCommitteeFormView, showTeamsCommitteesListView, renderTeamsCommitteesList, saveTeamCommitteeFromModal, deleteTeamCommitteeFromModal } from './modals/teams-committees.js';
 import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick } from './modals/project-search.js';
+import { openUfoModal, closeUfoModal, isUfoModalOpen } from './modals/ufo.js';
 
 /* ---- Dependency injection (break circular import chains) ---- */
 setBoardDeps({ toast, confirmDialog, openTaskModal, openColumnModal });
@@ -55,6 +56,9 @@ setTimelineDeps({ toast, openTaskModal });
 setCostBenefitDeps({ toast, openTaskModal });
 setBulkEditDeps({ confirmDialog, exportProjectJSON });
 setMutationsToast(toast);
+
+/* ---- Console-exposed debug helpers ---- */
+window.go_ufo = openUfoModal;
 
 /* =========================================================
    BACKUP REMINDER
@@ -1006,6 +1010,11 @@ function wireEvents(){
     if(e.target.id === 'backupReminderOverlay') dismissBackupReminder();
   });
 
+  document.getElementById('ufoClose').addEventListener('click', closeUfoModal);
+  document.getElementById('ufoOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'ufoOverlay') closeUfoModal();
+  });
+
   document.addEventListener('keydown', function(e){
     if(e.key !== 'Escape') return;
     if(!document.getElementById('taskOverlay').classList.contains('hidden')) closeTaskModal();
@@ -1044,6 +1053,7 @@ function wireEvents(){
     else if(!document.getElementById('assigneeFilterPanel').classList.contains('hidden')) closeAssigneeFilterPanel();
     else if(!document.getElementById('taskTypeFilterPanel').classList.contains('hidden')) closeTaskTypeFilterPanel();
     else if(isMobileDrawerOpen()) closeMobileDrawer();
+    else if(isUfoModalOpen()) closeUfoModal();
   });
 }
 
