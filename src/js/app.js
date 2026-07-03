@@ -16,6 +16,7 @@ import { renderAll, renderBoard, setBoardDeps, closeTeamFilterPanel, closeAssign
 import { setTaskListDeps, openTaskListOverlay, closeTaskListOverlay, isTaskListOpen, renderTaskListBody, collapseAllTaskListGroups, expandAllTaskListGroups, exportTaskListAsCsv } from './views/task-list.js';
 import { setDepMapDeps, depMapState, lastDepLayout, openDepMapOverlay, closeDepMapOverlay, isDepMapOpen, toggleDepMapShowArchived, setDepMapZoom, resetDepMapZoom, zoomDepMapAtPoint } from './views/dependency-map.js';
 import { setOrgChartDeps, orgChartState, lastOrgChartLayout, openOrgChartOverlay, closeOrgChartOverlay, isOrgChartOpen, toggleOrgChartFilter, setOrgChartZoom, resetOrgChartZoom, zoomOrgChartAtPoint, openOrgChartMemberPopover, closeOrgChartMemberPopover, isOrgChartMemberPopoverOpen } from './views/org-chart.js';
+import { setGovMapDeps, govMapState, lastGovMapLayout, openGovMapOverlay, closeGovMapOverlay, isGovMapOpen, toggleGovMapShowRelationships, setGovMapZoom, resetGovMapZoom, zoomGovMapAtPoint } from './views/governance-map.js';
 import { setWorkflowEditorDeps, workflowEditorState, lastWorkflowLayout, openWorkflowOverlay, closeWorkflowOverlay, isWorkflowOverlayOpen, setWorkflowMode, setWorkflowZoom, resetWorkflowZoom, zoomWorkflowAtPoint, handleWorkflowScrollMouseDown, handleWorkflowPointerMove, handleWorkflowPointerUp, handleWorkflowInnerClick, handleWorkflowReflow, updateWorkflowEdgePopoverMessageVisibility, refreshWorkflowEdgeConditionControls, handleWorkflowEdgeConditionFieldChange, saveWorkflowEdgePopover, deleteWorkflowEdgeFromPopover, closeWorkflowEdgePopover, isWorkflowEdgePopoverOpen } from './views/workflow-editor.js';
 import { setTimelineDeps, openTimelineOverlay, closeTimelineOverlay, isTimelineOverlayOpen, toggleTimelineShowArchived, renderTimeline } from './views/timeline.js';
 import { setCostBenefitDeps, cbZoomState, openCostBenefitOverlay, closeCostBenefitOverlay, isCostBenefitOverlayOpen, toggleCostBenefitShowArchived, setCbZoom, resetCbZoom, zoomCbAtPoint } from './views/cost-benefit.js';
@@ -52,6 +53,7 @@ setBoardDeps({ toast, confirmDialog, openTaskModal, openColumnModal });
 setTaskListDeps({ toast, openTaskModal });
 setDepMapDeps({ toast, openTaskModal });
 setOrgChartDeps({ toast });
+setGovMapDeps({ toast });
 setWorkflowEditorDeps({ toast, confirmDialog });
 setTimelineDeps({ toast, openTaskModal });
 setCostBenefitDeps({ toast, openTaskModal });
@@ -250,6 +252,7 @@ function wireEvents(){
   document.getElementById('navDepMapBtn').addEventListener('click', openDepMapOverlay);
   document.getElementById('navCostBenefitBtn').addEventListener('click', openCostBenefitOverlay);
   document.getElementById('navOrgChartBtn').addEventListener('click', openOrgChartOverlay);
+  document.getElementById('navGovernanceMapBtn').addEventListener('click', openGovMapOverlay);
   document.getElementById('navBulkEditBtn').addEventListener('click', openBulkEditOverlay);
   document.getElementById('navArchivedBtn').addEventListener('click', openArchivedTasksOverlay);
   document.getElementById('navTaskTypesBtn').addEventListener('click', openTaskTypesModal);
@@ -653,6 +656,44 @@ function wireEvents(){
     if(isOrgChartMemberPopoverOpen() && !e.target.closest('#orgChartMemberPopover') && !e.target.closest('.kf-orgnode')) closeOrgChartMemberPopover();
   });
 
+  document.getElementById('governanceMapBtn').addEventListener('click', openGovMapOverlay);
+  document.getElementById('govMapClose').addEventListener('click', closeGovMapOverlay);
+  document.getElementById('govMapRelationshipsToggle').addEventListener('click', toggleGovMapShowRelationships);
+  document.getElementById('govMapZoomInBtn').addEventListener('click', function(){ setGovMapZoom(0.1); });
+  document.getElementById('govMapZoomOutBtn').addEventListener('click', function(){ setGovMapZoom(-0.1); });
+  document.getElementById('govMapResetBtn').addEventListener('click', resetGovMapZoom);
+  document.getElementById('govMapExportAsBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('govMapExportAsPanel');
+  });
+  document.querySelectorAll('#govMapExportAsPanel .kf-export-as-option').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      closeAllExportAsPanels();
+      var project = getCurrentProject();
+      var filenameBase = (project ? project.key : 'export') + '-governance-map';
+      var svgEl = document.querySelector('#govMapInner svg');
+      if(!svgEl){ toast('Nothing to export.'); return; }
+      if(btn.getAttribute('data-export-type') === 'svg') exportSvgElementAsSvgFile(svgEl, filenameBase);
+      else exportSvgElementAsPng(svgEl, filenameBase, 4);
+    });
+  });
+  document.getElementById('govMapOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'govMapOverlay') closeGovMapOverlay();
+  });
+  document.getElementById('govMapInner').addEventListener('click', function(e){
+    if(govMapState.panMoved) return;
+    var node = e.target.closest('.kf-govmap-hub') || e.target.closest('.kf-govmap-leaf');
+    if(!node) return;
+    var type = node.getAttribute('data-type');
+    var id = node.getAttribute('data-id');
+    closeGovMapOverlay();
+    if(type === 'principles'){ openPrinciplesOverlay(); if(id) showPrinciplesFormView(id); }
+    else if(type === 'objectives'){ openObjectivesOverlay(); if(id) showObjectivesFormView(id); }
+    else if(type === 'documents'){ openDocumentsOverlay(); if(id) showDocumentsFormView(id); }
+    else if(type === 'risks'){ openRisksOverlay(); if(id) showRisksFormView(id); }
+    else if(type === 'decisions'){ openDecisionsOverlay(); if(id) showDecisionsFormView(id); }
+  });
+
   document.getElementById('workflowBtn').addEventListener('click', openWorkflowOverlay);
   document.getElementById('navWorkflowBtn').addEventListener('click', openWorkflowOverlay);
   document.getElementById('workflowClose').addEventListener('click', closeWorkflowOverlay);
@@ -890,6 +931,39 @@ function wireEvents(){
     }
   });
 
+  var govMapScrollEl = document.getElementById('govMapScroll');
+  govMapScrollEl.addEventListener('wheel', function(e){
+    if(!lastGovMapLayout) return;
+    e.preventDefault();
+    zoomGovMapAtPoint(e.deltaY < 0 ? 0.12 : -0.12, e.clientX, e.clientY);
+  }, {passive: false});
+  govMapScrollEl.addEventListener('mousedown', function(e){
+    if(e.button !== 0) return;
+    govMapState.panActive = true;
+    govMapState.panMoved = false;
+    govMapState.panStartX = e.clientX;
+    govMapState.panStartY = e.clientY;
+    govMapState.panStartScrollLeft = govMapScrollEl.scrollLeft;
+    govMapState.panStartScrollTop = govMapScrollEl.scrollTop;
+    govMapScrollEl.classList.add('kf-govmap-panning');
+  });
+  document.addEventListener('mousemove', function(e){
+    if(!govMapState.panActive) return;
+    var dx = e.clientX - govMapState.panStartX;
+    var dy = e.clientY - govMapState.panStartY;
+    if(Math.abs(dx) > 3 || Math.abs(dy) > 3) govMapState.panMoved = true;
+    if(govMapState.panMoved){
+      govMapScrollEl.scrollLeft = govMapState.panStartScrollLeft - dx;
+      govMapScrollEl.scrollTop = govMapState.panStartScrollTop - dy;
+    }
+  });
+  document.addEventListener('mouseup', function(){
+    if(govMapState.panActive){
+      govMapState.panActive = false;
+      govMapScrollEl.classList.remove('kf-govmap-panning');
+    }
+  });
+
   document.getElementById('exportBtn').addEventListener('click', function(){
     var p = getCurrentProject();
     if(!p){ toast('No project to export.'); return; }
@@ -1060,6 +1134,7 @@ function wireEvents(){
     else if(isDepMapOpen()) closeDepMapOverlay();
     else if(isOrgChartMemberPopoverOpen()) closeOrgChartMemberPopover();
     else if(isOrgChartOpen()) closeOrgChartOverlay();
+    else if(isGovMapOpen()) closeGovMapOverlay();
     else if(isWorkflowEdgePopoverOpen()) closeWorkflowEdgePopover();
     else if(isWorkflowOverlayOpen()) closeWorkflowOverlay();
     else if(isTimelineOverlayOpen()) closeTimelineOverlay();

@@ -12,6 +12,7 @@ import { getTeamsCommitteesForMember } from '../mutations.js';
 import { reorderColumns, deleteColumn, moveTaskToColumn, updateTask, addTask, deleteTask } from '../mutations.js';
 import { getReleaseById } from '../utils.js';
 import { isWorkflowEnabled, evaluateTransition } from '../features/workflow-engine.js';
+import { isGovernanceMapEnabled } from './governance-map.js';
 
 export function escapeHTML(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 function iconHTML(name, size){ return '<span class="kf-icon">'+iconSvg(name,size)+'</span>'; }
@@ -70,6 +71,10 @@ export function applyHeaderButtonVisibility(){
   document.getElementById('navOrgChartBtn').classList.toggle('kf-vis-hidden', !visibility.teamsCommittees);
   document.getElementById('workflowBtn').classList.toggle('kf-vis-hidden', !visibility.workflow);
   document.getElementById('navWorkflowBtn').classList.toggle('kf-vis-hidden', !visibility.workflow);
+
+  var govMapEnabled = isGovernanceMapEnabled(visibility);
+  document.getElementById('governanceMapBtn').classList.toggle('kf-vis-hidden', !govMapEnabled);
+  document.getElementById('navGovernanceMapBtn').classList.toggle('kf-vis-hidden', !govMapEnabled);
 
   renderTeamFilterChips();
 }

@@ -9,6 +9,7 @@
     --kf-column-bg-drag: #e3e6ea;
     --kf-border: #dfe1e6;
     --kf-border-strong: #c1c7d0;
+    --kf-border-black: #333333;
     --kf-text: #172b4d;
     --kf-text-secondary: #6b778c;
     --kf-text-faint: #8993a4;
@@ -50,6 +51,7 @@
     --kf-column-bg-drag: #282e33;
     --kf-border: #3a3f42;
     --kf-border-strong: #56616a;
+    --kf-border-black: #777777;
     --kf-text: #e6e7e8;
     --kf-text-secondary: #9fadbc;
     --kf-text-faint: #7a8694;
@@ -3210,6 +3212,122 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+
+  /* Governance Map */
+  .kf-govmap-legend {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--kf-border);
+    flex-shrink: 0;
+  }
+
+  .kf-govmap-scroll {
+    flex: 1;
+    overflow: auto;
+    padding: 28px;
+    background-color: var(--kf-canvas-bg);
+    background-image: radial-gradient(circle, var(--kf-canvas-dot) 1px, transparent 1px);
+    background-size: 18px 18px;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .kf-govmap-scroll.kf-govmap-panning {
+    cursor: grabbing;
+  }
+
+  .kf-govmap-inner {
+    display: inline-block;
+  }
+
+  .kf-govmap-inner svg {
+    display: block;
+  }
+
+  #govMapRelationshipsToggle.active {
+    background: var(--kf-chip-active-bg);
+    color: #fff;
+  }
+
+  #govMapRelationshipsToggle.active:hover {
+    background: var(--kf-chip-active-bg);
+  }
+
+  .kf-govmap-node {
+    cursor: pointer;
+  }
+
+  .kf-govmap-hub circle,
+  .kf-govmap-leaf circle {
+    transition: stroke .1s, stroke-width .1s;
+    stroke: var(--kf-surface);
+    stroke-width: 1.5;
+  }
+
+  .kf-govmap-hub circle {
+    stroke-width: 2.5;
+  }
+
+  .kf-govmap-hub:hover circle {
+    stroke: var(--kf-blue);
+    stroke-width: 3;
+  }
+
+  .kf-govmap-leaf:hover circle {
+    stroke: var(--kf-blue);
+    stroke-width: 2.5;
+  }
+
+  .kf-govmap-hub-empty {
+    opacity: 0.45;
+  }
+
+  .kf-govmap-hub-empty:hover {
+    opacity: 0.7;
+  }
+
+  .kf-govmap-center circle {
+    fill: var(--kf-text);
+  }
+
+  .kf-govmap-center text {
+    fill: var(--kf-text);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .kf-govmap-tree-edge {
+    stroke: var(--kf-border-black);
+    stroke-width: 1.5;
+    fill: none;
+  }
+
+  .kf-govmap-edge {
+    stroke: #8993a4;
+    stroke-width: 1.5;
+    fill: none;
+    opacity: 0.55;
+  }
+
+  .kf-govmap-edge-hidden {
+    /*display: none;*/
+    opacity: 0.05;
+  }
+
+  .kf-govmap-hub text {
+    font-size: 12px;
+    font-weight: 700;
+    fill: var(--kf-text);
+  }
+
+  .kf-govmap-leaf text {
+    font-size: 10px;
+    fill: var(--kf-text-secondary);
   }
 
   /* Workflow editor */

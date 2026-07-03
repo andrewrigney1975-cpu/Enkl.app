@@ -203,7 +203,8 @@ export var ui = {
   objectivesSearchTerm: '',
   taskListCollapsedGroups: new Set(),
   sideNavExpanded: false,
-  orgChartFilter: 'team'
+  orgChartFilter: 'team',
+  govMapShowRelationships: true
 };
 
 export function resetFilters(){

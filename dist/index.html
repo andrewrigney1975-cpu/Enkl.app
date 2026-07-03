@@ -44,6 +44,7 @@
     --kf-column-bg-drag: #e3e6ea;
     --kf-border: #dfe1e6;
     --kf-border-strong: #c1c7d0;
+    --kf-border-black: #333333;
     --kf-text: #172b4d;
     --kf-text-secondary: #6b778c;
     --kf-text-faint: #8993a4;
@@ -85,6 +86,7 @@
     --kf-column-bg-drag: #282e33;
     --kf-border: #3a3f42;
     --kf-border-strong: #56616a;
+    --kf-border-black: #777777;
     --kf-text: #e6e7e8;
     --kf-text-secondary: #9fadbc;
     --kf-text-faint: #7a8694;
@@ -3247,6 +3249,122 @@
     gap: 6px;
   }
 
+  /* Governance Map */
+  .kf-govmap-legend {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--kf-border);
+    flex-shrink: 0;
+  }
+
+  .kf-govmap-scroll {
+    flex: 1;
+    overflow: auto;
+    padding: 28px;
+    background-color: var(--kf-canvas-bg);
+    background-image: radial-gradient(circle, var(--kf-canvas-dot) 1px, transparent 1px);
+    background-size: 18px 18px;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .kf-govmap-scroll.kf-govmap-panning {
+    cursor: grabbing;
+  }
+
+  .kf-govmap-inner {
+    display: inline-block;
+  }
+
+  .kf-govmap-inner svg {
+    display: block;
+  }
+
+  #govMapRelationshipsToggle.active {
+    background: var(--kf-chip-active-bg);
+    color: #fff;
+  }
+
+  #govMapRelationshipsToggle.active:hover {
+    background: var(--kf-chip-active-bg);
+  }
+
+  .kf-govmap-node {
+    cursor: pointer;
+  }
+
+  .kf-govmap-hub circle,
+  .kf-govmap-leaf circle {
+    transition: stroke .1s, stroke-width .1s;
+    stroke: var(--kf-surface);
+    stroke-width: 1.5;
+  }
+
+  .kf-govmap-hub circle {
+    stroke-width: 2.5;
+  }
+
+  .kf-govmap-hub:hover circle {
+    stroke: var(--kf-blue);
+    stroke-width: 3;
+  }
+
+  .kf-govmap-leaf:hover circle {
+    stroke: var(--kf-blue);
+    stroke-width: 2.5;
+  }
+
+  .kf-govmap-hub-empty {
+    opacity: 0.45;
+  }
+
+  .kf-govmap-hub-empty:hover {
+    opacity: 0.7;
+  }
+
+  .kf-govmap-center circle {
+    fill: var(--kf-text);
+  }
+
+  .kf-govmap-center text {
+    fill: var(--kf-text);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .kf-govmap-tree-edge {
+    stroke: var(--kf-border-black);
+    stroke-width: 1.5;
+    fill: none;
+  }
+
+  .kf-govmap-edge {
+    stroke: #8993a4;
+    stroke-width: 1.5;
+    fill: none;
+    opacity: 0.55;
+  }
+
+  .kf-govmap-edge-hidden {
+    /*display: none;*/
+    opacity: 0.05;
+  }
+
+  .kf-govmap-hub text {
+    font-size: 12px;
+    font-weight: 700;
+    fill: var(--kf-text);
+  }
+
+  .kf-govmap-leaf text {
+    font-size: 10px;
+    fill: var(--kf-text-secondary);
+  }
+
   /* Workflow editor */
   .kf-workflow-mode-group {
     display: flex;
@@ -3747,7 +3865,8 @@
         <button type="button" class="kf-side-nav-item" id="navTimelineBtn" title="Timeline"><span class="kf-icon" data-icon="timeline" data-size="18"></span><span class="kf-side-nav-text">Timeline</span></button>
         <button type="button" class="kf-side-nav-item" id="navDepMapBtn" title="Dependency Map"><span class="kf-icon" data-icon="graph" data-size="18"></span><span class="kf-side-nav-text">Dependency Map</span></button>
         <button type="button" class="kf-side-nav-item" id="navCostBenefitBtn" title="Cost/Benefit Chart"><span class="kf-icon" data-icon="quadrant" data-size="18"></span><span class="kf-side-nav-text">Cost/Benefit Chart</span></button>
-        <button type="button" class="kf-side-nav-item" id="navOrgChartBtn" title="Org Chart"><span class="kf-icon" data-icon="orgChart" data-size="18"></span><span class="kf-side-nav-text">Org Chart</span></button>   
+        <button type="button" class="kf-side-nav-item" id="navOrgChartBtn" title="Org Chart"><span class="kf-icon" data-icon="orgChart" data-size="18"></span><span class="kf-side-nav-text">Org Chart</span></button>
+        <button type="button" class="kf-side-nav-item" id="navGovernanceMapBtn" title="Governance Map"><span class="kf-icon" data-icon="radar" data-size="18"></span><span class="kf-side-nav-text">Governance Map</span></button>
       </div>
       <div class="kf-side-nav-section">
         <div class="kf-side-nav-label">Tools</div>
@@ -3809,6 +3928,7 @@
       <button class="kf-btn kf-btn-secondary" id="depMapBtn"><span class="kf-icon" data-icon="graph" data-size="14"></span>Dependency Map</button>
       <button class="kf-btn kf-btn-secondary" id="costBenefitBtn"><span class="kf-icon" data-icon="quadrant" data-size="14"></span>Cost/Benefit Chart</button>
       <button class="kf-btn kf-btn-secondary" id="orgChartBtn"><span class="kf-icon" data-icon="orgChart" data-size="14"></span>Org Chart</button>
+      <button class="kf-btn kf-btn-secondary" id="governanceMapBtn"><span class="kf-icon" data-icon="radar" data-size="14"></span>Governance Map</button>
     </div>
     <div class="kf-toolbar-spacer"></div>
     <button class="kf-btn kf-btn-secondary" id="addColumnTopBtn"><span class="kf-icon" data-icon="plus" data-size="14"></span>Column</button>
@@ -4062,6 +4182,37 @@
 <div class="kf-org-member-popover hidden" id="orgChartMemberPopover">
   <div class="kf-org-member-popover-title" id="orgChartMemberPopoverTitle"></div>
   <div class="kf-org-member-popover-list" id="orgChartMemberPopoverList"></div>
+</div>
+
+<!-- Governance Map Overlay -->
+<div class="kf-overlay hidden" id="govMapOverlay">
+  <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="govMapTitle">Governance Map</h2>
+      <div class="kf-modal-header-actions">
+        <button class="kf-btn kf-btn-ghost" id="govMapRelationshipsToggle" title="Hide relationships"><span class="kf-icon" data-icon="link" data-size="16"></span><span id="govMapRelationshipsToggleLabel">Hide relationships</span></button>
+        <div class="kf-header-divider-light"></div>
+        <button class="kf-btn kf-btn-ghost" id="govMapZoomOutBtn" title="Zoom out"><span class="kf-icon" data-icon="zoomOut" data-size="16"></span></button>
+        <span id="govMapZoomLabel" class="kf-zoom-label">100%</span>
+        <button class="kf-btn kf-btn-ghost" id="govMapZoomInBtn" title="Zoom in"><span class="kf-icon" data-icon="zoomIn" data-size="16"></span></button>
+        <button class="kf-btn kf-btn-ghost" id="govMapResetBtn" title="Reset view"><span class="kf-icon" data-icon="fit" data-size="16"></span></button>
+        <div class="kf-header-divider-light"></div>
+        <div class="kf-export-as-wrap">
+          <button class="kf-btn kf-btn-ghost" id="govMapExportAsBtn" title="Export As..."><span class="kf-icon" data-icon="download" data-size="14"></span>Export As...</button>
+          <div class="kf-export-as-panel hidden" id="govMapExportAsPanel">
+            <button type="button" class="kf-export-as-option" data-export-type="svg">Export as SVG</button>
+            <button type="button" class="kf-export-as-option" data-export-type="png">Export as PNG (4x resolution)</button>
+          </div>
+        </div>
+        <div class="kf-header-divider-light"></div>
+        <button class="kf-btn kf-btn-ghost" id="govMapClose" title="Close"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+      </div>
+    </div>
+    <div class="kf-govmap-legend" id="govMapLegend"></div>
+    <div class="kf-govmap-scroll" id="govMapScroll">
+      <div id="govMapInner" class="kf-govmap-inner"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Workflow Editor Overlay -->
@@ -5222,6 +5373,7 @@ self.onmessage = function(e) {
     fit: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
     team: '<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22.5 21v-2a4 4 0 0 0-3-3.87"/><path d="M16.5 3.13a4 4 0 0 1 0 7.75"/>',
     orgChart: '<rect x="9" y="3" width="6" height="6" rx="1"/><rect x="2" y="15" width="6" height="6" rx="1"/><rect x="16" y="15" width="6" height="6" rx="1"/><path d="M12 9v3M5 12h14M5 12v3M19 12v3"/>',
+    radar: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/><path d="M12 12 19 6"/>',
     workflow: '<rect x="2" y="9" width="6" height="6" rx="1"/><rect x="16" y="2" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M8 12h4"/><path d="M12 12l4-7"/><path d="M12 12l4 7"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/>',
     moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/>',
@@ -6465,7 +6617,8 @@ self.onmessage = function(e) {
     objectivesSearchTerm: "",
     taskListCollapsedGroups: /* @__PURE__ */ new Set(),
     sideNavExpanded: false,
-    orgChartFilter: "team"
+    orgChartFilter: "team",
+    govMapShowRelationships: true
   };
   function resetFilters() {
     ui.searchTerm = "";
@@ -7755,16 +7908,348 @@ self.onmessage = function(e) {
     return '<svg viewBox="0 0 ' + width + " " + height + '" width="' + width + '" height="' + height + '" class="kf-risk-matrix-svg">' + cellsHTML + rowLabelsHTML + colLabelsHTML + axisTitlesHTML + pointsHTML + "</svg>";
   }
 
-  // src/js/views/board.js
+  // src/js/views/governance-map.js
   function escapeHTML2(s) {
     var d = document.createElement("div");
     d.textContent = s == null ? "" : String(s);
     return d.innerHTML;
   }
+  function buildEl(tag, className, innerHTML) {
+    var el = document.createElement(tag);
+    if (className) el.className = className;
+    if (innerHTML !== void 0) el.innerHTML = innerHTML;
+    return el;
+  }
   function iconHTML(name, size) {
     return '<span class="kf-icon">' + iconSvg(name, size) + "</span>";
   }
   var _toast2 = function(msg) {
+    console.error(msg);
+  };
+  function setGovMapDeps(deps) {
+    if (deps.toast) _toast2 = deps.toast;
+  }
+  var govMapState = { scale: 1, panActive: false, panMoved: false, panStartX: 0, panStartY: 0, panStartScrollLeft: 0, panStartScrollTop: 0 };
+  var GOVMAP_MIN_ZOOM = 0.3;
+  var GOVMAP_MAX_ZOOM = 2.5;
+  var lastGovMapLayout = null;
+  var GOVMAP_CENTER_NODE_R = 34;
+  var GOVMAP_HUB_NODE_R = 22;
+  var GOVMAP_LEAF_NODE_R = 9;
+  var GOVMAP_HUB_RADIUS = 150;
+  var GOVMAP_LEAF_RADIUS_MIN = 300;
+  var GOVMAP_LEAF_ARC_MIN = 46;
+  var GOVMAP_MARGIN = 60;
+  var GOVMAP_CATEGORIES = [
+    { key: "principles", label: "Principles", icon: "compass", getItems: function(p) {
+      return p.principles || [];
+    } },
+    { key: "objectives", label: "Objectives", icon: "target", getItems: function(p) {
+      return p.objectives || [];
+    } },
+    { key: "documents", label: "Documents", icon: "ty_document", getItems: function(p) {
+      return p.documents || [];
+    } },
+    { key: "risks", label: "Risks", icon: "warning", getItems: function(p) {
+      return p.risks || [];
+    } },
+    { key: "decisions", label: "Decisions", icon: "ty_approve", getItems: function(p) {
+      return p.decisions || [];
+    } }
+  ];
+  var GOVMAP_TYPE_ACCENT = {
+    principles: "#6554c0",
+    objectives: "#00875a",
+    documents: "#0c66e4",
+    risks: "#de350b",
+    decisions: "#ff991f"
+  };
+  function isGovernanceMapEnabled(visibility) {
+    return GOVMAP_CATEGORIES.some(function(c) {
+      return visibility[c.key];
+    });
+  }
+  function angularMidpoint(a, b) {
+    if (Math.abs(a - b) > Math.PI) {
+      if (a < b) a += Math.PI * 2;
+      else b += Math.PI * 2;
+    }
+    return (a + b) / 2;
+  }
+  function computeGovernanceMapLayout(project) {
+    var visibility = normalizeHeaderButtonVisibility(project.headerButtonVisibility);
+    var categories = GOVMAP_CATEGORIES.filter(function(c) {
+      return visibility[c.key];
+    });
+    var byId = {};
+    categories.forEach(function(c) {
+      c.getItems(project).forEach(function(item) {
+        byId[item.id] = { item, type: c.key };
+      });
+    });
+    var totalLeaves = 0;
+    categories.forEach(function(c) {
+      totalLeaves += c.getItems(project).length;
+    });
+    var leafRadius = Math.max(GOVMAP_LEAF_RADIUS_MIN, totalLeaves * GOVMAP_LEAF_ARC_MIN / (2 * Math.PI));
+    var size = 2 * (leafRadius + GOVMAP_MARGIN);
+    var cx = leafRadius + GOVMAP_MARGIN;
+    var cy = leafRadius + GOVMAP_MARGIN;
+    var rotationOffset = -Math.PI / 2;
+    var hubs = [];
+    var leaves = [];
+    var positions = {};
+    var sectorAngle = categories.length > 0 ? Math.PI * 2 / categories.length : 0;
+    categories.forEach(function(cat, i) {
+      var sectorStart = i * sectorAngle;
+      var hubAngle = sectorStart + sectorAngle / 2;
+      var finalHubAngle = hubAngle + rotationOffset;
+      var hubPos = { angle: finalHubAngle, radius: GOVMAP_HUB_RADIUS, x: cx + GOVMAP_HUB_RADIUS * Math.cos(finalHubAngle), y: cy + GOVMAP_HUB_RADIUS * Math.sin(finalHubAngle) };
+      positions[cat.key] = hubPos;
+      var items = cat.getItems(project);
+      var sectorInset = Math.max(sectorAngle * 0.08, 0.03);
+      var usableArc = Math.max(sectorAngle - 2 * sectorInset, 0);
+      var catLeaves = items.map(function(item, j) {
+        var angle;
+        if (items.length === 1) angle = hubAngle;
+        else angle = sectorStart + sectorInset + usableArc * j / (items.length - 1);
+        var finalAngle = angle + rotationOffset;
+        var pos = { angle: finalAngle, radius: leafRadius, x: cx + leafRadius * Math.cos(finalAngle), y: cy + leafRadius * Math.sin(finalAngle), type: cat.key, item };
+        positions[item.id] = pos;
+        return pos;
+      });
+      hubs.push({ key: cat.key, label: cat.label, icon: cat.icon, empty: items.length === 0, pos: hubPos });
+      leaves = leaves.concat(catLeaves);
+    });
+    var relationshipEdges = [];
+    function addEdge(fromId, toId, fromType, toType) {
+      if (!positions[fromId] || !positions[toId]) return;
+      relationshipEdges.push({ fromId, toId, fromType, toType });
+    }
+    (project.objectives || []).forEach(function(o) {
+      (o.principleIds || []).forEach(function(id) {
+        addEdge(o.id, id, "objectives", "principles");
+      });
+    });
+    (project.documents || []).forEach(function(d) {
+      (d.relatedDocumentIds || []).forEach(function(id) {
+        if (id !== d.id) addEdge(d.id, id, "documents", "documents");
+      });
+    });
+    (project.risks || []).forEach(function(r) {
+      (r.documentIds || []).forEach(function(id) {
+        addEdge(r.id, id, "risks", "documents");
+      });
+      (r.principleIds || []).forEach(function(id) {
+        addEdge(r.id, id, "risks", "principles");
+      });
+      (r.objectiveIds || []).forEach(function(id) {
+        addEdge(r.id, id, "risks", "objectives");
+      });
+    });
+    (project.decisions || []).forEach(function(d) {
+      (d.documentIds || []).forEach(function(id) {
+        addEdge(d.id, id, "decisions", "documents");
+      });
+      (d.riskIds || []).forEach(function(id) {
+        addEdge(d.id, id, "decisions", "risks");
+      });
+      (d.principleIds || []).forEach(function(id) {
+        addEdge(d.id, id, "decisions", "principles");
+      });
+      (d.objectiveIds || []).forEach(function(id) {
+        addEdge(d.id, id, "decisions", "objectives");
+      });
+    });
+    return {
+      categories,
+      hubs,
+      leaves,
+      relationshipEdges,
+      positions,
+      center: { x: cx, y: cy },
+      leafRadius,
+      width: size,
+      height: size
+    };
+  }
+  function truncateTitle(title) {
+    return title.length > 22 ? title.slice(0, 21) + "\u2026" : title;
+  }
+  function renderGovernanceMap() {
+    var project = getCurrentProject();
+    var inner = document.getElementById("govMapInner");
+    var legend = document.getElementById("govMapLegend");
+    document.getElementById("govMapTitle").textContent = "Governance Map" + (project ? " \u2014 " + project.name : "");
+    var enabled = project && isGovernanceMapEnabled(normalizeHeaderButtonVisibility(project.headerButtonVisibility));
+    if (!enabled) {
+      legend.innerHTML = "";
+      inner.innerHTML = "";
+      inner.appendChild(buildEl("div", "kf-depmap-empty", iconHTML("radar", 36) + "<div>No governance artefact types are enabled \u2014 turn on Principles, Objectives, Documents, Risks or Decisions in App Settings to use the Governance Map.</div>"));
+      lastGovMapLayout = null;
+      return;
+    }
+    var layout = computeGovernanceMapLayout(project);
+    lastGovMapLayout = layout;
+    legend.innerHTML = layout.categories.map(function(c) {
+      return '<span class="kf-legend-item"><span class="kf-legend-dot" style="background:' + GOVMAP_TYPE_ACCENT[c.key] + ';"></span>' + escapeHTML2(c.label) + "</span>";
+    }).join("") + (ui.govMapShowRelationships ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:#8993a4;"></span>Relationship</span>' : "");
+    var cx = layout.center.x, cy = layout.center.y;
+    var treeEdgesHTML = layout.hubs.map(function(h) {
+      return '<path class="kf-govmap-tree-edge" data-a="center" data-b="' + h.key + '" d="M ' + cx + " " + cy + " L " + h.pos.x + " " + h.pos.y + '"></path>';
+    }).join("") + layout.leaves.map(function(l) {
+      var hub = layout.positions[l.type];
+      return '<path class="kf-govmap-tree-edge" data-a="' + l.type + '" data-b="' + l.item.id + '" d="M ' + hub.x + " " + hub.y + " L " + l.x + " " + l.y + '"></path>';
+    }).join("");
+    var relationshipEdgesHTML = !ui.govMapShowRelationships ? "" : layout.relationshipEdges.map(function(e) {
+      var from = layout.positions[e.fromId], to = layout.positions[e.toId];
+      var midAngle = angularMidpoint(from.angle, to.angle);
+      var controlRadius = layout.leafRadius * 0.35;
+      var cpx = cx + controlRadius * Math.cos(midAngle);
+      var cpy = cy + controlRadius * Math.sin(midAngle);
+      return '<path class="kf-govmap-edge" data-a="' + e.fromId + '" data-b="' + e.toId + '" d="M ' + from.x + " " + from.y + " Q " + cpx + " " + cpy + " " + to.x + " " + to.y + '"></path>';
+    }).join("");
+    var centerHTML = '<g class="kf-govmap-center" data-node-key="center" transform="translate(' + cx + "," + cy + ')"><circle r="' + GOVMAP_CENTER_NODE_R + '"></circle><text y="' + (GOVMAP_CENTER_NODE_R + 18) + '" text-anchor="middle">' + escapeHTML2(truncateTitle(project.name || "Project")) + "</text></g>";
+    var hubsHTML = layout.hubs.map(function(h) {
+      return '<g class="kf-govmap-node kf-govmap-hub' + (h.empty ? " kf-govmap-hub-empty" : "") + '" data-type="' + h.key + '" data-node-key="' + h.key + '" transform="translate(' + h.pos.x + "," + h.pos.y + ')"><circle r="' + GOVMAP_HUB_NODE_R + '" style="fill:' + GOVMAP_TYPE_ACCENT[h.key] + ';"></circle><text y="' + (GOVMAP_HUB_NODE_R + 16) + '" text-anchor="middle">' + escapeHTML2(h.label) + "</text></g>";
+    }).join("");
+    var leavesHTML = layout.leaves.map(function(l) {
+      var degrees = l.angle * 180 / Math.PI;
+      var title = truncateTitle(l.item.title || l.item.name || "");
+      var labelHTML = Math.cos(l.angle) >= 0 ? '<g transform="rotate(' + degrees + ')"><text x="' + (GOVMAP_LEAF_NODE_R + 6) + '" y="4" text-anchor="start">' + escapeHTML2(title) + "</text></g>" : '<g transform="rotate(' + degrees + ')"><text x="-' + (GOVMAP_LEAF_NODE_R + 6) + '" y="4" transform="rotate(180)" text-anchor="end">' + escapeHTML2(title) + "</text></g>";
+      return '<g class="kf-govmap-node kf-govmap-leaf" data-type="' + l.type + '" data-id="' + l.item.id + '" data-node-key="' + l.item.id + '" transform="translate(' + l.x + "," + l.y + ')"><title>' + escapeHTML2(l.item.title || l.item.name || "") + '</title><circle r="' + GOVMAP_LEAF_NODE_R + '" style="fill:' + GOVMAP_TYPE_ACCENT[l.type] + ';"></circle>' + labelHTML + "</g>";
+    }).join("");
+    var svgHTML = '<svg width="' + layout.width + '" height="' + layout.height + '" viewBox="0 0 ' + layout.width + " " + layout.height + '" xmlns="http://www.w3.org/2000/svg">' + treeEdgesHTML + relationshipEdgesHTML + centerHTML + hubsHTML + leavesHTML + "</svg>";
+    inner.innerHTML = svgHTML;
+    applyGovMapZoom();
+    wireGovMapHover();
+  }
+  var govMapHoverWired = false;
+  function wireGovMapHover() {
+    if (govMapHoverWired) return;
+    govMapHoverWired = true;
+    var inner = document.getElementById("govMapInner");
+    inner.addEventListener("mouseover", function(e) {
+      var node = e.target.closest("[data-node-key]");
+      if (!node) return;
+      highlightGovMapNode(node.getAttribute("data-node-key"));
+    });
+    inner.addEventListener("mouseout", function(e) {
+      var node = e.target.closest("[data-node-key]");
+      if (!node) return;
+      var related = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest("[data-node-key]") : null;
+      if (related === node) return;
+      clearGovMapHighlight();
+    });
+  }
+  function highlightGovMapNode(key) {
+    var inner = document.getElementById("govMapInner");
+    inner.querySelectorAll(".kf-govmap-tree-edge, .kf-govmap-edge").forEach(function(edge) {
+      var connected = edge.getAttribute("data-a") === key || edge.getAttribute("data-b") === key;
+      edge.classList.toggle("kf-govmap-edge-hidden", !connected);
+    });
+  }
+  function clearGovMapHighlight() {
+    var inner = document.getElementById("govMapInner");
+    inner.querySelectorAll(".kf-govmap-edge-hidden").forEach(function(edge) {
+      edge.classList.remove("kf-govmap-edge-hidden");
+    });
+  }
+  function applyGovMapZoom() {
+    var svg = document.querySelector("#govMapInner svg");
+    document.getElementById("govMapZoomLabel").textContent = Math.round(govMapState.scale * 100) + "%";
+    if (!svg || !lastGovMapLayout) return;
+    svg.setAttribute("width", Math.round(lastGovMapLayout.width * govMapState.scale));
+    svg.setAttribute("height", Math.round(lastGovMapLayout.height * govMapState.scale));
+  }
+  function setGovMapZoom(delta) {
+    govMapState.scale = Math.max(GOVMAP_MIN_ZOOM, Math.min(GOVMAP_MAX_ZOOM, Math.round((govMapState.scale + delta) * 100) / 100));
+    applyGovMapZoom();
+  }
+  function centerGovMapHorizontally() {
+    var scroll = document.getElementById("govMapScroll");
+    if (!scroll) return;
+    scroll.scrollLeft = Math.max(0, (scroll.scrollWidth - scroll.clientWidth) / 2);
+  }
+  function resetGovMapZoom() {
+    govMapState.scale = 1;
+    applyGovMapZoom();
+    var scroll = document.getElementById("govMapScroll");
+    scroll.scrollTop = 0;
+    centerGovMapHorizontally();
+  }
+  function zoomGovMapAtPoint(deltaScale, clientX, clientY) {
+    if (!lastGovMapLayout) return;
+    var scroll = document.getElementById("govMapScroll");
+    if (!scroll) return;
+    var oldScale = govMapState.scale;
+    var newScale = Math.max(GOVMAP_MIN_ZOOM, Math.min(GOVMAP_MAX_ZOOM, Math.round((oldScale + deltaScale) * 100) / 100));
+    if (newScale === oldScale) return;
+    var rect = scroll.getBoundingClientRect();
+    var offsetX = clientX != null ? clientX - rect.left : rect.width / 2;
+    var offsetY = clientY != null ? clientY - rect.top : rect.height / 2;
+    var oldWidth = lastGovMapLayout.width * oldScale;
+    var oldHeight = lastGovMapLayout.height * oldScale;
+    var fracX = oldWidth > 0 ? (scroll.scrollLeft + offsetX) / oldWidth : 0;
+    var fracY = oldHeight > 0 ? (scroll.scrollTop + offsetY) / oldHeight : 0;
+    govMapState.scale = newScale;
+    applyGovMapZoom();
+    var newWidth = lastGovMapLayout.width * newScale;
+    var newHeight = lastGovMapLayout.height * newScale;
+    scroll.scrollLeft = fracX * newWidth - offsetX;
+    scroll.scrollTop = fracY * newHeight - offsetY;
+  }
+  function updateGovMapRelationshipsToggleButton() {
+    var btn = document.getElementById("govMapRelationshipsToggle");
+    var label = document.getElementById("govMapRelationshipsToggleLabel");
+    if (!btn) return;
+    btn.classList.toggle("active", !ui.govMapShowRelationships);
+    label.textContent = ui.govMapShowRelationships ? "Hide relationships" : "Show relationships";
+    btn.title = ui.govMapShowRelationships ? "Hide relationships" : "Show relationships";
+  }
+  function toggleGovMapShowRelationships() {
+    ui.govMapShowRelationships = !ui.govMapShowRelationships;
+    updateGovMapRelationshipsToggleButton();
+    renderGovernanceMap();
+  }
+  function openGovMapOverlay() {
+    var project = getCurrentProject();
+    if (!project) {
+      _toast2("No project selected.");
+      return;
+    }
+    if (!isGovernanceMapEnabled(normalizeHeaderButtonVisibility(project.headerButtonVisibility))) {
+      _toast2("Enable at least one governance artefact type in App Settings first.");
+      return;
+    }
+    govMapState.scale = 1;
+    govMapState.panActive = false;
+    govMapState.panMoved = false;
+    updateGovMapRelationshipsToggleButton();
+    document.getElementById("govMapOverlay").classList.remove("hidden");
+    renderGovernanceMap();
+    centerGovMapHorizontally();
+  }
+  function closeGovMapOverlay() {
+    document.getElementById("govMapOverlay").classList.add("hidden");
+    govMapState.panActive = false;
+    govMapState.panMoved = false;
+    document.getElementById("govMapScroll").classList.remove("kf-govmap-panning");
+  }
+  function isGovMapOpen() {
+    return !document.getElementById("govMapOverlay").classList.contains("hidden");
+  }
+
+  // src/js/views/board.js
+  function escapeHTML3(s) {
+    var d = document.createElement("div");
+    d.textContent = s == null ? "" : String(s);
+    return d.innerHTML;
+  }
+  function iconHTML2(name, size) {
+    return '<span class="kf-icon">' + iconSvg(name, size) + "</span>";
+  }
+  var _toast3 = function(msg) {
     console.error(msg);
   };
   var _confirmDialog = function(title, msg, cb) {
@@ -7775,7 +8260,7 @@ self.onmessage = function(e) {
   var _openColumnModal = function() {
   };
   function setBoardDeps(deps) {
-    if (deps.toast) _toast2 = deps.toast;
+    if (deps.toast) _toast3 = deps.toast;
     if (deps.confirmDialog) _confirmDialog = deps.confirmDialog;
     if (deps.openTaskModal) _openTaskModal = deps.openTaskModal;
     if (deps.openColumnModal) _openColumnModal = deps.openColumnModal;
@@ -7804,18 +8289,21 @@ self.onmessage = function(e) {
     });
     var morePanel = document.getElementById("headerMorePanel");
     morePanel.innerHTML = useMoreMenu ? enabledItems.map(function(item) {
-      return '<a href="#" class="kf-header-more-link" data-nav-target="' + item.id + '">' + escapeHTML2(item.label) + "</a>";
+      return '<a href="#" class="kf-header-more-link" data-nav-target="' + item.id + '">' + escapeHTML3(item.label) + "</a>";
     }).join("") : "";
     document.getElementById("orgChartBtn").classList.toggle("kf-vis-hidden", !visibility.teamsCommittees);
     document.getElementById("navOrgChartBtn").classList.toggle("kf-vis-hidden", !visibility.teamsCommittees);
     document.getElementById("workflowBtn").classList.toggle("kf-vis-hidden", !visibility.workflow);
     document.getElementById("navWorkflowBtn").classList.toggle("kf-vis-hidden", !visibility.workflow);
+    var govMapEnabled = isGovernanceMapEnabled(visibility);
+    document.getElementById("governanceMapBtn").classList.toggle("kf-vis-hidden", !govMapEnabled);
+    document.getElementById("navGovernanceMapBtn").classList.toggle("kf-vis-hidden", !govMapEnabled);
     renderTeamFilterChips();
   }
   function openAppSettingsOverlay() {
     var project = getCurrentProject();
     if (!project) {
-      _toast2("No project selected.");
+      _toast3("No project selected.");
       return;
     }
     var visibility = normalizeHeaderButtonVisibility(project.headerButtonVisibility);
@@ -7942,7 +8430,7 @@ self.onmessage = function(e) {
       row.className = "kf-dropdown-filter-row" + (hasTasks ? "" : " kf-team-filter-empty");
       var checked = ui.activeTeams.has(tc.id);
       row.title = hasTasks ? "" : "No tasks currently assigned to this team's members";
-      row.innerHTML = '<input type="checkbox" ' + (checked ? "checked" : "") + '><span class="kf-dropdown-filter-name">' + escapeHTML2(tc.name) + "</span>";
+      row.innerHTML = '<input type="checkbox" ' + (checked ? "checked" : "") + '><span class="kf-dropdown-filter-name">' + escapeHTML3(tc.name) + "</span>";
       row.querySelector("input").addEventListener("change", function(e) {
         if (e.target.checked) ui.activeTeams.add(tc.id);
         else ui.activeTeams.delete(tc.id);
@@ -8008,7 +8496,7 @@ self.onmessage = function(e) {
       var row = document.createElement("label");
       row.className = "kf-dropdown-filter-row";
       var checked = ui.activeAssignees.has(m.id);
-      row.innerHTML = '<input type="checkbox" ' + (checked ? "checked" : "") + '><span class="kf-dot" style="background:' + m.color + '"></span><span class="kf-dropdown-filter-name">' + escapeHTML2(m.name) + "</span>";
+      row.innerHTML = '<input type="checkbox" ' + (checked ? "checked" : "") + '><span class="kf-dot" style="background:' + m.color + '"></span><span class="kf-dropdown-filter-name">' + escapeHTML3(m.name) + "</span>";
       row.querySelector("input").addEventListener("change", function(e) {
         if (e.target.checked) ui.activeAssignees.add(m.id);
         else ui.activeAssignees.delete(m.id);
@@ -8087,7 +8575,7 @@ self.onmessage = function(e) {
       row.className = "kf-dropdown-filter-row";
       var checked = ui.activeTaskTypes.has(tt.id);
       var typeIconHTML = tt.iconName ? '<span class="kf-tasklist-type-icon">' + iconSvg(tt.iconName, 13) + "</span>" : '<span class="kf-dot" style="background:#c1c7d0"></span>';
-      row.innerHTML = '<input type="checkbox" ' + (checked ? "checked" : "") + ">" + typeIconHTML + '<span class="kf-dropdown-filter-name">' + escapeHTML2(tt.name) + "</span>";
+      row.innerHTML = '<input type="checkbox" ' + (checked ? "checked" : "") + ">" + typeIconHTML + '<span class="kf-dropdown-filter-name">' + escapeHTML3(tt.name) + "</span>";
       row.querySelector("input").addEventListener("change", function(e) {
         if (e.target.checked) ui.activeTaskTypes.add(tt.id);
         else ui.activeTaskTypes.delete(tt.id);
@@ -8192,7 +8680,7 @@ self.onmessage = function(e) {
     if (project.columns.length === 0) {
       var empty = document.createElement("div");
       empty.className = "kf-board-empty";
-      empty.innerHTML = iconHTML("inbox", 40) + "<div>This board has no columns yet.</div>";
+      empty.innerHTML = iconHTML2("inbox", 40) + "<div>This board has no columns yet.</div>";
       board.appendChild(empty);
     } else {
       project.columns.forEach(function(col) {
@@ -8201,7 +8689,7 @@ self.onmessage = function(e) {
     }
     var addColBtn = document.createElement("button");
     addColBtn.className = "kf-add-column";
-    addColBtn.innerHTML = iconHTML("plus", 16) + "<span>Add column</span>";
+    addColBtn.innerHTML = iconHTML2("plus", 16) + "<span>Add column</span>";
     addColBtn.addEventListener("click", function() {
       _openColumnModal(null);
     });
@@ -8241,13 +8729,13 @@ self.onmessage = function(e) {
     var header = document.createElement("div");
     header.className = "kf-column-header";
     header.draggable = true;
-    header.innerHTML = iconHTML("grip", 14) + '<span class="kf-column-name' + (col.done ? " done" : "") + '">' + escapeHTML2(col.name) + '</span><span class="kf-count-badge">' + activeTaskCount + "</span>";
+    header.innerHTML = iconHTML2("grip", 14) + '<span class="kf-column-name' + (col.done ? " done" : "") + '">' + escapeHTML3(col.name) + '</span><span class="kf-count-badge">' + activeTaskCount + "</span>";
     var actions = document.createElement("div");
     actions.className = "kf-column-actions";
     var editBtn = document.createElement("button");
     editBtn.className = "kf-btn kf-btn-ghost";
     editBtn.title = "Edit column";
-    editBtn.innerHTML = iconHTML("edit", 14);
+    editBtn.innerHTML = iconHTML2("edit", 14);
     editBtn.addEventListener("click", function(e) {
       e.stopPropagation();
       _openColumnModal(col.id);
@@ -8255,7 +8743,7 @@ self.onmessage = function(e) {
     var delBtn = document.createElement("button");
     delBtn.className = "kf-btn kf-btn-ghost";
     delBtn.title = "Delete column";
-    delBtn.innerHTML = iconHTML("trash", 14);
+    delBtn.innerHTML = iconHTML2("trash", 14);
     delBtn.addEventListener("click", function(e) {
       e.stopPropagation();
       _confirmDialog(
@@ -8339,7 +8827,7 @@ self.onmessage = function(e) {
       if (draggedTask && isWorkflowEnabled(project)) {
         var result = evaluateTransition(project, draggedTask, col.id);
         if (!result.allowed) {
-          _toast2(result.message);
+          _toast3(result.message);
           return;
         }
       }
@@ -8358,7 +8846,7 @@ self.onmessage = function(e) {
     });
     var addTaskBtn = document.createElement("button");
     addTaskBtn.className = "kf-add-task-btn";
-    addTaskBtn.innerHTML = iconHTML("plus", 14) + "<span>Add task</span>";
+    addTaskBtn.innerHTML = iconHTML2("plus", 14) + "<span>Add task</span>";
     addTaskBtn.addEventListener("click", function() {
       _openTaskModal(null, col.id);
     });
@@ -8377,12 +8865,12 @@ self.onmessage = function(e) {
     var overdue = isTaskOverdue(project, task);
     var depCount = (task.dependencies || []).length;
     var assignee = getMemberById(project, task.assigneeId);
-    var metaHTML = '<span class="kf-card-key">' + escapeHTML2(task.key) + "</span>";
+    var metaHTML = '<span class="kf-card-key">' + escapeHTML3(task.key) + "</span>";
     var taskType = getTaskTypeById(project, task.typeId);
     if (taskType && taskType.iconName) {
-      metaHTML += '<span class="kf-card-type-icon" title="' + escapeHTML2(taskType.name) + '">' + iconSvg(taskType.iconName, 13) + "</span>";
+      metaHTML += '<span class="kf-card-type-icon" title="' + escapeHTML3(taskType.name) + '">' + iconSvg(taskType.iconName, 13) + "</span>";
     }
-    metaHTML += '<span class="kf-priority-pill" style="color:' + prio.color + ";background:" + prio.bg + ';">' + iconSvg(prio.icon, 12) + escapeHTML2(prio.label) + "</span>";
+    metaHTML += '<span class="kf-priority-pill" style="color:' + prio.color + ";background:" + prio.bg + ';">' + iconSvg(prio.icon, 12) + escapeHTML3(prio.label) + "</span>";
     if (depCount > 0) {
       metaHTML += '<span class="kf-dep-chip" title="Depends on ' + depCount + ' task(s)">' + iconSvg("link", 12) + depCount + "</span>";
     }
@@ -8390,12 +8878,12 @@ self.onmessage = function(e) {
       metaHTML += '<span class="kf-blocked-chip" title="Blocked by unfinished dependencies">' + iconSvg("warning", 12) + "Blocked</span>";
     }
     if (overdue) {
-      metaHTML += '<span class="kf-overdue-chip" title="End date was ' + escapeHTML2(utcISOToLocalDisplayDate(task.endDate)) + '">' + iconSvg("clock", 12) + "Overdue</span>";
+      metaHTML += '<span class="kf-overdue-chip" title="End date was ' + escapeHTML3(utcISOToLocalDisplayDate(task.endDate)) + '">' + iconSvg("clock", 12) + "Overdue</span>";
     }
     if (assignee) {
-      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';" title="Assigned to ' + escapeHTML2(assignee.name) + '">' + escapeHTML2(memberInitials(assignee.name)) + "</span>";
+      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';" title="Assigned to ' + escapeHTML3(assignee.name) + '">' + escapeHTML3(memberInitials(assignee.name)) + "</span>";
     }
-    card.innerHTML = '<div class="kf-card-title">' + escapeHTML2(task.title) + '</div><div class="kf-card-meta">' + metaHTML + "</div>";
+    card.innerHTML = '<div class="kf-card-title">' + escapeHTML3(task.title) + '</div><div class="kf-card-meta">' + metaHTML + "</div>";
     card.addEventListener("click", function() {
       if (ui.dragWasMove) {
         ui.dragWasMove = false;
@@ -8421,18 +8909,18 @@ self.onmessage = function(e) {
   }
 
   // src/js/views/task-list.js
-  function escapeHTML3(s) {
+  function escapeHTML4(s) {
     var d = document.createElement("div");
     d.textContent = s == null ? "" : String(s);
     return d.innerHTML;
   }
-  var _toast3 = function(msg) {
+  var _toast4 = function(msg) {
     console.error(msg);
   };
   var _openTaskModal2 = function() {
   };
   function setTaskListDeps(deps) {
-    if (deps.toast) _toast3 = deps.toast;
+    if (deps.toast) _toast4 = deps.toast;
     if (deps.openTaskModal) _openTaskModal2 = deps.openTaskModal;
   }
   var RELEASE_STATUS_META2 = {
@@ -8492,7 +8980,7 @@ self.onmessage = function(e) {
   function openTaskListOverlay() {
     var project = getCurrentProject();
     if (!project) {
-      _toast3("No project selected.");
+      _toast4("No project selected.");
       return;
     }
     ui.taskListSearch = "";
@@ -8516,7 +9004,7 @@ self.onmessage = function(e) {
     TASKLIST_COLUMNS.forEach(function(col) {
       var sorted = ui.taskListSort.field === col.field;
       var arrow = sorted ? ui.taskListSort.dir === "asc" ? " \u2191" : " \u2193" : "";
-      html += '<div class="kf-tasklist-header-cell' + (sorted ? " sorted" : "") + '" data-sort-field="' + col.field + '">' + escapeHTML3(col.label) + arrow + "</div>";
+      html += '<div class="kf-tasklist-header-cell' + (sorted ? " sorted" : "") + '" data-sort-field="' + col.field + '">' + escapeHTML4(col.label) + arrow + "</div>";
     });
     header.innerHTML = html;
     header.querySelectorAll("[data-sort-field]").forEach(function(cell) {
@@ -8718,14 +9206,14 @@ self.onmessage = function(e) {
   function exportTaskListAsCsv() {
     var project = getCurrentProject();
     if (!project) {
-      _toast3("No project selected.");
+      _toast4("No project selected.");
       return;
     }
     var csv = buildTaskListCsv(project);
     var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     var filename = project.key + "-task-list-" + (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) + ".csv";
     downloadBlob(blob, filename);
-    _toast3("Exported " + filename);
+    _toast4("Exported " + filename);
   }
   function buildTaskListGroupHeader(project, groupKey, groupTasks, collapsed) {
     var header = document.createElement("div");
@@ -8740,7 +9228,7 @@ self.onmessage = function(e) {
       var dateRangeText = release.startDate || release.endDate ? (release.startDate ? utcISOToLocalDisplayDate(release.startDate) : "\u2014") + " \u2013 " + (release.endDate ? utcISOToLocalDisplayDate(release.endDate) : "\u2014") : "";
       var vp = computeReleaseValueProposition(groupTasks);
       var vpClass = valuePropClass(vp);
-      header.innerHTML = chevronHTML + '<span class="kf-tasklist-group-name">' + escapeHTML3(release.name) + '</span><span class="kf-release-status-pill ' + normalizeReleaseStatus2(release.status) + '">' + escapeHTML3(statusMeta.label) + "</span>" + (dateRangeText ? '<span class="kf-tasklist-group-dates">' + escapeHTML3(dateRangeText) + "</span>" : "") + '<span class="kf-tasklist-group-right"><span class="kf-valueprop-pill ' + vpClass + `" title="Aggregate Value Proposition: total Business Value \xF7 total Task Cost across this release's tasks">` + formatValueProp(vp) + '</span><span class="kf-tasklist-group-count">' + count + " task" + (count === 1 ? "" : "s") + "</span></span>";
+      header.innerHTML = chevronHTML + '<span class="kf-tasklist-group-name">' + escapeHTML4(release.name) + '</span><span class="kf-release-status-pill ' + normalizeReleaseStatus2(release.status) + '">' + escapeHTML4(statusMeta.label) + "</span>" + (dateRangeText ? '<span class="kf-tasklist-group-dates">' + escapeHTML4(dateRangeText) + "</span>" : "") + '<span class="kf-tasklist-group-right"><span class="kf-valueprop-pill ' + vpClass + `" title="Aggregate Value Proposition: total Business Value \xF7 total Task Cost across this release's tasks">` + formatValueProp(vp) + '</span><span class="kf-tasklist-group-count">' + count + " task" + (count === 1 ? "" : "s") + "</span></span>";
     } else {
       header.innerHTML = chevronHTML + '<span class="kf-tasklist-group-name kf-tasklist-group-name-none">No Release</span><span class="kf-tasklist-group-right"><span class="kf-tasklist-group-count">' + count + " task" + (count === 1 ? "" : "s") + "</span></span>";
     }
@@ -8773,15 +9261,15 @@ self.onmessage = function(e) {
     var vp = computeValueProposition(t);
     var vpClass = valuePropClass(vp);
     var col = getColumn(project, t.columnId);
-    var assigneeHTML = assignee ? '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';">' + escapeHTML3(memberInitials(assignee.name)) + "</span><span>" + escapeHTML3(assignee.name) + "</span>" : '<span style="color:var(--kf-text-faint);">Unassigned</span>';
+    var assigneeHTML = assignee ? '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';">' + escapeHTML4(memberInitials(assignee.name)) + "</span><span>" + escapeHTML4(assignee.name) + "</span>" : '<span style="color:var(--kf-text-faint);">Unassigned</span>';
     var taskType = getTaskTypeById(project, t.typeId);
     var typeIconHTML = "";
     if (taskType && taskType.iconName) {
-      typeIconHTML = '<span class="kf-tasklist-type-icon" title="' + escapeHTML3(taskType.name) + '">' + iconSvg(taskType.iconName, 13) + "</span>";
+      typeIconHTML = '<span class="kf-tasklist-type-icon" title="' + escapeHTML4(taskType.name) + '">' + iconSvg(taskType.iconName, 13) + "</span>";
     }
     var row = document.createElement("div");
     row.className = "kf-tasklist-row";
-    row.innerHTML = '<button type="button" class="kf-tasklist-chevron' + (expanded ? " expanded" : "") + '" data-toggle-id="' + t.id + '" aria-label="Toggle details">' + iconSvg("chevronDown", 14) + '</button><span class="kf-tasklist-key">' + typeIconHTML + escapeHTML3(t.key) + '</span><span class="kf-tasklist-title" title="' + escapeHTML3(t.title) + '">' + escapeHTML3(t.title) + '</span><span class="kf-tasklist-column" title="' + escapeHTML3(col ? col.name : "") + '">' + escapeHTML3(col ? col.name : "\u2014") + '</span><span class="kf-tasklist-assignee">' + assigneeHTML + '</span><span class="kf-priority-pill" style="color:' + prio.color + ";background:" + prio.bg + ';">' + iconSvg(prio.icon, 12) + escapeHTML3(prio.label) + '</span><span class="kf-tasklist-date">' + (t.startDate ? escapeHTML3(utcISOToLocalDisplayDate(t.startDate)) : "\u2014") + '</span><span class="kf-tasklist-date' + (overdue ? " overdue" : "") + '">' + (t.endDate ? escapeHTML3(utcISOToLocalDisplayDate(t.endDate)) : "\u2014") + '</span><span class="kf-valueprop-pill ' + vpClass + '" title="Business Value ' + t.businessValue + " \xF7 Task Cost " + t.taskCost + '">' + formatValueProp(vp) + "</span>";
+    row.innerHTML = '<button type="button" class="kf-tasklist-chevron' + (expanded ? " expanded" : "") + '" data-toggle-id="' + t.id + '" aria-label="Toggle details">' + iconSvg("chevronDown", 14) + '</button><span class="kf-tasklist-key">' + typeIconHTML + escapeHTML4(t.key) + '</span><span class="kf-tasklist-title" title="' + escapeHTML4(t.title) + '">' + escapeHTML4(t.title) + '</span><span class="kf-tasklist-column" title="' + escapeHTML4(col ? col.name : "") + '">' + escapeHTML4(col ? col.name : "\u2014") + '</span><span class="kf-tasklist-assignee">' + assigneeHTML + '</span><span class="kf-priority-pill" style="color:' + prio.color + ";background:" + prio.bg + ';">' + iconSvg(prio.icon, 12) + escapeHTML4(prio.label) + '</span><span class="kf-tasklist-date">' + (t.startDate ? escapeHTML4(utcISOToLocalDisplayDate(t.startDate)) : "\u2014") + '</span><span class="kf-tasklist-date' + (overdue ? " overdue" : "") + '">' + (t.endDate ? escapeHTML4(utcISOToLocalDisplayDate(t.endDate)) : "\u2014") + '</span><span class="kf-valueprop-pill ' + vpClass + '" title="Business Value ' + t.businessValue + " \xF7 Task Cost " + t.taskCost + '">' + formatValueProp(vp) + "</span>";
     return row;
   }
   function renderTaskListDetail(project, t) {
@@ -8797,7 +9285,7 @@ self.onmessage = function(e) {
     if (overdue) badgesHTML += '<span class="kf-overdue-chip">' + iconSvg("clock", 12) + "Overdue</span>";
     var detail = document.createElement("div");
     detail.className = "kf-tasklist-detail";
-    detail.innerHTML = (t.description ? "<div>" + escapeHTML3(t.description) + "</div>" : '<div style="color:var(--kf-text-faint);">No description.</div>') + (badgesHTML ? '<div style="margin-top:8px;display:flex;gap:6px;">' + badgesHTML + "</div>" : "") + '<div class="kf-tasklist-detail-grid"><div><div class="kf-tasklist-detail-label">Column</div><div class="kf-tasklist-detail-value">' + escapeHTML3(col ? col.name : "\u2014") + '</div></div><div><div class="kf-tasklist-detail-label">Business Value</div><div class="kf-tasklist-detail-value">' + t.businessValue + '</div></div><div><div class="kf-tasklist-detail-label">Task Cost</div><div class="kf-tasklist-detail-value">' + t.taskCost + '</div></div><div><div class="kf-tasklist-detail-label">Depends on</div><div class="kf-tasklist-detail-value">' + (depKeys.length ? escapeHTML3(depKeys.join(", ")) : "\u2014") + '</div></div></div><button type="button" class="kf-btn kf-btn-secondary kf-tasklist-edit-btn" data-edit-id="' + t.id + '"><span class="kf-icon">' + iconSvg("edit", 13) + "</span>Edit task</button>";
+    detail.innerHTML = (t.description ? "<div>" + escapeHTML4(t.description) + "</div>" : '<div style="color:var(--kf-text-faint);">No description.</div>') + (badgesHTML ? '<div style="margin-top:8px;display:flex;gap:6px;">' + badgesHTML + "</div>" : "") + '<div class="kf-tasklist-detail-grid"><div><div class="kf-tasklist-detail-label">Column</div><div class="kf-tasklist-detail-value">' + escapeHTML4(col ? col.name : "\u2014") + '</div></div><div><div class="kf-tasklist-detail-label">Business Value</div><div class="kf-tasklist-detail-value">' + t.businessValue + '</div></div><div><div class="kf-tasklist-detail-label">Task Cost</div><div class="kf-tasklist-detail-value">' + t.taskCost + '</div></div><div><div class="kf-tasklist-detail-label">Depends on</div><div class="kf-tasklist-detail-value">' + (depKeys.length ? escapeHTML4(depKeys.join(", ")) : "\u2014") + '</div></div></div><button type="button" class="kf-btn kf-btn-secondary kf-tasklist-edit-btn" data-edit-id="' + t.id + '"><span class="kf-icon">' + iconSvg("edit", 13) + "</span>Edit task</button>";
     detail.querySelector("[data-edit-id]").addEventListener("click", function() {
       closeTaskListOverlay();
       _openTaskModal2(t.id, t.columnId);
@@ -8806,27 +9294,27 @@ self.onmessage = function(e) {
   }
 
   // src/js/views/dependency-map.js
-  function escapeHTML4(s) {
+  function escapeHTML5(s) {
     var d = document.createElement("div");
     d.textContent = s == null ? "" : String(s);
     return d.innerHTML;
   }
-  function buildEl(tag, className, innerHTML) {
+  function buildEl2(tag, className, innerHTML) {
     var el = document.createElement(tag);
     if (className) el.className = className;
     if (innerHTML !== void 0) el.innerHTML = innerHTML;
     return el;
   }
-  function iconHTML2(name, size) {
+  function iconHTML3(name, size) {
     return '<span class="kf-icon">' + iconSvg(name, size) + "</span>";
   }
-  var _toast4 = function(msg) {
+  var _toast5 = function(msg) {
     console.error(msg);
   };
   var _openTaskModal3 = function() {
   };
   function setDepMapDeps(deps) {
-    if (deps.toast) _toast4 = deps.toast;
+    if (deps.toast) _toast5 = deps.toast;
     if (deps.openTaskModal) _openTaskModal3 = deps.openTaskModal;
   }
   var depMapState = { scale: 1, panActive: false, panMoved: false, panStartX: 0, panStartY: 0, panStartScrollLeft: 0, panStartScrollTop: 0 };
@@ -8941,7 +9429,7 @@ self.onmessage = function(e) {
     });
     if (!hasVisibleTasks) {
       inner.innerHTML = "";
-      inner.appendChild(buildEl("div", "kf-depmap-empty", iconHTML2("inbox", 36) + "<div>No tasks yet \u2014 add some tasks to see how they depend on each other.</div>"));
+      inner.appendChild(buildEl2("div", "kf-depmap-empty", iconHTML3("inbox", 36) + "<div>No tasks yet \u2014 add some tasks to see how they depend on each other.</div>"));
       lastDepLayout = null;
       return;
     }
@@ -8969,16 +9457,16 @@ self.onmessage = function(e) {
       var taskType = getTaskTypeById(project, t.typeId);
       var title = t.title.length > 26 ? t.title.slice(0, 25) + "\u2026" : t.title;
       var warningBadge = blocked ? '<g transform="translate(' + (n.w - 24) + ',8)" style="color:#de350b;"><title>Blocked by unfinished dependencies</title>' + iconSvg("warning", 16) + "</g>" : "";
-      var overdueBadge = overdue ? '<g transform="translate(' + (blocked ? n.w - 46 : n.w - 24) + ',8)" style="color:var(--kf-overdue-fg);"><title>Overdue \u2014 end date was ' + escapeHTML4(utcISOToLocalDisplayDate(t.endDate)) + "</title>" + iconSvg("clock", 16) + "</g>" : "";
+      var overdueBadge = overdue ? '<g transform="translate(' + (blocked ? n.w - 46 : n.w - 24) + ',8)" style="color:var(--kf-overdue-fg);"><title>Overdue \u2014 end date was ' + escapeHTML5(utcISOToLocalDisplayDate(t.endDate)) + "</title>" + iconSvg("clock", 16) + "</g>" : "";
       var typeBadge = "";
       if (taskType && taskType.iconName) {
         var precedingBadgeCount = (blocked ? 1 : 0) + (overdue ? 1 : 0);
-        typeBadge = '<g transform="translate(' + (n.w - 24 - precedingBadgeCount * 22) + ',8)" style="color:var(--kf-text-secondary);"><title>' + escapeHTML4(taskType.name) + "</title>" + iconSvg(taskType.iconName, 16) + "</g>";
+        typeBadge = '<g transform="translate(' + (n.w - 24 - precedingBadgeCount * 22) + ',8)" style="color:var(--kf-text-secondary);"><title>' + escapeHTML5(taskType.name) + "</title>" + iconSvg(taskType.iconName, 16) + "</g>";
       }
-      var avatarBadge = assignee ? "<g><title>" + escapeHTML4(assignee.name) + '</title><circle cx="' + (n.w - 18) + '" cy="' + (n.h - 16) + '" r="10" fill="' + assignee.color + '"></circle><text x="' + (n.w - 18) + '" y="' + (n.h - 12.5) + '" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">' + escapeHTML4(memberInitials(assignee.name)) + "</text></g>" : "";
+      var avatarBadge = assignee ? "<g><title>" + escapeHTML5(assignee.name) + '</title><circle cx="' + (n.w - 18) + '" cy="' + (n.h - 16) + '" r="10" fill="' + assignee.color + '"></circle><text x="' + (n.w - 18) + '" y="' + (n.h - 12.5) + '" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">' + escapeHTML5(memberInitials(assignee.name)) + "</text></g>" : "";
       var archivedBadge = t.archived ? '<g transform="translate(4,7)" style="color:var(--kf-text-faint);"><title>Archived</title>' + iconSvg("archive", 14) + "</g>" : "";
       var keyX = t.archived ? 30 : 16;
-      return '<g class="kf-depnode' + (t.archived ? " kf-depnode-archived" : "") + '" data-task-id="' + t.id + '" transform="translate(' + n.x + "," + n.y + ')"><rect class="kf-depnode-box" x="0" y="0" width="' + n.w + '" height="' + n.h + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border);" stroke-width="1.5"></rect><rect x="0" y="0" width="5" height="' + n.h + '" rx="2" fill="' + prio.accent + '"></rect>' + archivedBadge + '<text x="' + keyX + '" y="20" font-size="10" font-weight="700" style="fill:var(--kf-text-faint);">' + escapeHTML4(t.key) + '</text><text x="16" y="38" font-size="13" font-weight="600" style="fill:var(--kf-text);">' + escapeHTML4(title) + '</text><circle cx="21" cy="54" r="4" fill="' + prio.accent + '"></circle><text x="30" y="57.5" font-size="10" font-weight="700" fill="' + prio.accent + '">' + escapeHTML4(prio.label) + "</text>" + warningBadge + overdueBadge + typeBadge + avatarBadge + "</g>";
+      return '<g class="kf-depnode' + (t.archived ? " kf-depnode-archived" : "") + '" data-task-id="' + t.id + '" transform="translate(' + n.x + "," + n.y + ')"><rect class="kf-depnode-box" x="0" y="0" width="' + n.w + '" height="' + n.h + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border);" stroke-width="1.5"></rect><rect x="0" y="0" width="5" height="' + n.h + '" rx="2" fill="' + prio.accent + '"></rect>' + archivedBadge + '<text x="' + keyX + '" y="20" font-size="10" font-weight="700" style="fill:var(--kf-text-faint);">' + escapeHTML5(t.key) + '</text><text x="16" y="38" font-size="13" font-weight="600" style="fill:var(--kf-text);">' + escapeHTML5(title) + '</text><circle cx="21" cy="54" r="4" fill="' + prio.accent + '"></circle><text x="30" y="57.5" font-size="10" font-weight="700" fill="' + prio.accent + '">' + escapeHTML5(prio.label) + "</text>" + warningBadge + overdueBadge + typeBadge + avatarBadge + "</g>";
     }).join("");
     var svgHTML = '<svg width="' + layout.width + '" height="' + layout.height + '" viewBox="0 0 ' + layout.width + " " + layout.height + '" xmlns="http://www.w3.org/2000/svg">' + defsHTML + edgesHTML + nodesHTML + "</svg>";
     inner.innerHTML = svgHTML;
@@ -9039,7 +9527,7 @@ self.onmessage = function(e) {
   function openDepMapOverlay() {
     var project = getCurrentProject();
     if (!project) {
-      _toast4("No project selected.");
+      _toast5("No project selected.");
       return;
     }
     depMapState.scale = 1;
@@ -9060,19 +9548,19 @@ self.onmessage = function(e) {
   }
 
   // src/js/views/org-chart.js
-  function escapeHTML5(s) {
+  function escapeHTML6(s) {
     var d = document.createElement("div");
     d.textContent = s == null ? "" : String(s);
     return d.innerHTML;
   }
-  function iconHTML3(name, size) {
+  function iconHTML4(name, size) {
     return '<span class="kf-icon">' + iconSvg(name, size) + "</span>";
   }
-  var _toast5 = function(msg) {
+  var _toast6 = function(msg) {
     console.error(msg);
   };
   function setOrgChartDeps(deps) {
-    if (deps.toast) _toast5 = deps.toast;
+    if (deps.toast) _toast6 = deps.toast;
   }
   var orgChartState = { scale: 1, panActive: false, panMoved: false, panStartX: 0, panStartY: 0, panStartScrollLeft: 0, panStartScrollTop: 0 };
   var ORGCHART_MIN_ZOOM = 0.3;
@@ -9168,12 +9656,12 @@ self.onmessage = function(e) {
     var filterType = ui.orgChartFilter;
     var typeLabel = TEAM_COMMITTEE_TYPES[filterType];
     document.getElementById("orgChartTitle").textContent = "Org Chart" + (project ? " \u2014 " + project.name : "");
-    legend.innerHTML = '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:' + ORGCHART_TYPE_ACCENT[filterType] + ';"></span>' + escapeHTML5(typeLabel) + '</span><span class="kf-legend-item">' + iconSvg("team", 12) + ' Number of direct members</span><span class="kf-legend-item">Click a box to see its members</span>';
+    legend.innerHTML = '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:' + ORGCHART_TYPE_ACCENT[filterType] + ';"></span>' + escapeHTML6(typeLabel) + '</span><span class="kf-legend-item">' + iconSvg("team", 12) + ' Number of direct members</span><span class="kf-legend-item">Click a box to see its members</span>';
     var hasAny = project && (project.teamsCommittees || []).some(function(tc) {
       return tc.type === filterType;
     });
     if (!hasAny) {
-      inner.innerHTML = '<div class="kf-depmap-empty">' + iconHTML3("inbox", 36) + "<div>No " + escapeHTML5(typeLabel.toLowerCase()) + "s yet \u2014 add some in Teams &amp; Committees to see them here.</div></div>";
+      inner.innerHTML = '<div class="kf-depmap-empty">' + iconHTML4("inbox", 36) + "<div>No " + escapeHTML6(typeLabel.toLowerCase()) + "s yet \u2014 add some in Teams &amp; Committees to see them here.</div></div>";
       lastOrgChartLayout = null;
       return;
     }
@@ -9193,7 +9681,7 @@ self.onmessage = function(e) {
       var tc = n.tc;
       var members = tc.memberIds || [];
       var name = tc.name.length > 22 ? tc.name.slice(0, 21) + "\u2026" : tc.name;
-      return '<g class="kf-orgnode" data-tc-id="' + tc.id + '" transform="translate(' + n.x + "," + n.y + ')"><rect class="kf-orgnode-box" x="0" y="0" width="' + n.w + '" height="' + n.h + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border);" stroke-width="1.5"></rect><rect x="0" y="0" width="5" height="' + n.h + '" rx="2" fill="' + accent + '"></rect><text x="16" y="18" font-size="10" font-weight="700" style="fill:var(--kf-text-faint);">' + escapeHTML5(tc.key) + '</text><text x="16" y="36" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML5(tc.name) + "</title>" + escapeHTML5(name) + '</text><g transform="translate(16,' + (n.h - 16) + ')" style="color:var(--kf-text-faint);">' + iconSvg("team", 13) + '</g><text x="34" y="' + (n.h - 5) + '" font-size="11" font-weight="600" style="fill:var(--kf-text-faint);">' + members.length + "</text></g>";
+      return '<g class="kf-orgnode" data-tc-id="' + tc.id + '" transform="translate(' + n.x + "," + n.y + ')"><rect class="kf-orgnode-box" x="0" y="0" width="' + n.w + '" height="' + n.h + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border);" stroke-width="1.5"></rect><rect x="0" y="0" width="5" height="' + n.h + '" rx="2" fill="' + accent + '"></rect><text x="16" y="18" font-size="10" font-weight="700" style="fill:var(--kf-text-faint);">' + escapeHTML6(tc.key) + '</text><text x="16" y="36" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML6(tc.name) + "</title>" + escapeHTML6(name) + '</text><g transform="translate(16,' + (n.h - 16) + ')" style="color:var(--kf-text-faint);">' + iconSvg("team", 13) + '</g><text x="34" y="' + (n.h - 5) + '" font-size="11" font-weight="600" style="fill:var(--kf-text-faint);">' + members.length + "</text></g>";
     }).join("");
     var svgHTML = '<svg width="' + layout.width + '" height="' + layout.height + '" viewBox="0 0 ' + layout.width + " " + layout.height + '" xmlns="http://www.w3.org/2000/svg">' + edgesHTML + nodesHTML + "</svg>";
     inner.innerHTML = svgHTML;
@@ -9263,10 +9751,10 @@ self.onmessage = function(e) {
     }).filter(Boolean).sort(function(a, b) {
       return a.name.localeCompare(b.name, void 0, { sensitivity: "base" });
     });
-    document.getElementById("orgChartMemberPopoverTitle").innerHTML = escapeHTML5(tc.name) + ' <span class="kf-decision-type-pill">' + escapeHTML5(TEAM_COMMITTEE_TYPES[tc.type]) + "</span>";
+    document.getElementById("orgChartMemberPopoverTitle").innerHTML = escapeHTML6(tc.name) + ' <span class="kf-decision-type-pill">' + escapeHTML6(TEAM_COMMITTEE_TYPES[tc.type]) + "</span>";
     var listEl = document.getElementById("orgChartMemberPopoverList");
     listEl.innerHTML = members.length ? members.map(function(m) {
-      return '<div class="kf-tc-member-item"><span class="kf-avatar kf-avatar-sm" style="background:' + m.color + ';">' + escapeHTML5(memberInitials(m.name)) + "</span>" + escapeHTML5(m.name) + (m.role ? ' <span class="kf-health-top-member-role">' + escapeHTML5(m.role) + "</span>" : "") + "</div>";
+      return '<div class="kf-tc-member-item"><span class="kf-avatar kf-avatar-sm" style="background:' + m.color + ';">' + escapeHTML6(memberInitials(m.name)) + "</span>" + escapeHTML6(m.name) + (m.role ? ' <span class="kf-health-top-member-role">' + escapeHTML6(m.role) + "</span>" : "") + "</div>";
     }).join("") : '<div class="kf-tc-empty" style="padding:10px 0;">No direct members.</div>';
     popover.classList.remove("hidden");
     var popW = popover.offsetWidth || 240;
@@ -9285,7 +9773,7 @@ self.onmessage = function(e) {
   function openOrgChartOverlay() {
     var project = getCurrentProject();
     if (!project) {
-      _toast5("No project selected.");
+      _toast6("No project selected.");
       return;
     }
     orgChartState.scale = 1;
@@ -9308,22 +9796,22 @@ self.onmessage = function(e) {
   }
 
   // src/js/views/workflow-editor.js
-  function escapeHTML6(s) {
+  function escapeHTML7(s) {
     var d = document.createElement("div");
     d.textContent = s == null ? "" : String(s);
     return d.innerHTML;
   }
-  function iconHTML4(name, size) {
+  function iconHTML5(name, size) {
     return '<span class="kf-icon">' + iconSvg(name, size) + "</span>";
   }
-  var _toast6 = function(msg) {
+  var _toast7 = function(msg) {
     console.error(msg);
   };
   var _confirmDialog2 = function(title, msg, cb) {
     if (window.confirm(title + "\n" + msg)) cb();
   };
   function setWorkflowEditorDeps(deps) {
-    if (deps.toast) _toast6 = deps.toast;
+    if (deps.toast) _toast7 = deps.toast;
     if (deps.confirmDialog) _confirmDialog2 = deps.confirmDialog;
   }
   var workflowEditorState = {
@@ -9445,7 +9933,7 @@ self.onmessage = function(e) {
     }
     ensureProjectWorkflow(project);
     if (project.columns.length === 0) {
-      inner.innerHTML = '<div class="kf-depmap-empty">' + iconHTML4("inbox", 36) + "<div>This board has no columns yet \u2014 add some columns to build a workflow.</div></div>";
+      inner.innerHTML = '<div class="kf-depmap-empty">' + iconHTML5("inbox", 36) + "<div>This board has no columns yet \u2014 add some columns to build a workflow.</div></div>";
       lastWorkflowLayout = null;
       return;
     }
@@ -9459,13 +9947,13 @@ self.onmessage = function(e) {
       var color = WORKFLOW_EDGE_COLOR[e.type] || WORKFLOW_EDGE_COLOR.allowed;
       var dashAttr = e.type === "conditional" ? ' stroke-dasharray="5,5"' : "";
       var titleText = e.type === "conditional" ? describeWorkflowCondition(e.condition) + (e.message ? " \u2014 " + e.message : "") : e.message;
-      return '<g class="kf-wfedge-group" data-edge-id="' + e.id + '">' + (titleText ? "<title>" + escapeHTML6(titleText) + "</title>" : "") + '<path class="kf-wfedge" d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2.5"' + dashAttr + ' marker-start="url(#kf-wf-dot-start-' + e.type + ')" marker-end="url(#kf-wf-dot-end-' + e.type + ')"></path><path class="kf-wfedge-hit" data-edge-id="' + e.id + '" d="' + d + '" fill="none" stroke="transparent" stroke-width="16"></path></g>';
+      return '<g class="kf-wfedge-group" data-edge-id="' + e.id + '">' + (titleText ? "<title>" + escapeHTML7(titleText) + "</title>" : "") + '<path class="kf-wfedge" d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2.5"' + dashAttr + ' marker-start="url(#kf-wf-dot-start-' + e.type + ')" marker-end="url(#kf-wf-dot-end-' + e.type + ')"></path><path class="kf-wfedge-hit" data-edge-id="' + e.id + '" d="' + d + '" fill="none" stroke="transparent" stroke-width="16"></path></g>';
     }).join("");
     var nodesHTML = project.columns.map(function(col, idx) {
       var pos = layout.positions[col.id];
       var label = idx + 1 + ". " + col.name;
       var displayLabel = label.length > 24 ? label.slice(0, 23) + "\u2026" : label;
-      return '<g class="kf-wfnode" data-column-id="' + col.id + '" transform="translate(' + pos.x + "," + pos.y + ')"><rect class="kf-wfnode-box" x="0" y="0" width="' + WORKFLOW_NODE_W + '" height="' + WORKFLOW_NODE_H + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border-strong);" stroke-width="1.5"></rect>' + (col.done ? '<rect x="0" y="0" width="5" height="' + WORKFLOW_NODE_H + '" rx="2" fill="#22a06b"></rect>' : "") + '<text x="16" y="' + (WORKFLOW_NODE_H / 2 + 5) + '" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML6(label) + "</title>" + escapeHTML6(displayLabel) + "</text></g>";
+      return '<g class="kf-wfnode" data-column-id="' + col.id + '" transform="translate(' + pos.x + "," + pos.y + ')"><rect class="kf-wfnode-box" x="0" y="0" width="' + WORKFLOW_NODE_W + '" height="' + WORKFLOW_NODE_H + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border-strong);" stroke-width="1.5"></rect>' + (col.done ? '<rect x="0" y="0" width="5" height="' + WORKFLOW_NODE_H + '" rx="2" fill="#22a06b"></rect>' : "") + '<text x="16" y="' + (WORKFLOW_NODE_H / 2 + 5) + '" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML7(label) + "</title>" + escapeHTML7(displayLabel) + "</text></g>";
     }).join("");
     var svgHTML = '<svg width="' + layout.width + '" height="' + layout.height + '" viewBox="0 0 ' + layout.width + " " + layout.height + '" xmlns="http://www.w3.org/2000/svg">' + defsHTML + edgesHTML + nodesHTML + "</svg>";
     inner.innerHTML = svgHTML;
@@ -9525,7 +10013,7 @@ self.onmessage = function(e) {
   function openWorkflowOverlay() {
     var project = getCurrentProject();
     if (!project) {
-      _toast6("No project selected.");
+      _toast7("No project selected.");
       return;
     }
     workflowEditorState.scale = 1;
@@ -9847,28 +10335,28 @@ self.onmessage = function(e) {
   }
 
   // src/js/views/timeline.js
-  function escapeHTML7(s) {
+  function escapeHTML8(s) {
     var d = document.createElement("div");
     d.textContent = s == null ? "" : String(s);
     return d.innerHTML;
   }
-  function iconHTML5(name, size) {
+  function iconHTML6(name, size) {
     return '<span class="kf-icon">' + iconSvg(name, size) + "</span>";
   }
-  function buildEl2(tag, className, innerHTML) {
+  function buildEl3(tag, className, innerHTML) {
     var el = document.createElement(tag);
     if (className) el.className = className;
     if (innerHTML !== void 0) el.innerHTML = innerHTML;
     return el;
   }
   var PRIORITY_ORDER2 = ["trivial", "low", "medium", "high", "critical"];
-  var _toast7 = function(msg) {
+  var _toast8 = function(msg) {
     console.error(msg);
   };
   var _openTaskModal4 = function() {
   };
   function setTimelineDeps(deps) {
-    if (deps.toast) _toast7 = deps.toast;
+    if (deps.toast) _toast8 = deps.toast;
     if (deps.openTaskModal) _openTaskModal4 = deps.openTaskModal;
   }
   function localCalDateFromISO(iso) {
@@ -10054,7 +10542,7 @@ self.onmessage = function(e) {
   function openTimelineOverlay() {
     var project = getCurrentProject();
     if (!project) {
-      _toast7("No project selected.");
+      _toast8("No project selected.");
       return;
     }
     document.getElementById("timelineScaleSelect").value = ui.timelineScale;
@@ -10082,21 +10570,21 @@ self.onmessage = function(e) {
     var range = computeTimelineRange(project);
     if (!range.start || !range.end) {
       var msg = !range.start && !range.end ? "Set a project start date (or a start date on at least one task) and a project end date to see a timeline." : !range.start ? "Set a project start date, or a start date on at least one task, to see a timeline." : "Set a project end date to see a timeline.";
-      inner.appendChild(buildEl2("div", "kf-timeline-empty", iconHTML5("inbox", 36) + "<div>" + escapeHTML7(msg) + "</div>"));
+      inner.appendChild(buildEl3("div", "kf-timeline-empty", iconHTML6("inbox", 36) + "<div>" + escapeHTML8(msg) + "</div>"));
       return;
     }
     if (range.end.getTime() < range.start.getTime()) {
-      inner.appendChild(buildEl2("div", "kf-timeline-empty", iconHTML5("inbox", 36) + "<div>The project's end date is before its start date. Fix the project dates to see a timeline.</div>"));
+      inner.appendChild(buildEl3("div", "kf-timeline-empty", iconHTML6("inbox", 36) + "<div>The project's end date is before its start date. Fix the project dates to see a timeline.</div>"));
       return;
     }
     var overrunTask = findTimelineOverrun(project, range.end);
     if (overrunTask) {
       alertBanner.classList.remove("hidden");
-      alertBanner.innerHTML = iconHTML5("warning", 16) + "<span>" + escapeHTML7(overrunTask.key) + " \u201C" + escapeHTML7(overrunTask.title) + "\u201D is scheduled to finish " + escapeHTML7(utcISOToLocalDisplayDate(overrunTask.endDate)) + " \u2014 after the project's end date of " + escapeHTML7(utcISOToLocalDisplayDate(project.endDate)) + ".</span>";
+      alertBanner.innerHTML = iconHTML6("warning", 16) + "<span>" + escapeHTML8(overrunTask.key) + " \u201C" + escapeHTML8(overrunTask.title) + "\u201D is scheduled to finish " + escapeHTML8(utcISOToLocalDisplayDate(overrunTask.endDate)) + " \u2014 after the project's end date of " + escapeHTML8(utcISOToLocalDisplayDate(project.endDate)) + ".</span>";
     }
     legend.innerHTML = PRIORITY_ORDER2.map(function(key) {
       var conf = getPriority(key);
-      return '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:' + conf.accent + ';"></span>' + escapeHTML7(conf.label) + "</span>";
+      return '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:' + conf.accent + ';"></span>' + escapeHTML8(conf.label) + "</span>";
     }).join("") + '<span class="kf-legend-item"><span class="kf-legend-dot" style="background:var(--kf-blue);"></span>Today</span>' + (ui.timelineShowArchived ? '<span class="kf-legend-item">' + iconSvg("archive", 12) + " Archived task (ghosted)</span>" : "");
     var activeTasks = getTasksArray(project).filter(function(t) {
       return !t.archived;
@@ -10106,7 +10594,7 @@ self.onmessage = function(e) {
     }) : [];
     var tasks = activeTasks.concat(archivedTasks);
     if (tasks.length === 0) {
-      inner.appendChild(buildEl2("div", "kf-timeline-empty", iconHTML5("inbox", 36) + "<div>No tasks to show on the timeline yet.</div>"));
+      inner.appendChild(buildEl3("div", "kf-timeline-empty", iconHTML6("inbox", 36) + "<div>No tasks to show on the timeline yet.</div>"));
       return;
     }
     function effectiveStart(t) {
@@ -10132,7 +10620,7 @@ self.onmessage = function(e) {
     }, 0);
     var headerRow = document.createElement("div");
     headerRow.className = "kf-timeline-header-row";
-    var headerName = buildEl2("div", "kf-timeline-name-cell", "Task");
+    var headerName = buildEl3("div", "kf-timeline-name-cell", "Task");
     headerName.style.width = nameColWidth + "px";
     headerName.style.minWidth = nameColWidth + "px";
     headerRow.appendChild(headerName);
@@ -10140,7 +10628,7 @@ self.onmessage = function(e) {
     headerTrack.className = "kf-timeline-track";
     headerTrack.style.width = totalTrackWidth + "px";
     columns.forEach(function(col) {
-      var cell = buildEl2("div", "kf-timeline-col-header", escapeHTML7(col.label));
+      var cell = buildEl3("div", "kf-timeline-col-header", escapeHTML8(col.label));
       cell.style.width = col.width + "px";
       headerTrack.appendChild(cell);
     });
@@ -10173,21 +10661,21 @@ self.onmessage = function(e) {
       nameCell.style.minWidth = nameColWidth + "px";
       var assignee = getMemberById(project, t.assigneeId);
       if (assignee) {
-        var avatar = buildEl2("span", "kf-avatar kf-avatar-sm", escapeHTML7(memberInitials(assignee.name)));
+        var avatar = buildEl3("span", "kf-avatar kf-avatar-sm", escapeHTML8(memberInitials(assignee.name)));
         avatar.style.background = assignee.color;
         avatar.title = assignee.name;
         nameCell.appendChild(avatar);
       }
       var nameText = document.createElement("div");
       nameText.className = "kf-timeline-name-text";
-      nameText.innerHTML = '<span class="kf-timeline-name-key">' + escapeHTML7(t.key) + '</span><span class="kf-timeline-name-title">' + escapeHTML7(t.title) + "</span>";
+      nameText.innerHTML = '<span class="kf-timeline-name-key">' + escapeHTML8(t.key) + '</span><span class="kf-timeline-name-title">' + escapeHTML8(t.title) + "</span>";
       nameCell.appendChild(nameText);
       row.appendChild(nameCell);
       var track = document.createElement("div");
       track.className = "kf-timeline-track";
       track.style.width = totalTrackWidth + "px";
       columns.forEach(function(col) {
-        var cell = buildEl2("div", "kf-timeline-cell", "");
+        var cell = buildEl3("div", "kf-timeline-cell", "");
         cell.style.width = col.width + "px";
         track.appendChild(cell);
       });
@@ -10206,22 +10694,22 @@ self.onmessage = function(e) {
         bar.style.width = barWidth + "px";
         bar.style.background = prio.accent;
         if (assignee) {
-          var barAvatar = buildEl2("span", "kf-avatar kf-avatar-sm", escapeHTML7(memberInitials(assignee.name)));
+          var barAvatar = buildEl3("span", "kf-avatar kf-avatar-sm", escapeHTML8(memberInitials(assignee.name)));
           barAvatar.style.background = assignee.color;
           barAvatar.title = assignee.name;
           bar.appendChild(barAvatar);
         }
-        bar.appendChild(buildEl2("span", "kf-timeline-bar-key", escapeHTML7(t.key)));
+        bar.appendChild(buildEl3("span", "kf-timeline-bar-key", escapeHTML8(t.key)));
         var taskType = getTaskTypeById(project, t.typeId);
         if (taskType && taskType.iconName) {
-          var barTypeIcon = buildEl2("span", "kf-timeline-bar-type-icon", iconSvg(taskType.iconName, 13));
+          var barTypeIcon = buildEl3("span", "kf-timeline-bar-type-icon", iconSvg(taskType.iconName, 13));
           barTypeIcon.title = taskType.name;
           bar.appendChild(barTypeIcon);
         }
         bar.title = t.key + " \u2014 " + t.title + (startD ? " \xB7 Start " + utcISOToLocalDisplayDate(t.startDate) : "") + (endD ? " \xB7 End " + utcISOToLocalDisplayDate(t.endDate) : "");
         track.appendChild(bar);
       } else {
-        track.appendChild(buildEl2("div", "kf-timeline-no-dates-note", "No dates set"));
+        track.appendChild(buildEl3("div", "kf-timeline-no-dates-note", "No dates set"));
       }
       if (todayX !== null) {
         var todayLine = document.createElement("div");
@@ -10235,27 +10723,27 @@ self.onmessage = function(e) {
   }
 
   // src/js/views/cost-benefit.js
-  function escapeHTML8(s) {
+  function escapeHTML9(s) {
     var d = document.createElement("div");
     d.textContent = s == null ? "" : String(s);
     return d.innerHTML;
   }
-  function iconHTML6(name, size) {
+  function iconHTML7(name, size) {
     return '<span class="kf-icon">' + iconSvg(name, size) + "</span>";
   }
-  function buildEl3(tag, className, innerHTML) {
+  function buildEl4(tag, className, innerHTML) {
     var el = document.createElement(tag);
     if (className) el.className = className;
     if (innerHTML !== void 0) el.innerHTML = innerHTML;
     return el;
   }
-  var _toast8 = function(msg) {
+  var _toast9 = function(msg) {
     console.error(msg);
   };
   var _openTaskModal5 = function() {
   };
   function setCostBenefitDeps(deps) {
-    if (deps.toast) _toast8 = deps.toast;
+    if (deps.toast) _toast9 = deps.toast;
     if (deps.openTaskModal) _openTaskModal5 = deps.openTaskModal;
   }
   var CB_WIDTH = 880;
@@ -10335,14 +10823,14 @@ self.onmessage = function(e) {
     legend.innerHTML = PRIORITY_ORDER.map(function(key) {
       var conf = getPriority(key);
       var dotSize = Math.round(8 * CB_PRIORITY_RADIUS_MULTIPLIER[key]);
-      return '<span class="kf-legend-item"><span class="kf-legend-dot" style="background:' + conf.accent + ";width:" + dotSize + "px;height:" + dotSize + 'px;"></span>' + escapeHTML8(conf.label) + "</span>";
+      return '<span class="kf-legend-item"><span class="kf-legend-dot" style="background:' + conf.accent + ";width:" + dotSize + "px;height:" + dotSize + 'px;"></span>' + escapeHTML9(conf.label) + "</span>";
     }).join("") + '<span class="kf-legend-item" style="color:var(--kf-text-faint);">Marker size = priority</span><span class="kf-legend-item" style="margin-left:auto;color:var(--kf-text-faint);">Quadrants split at the midpoint (500) of the 1\u20131000 scale</span>' + (ui.cbShowArchived ? '<span class="kf-legend-item">' + iconSvg("archive", 12) + " Archived task (greyed out)</span>" : "");
     var hasTasks = project && getTasksArray(project).some(function(t) {
       return !t.archived || ui.cbShowArchived;
     });
     if (!hasTasks) {
       inner.innerHTML = "";
-      inner.appendChild(buildEl3("div", "kf-depmap-empty", iconHTML6("inbox", 36) + "<div>No tasks yet \u2014 set Business Value and Task Cost on a task to plot it here.</div>"));
+      inner.appendChild(buildEl4("div", "kf-depmap-empty", iconHTML7("inbox", 36) + "<div>No tasks yet \u2014 set Business Value and Task Cost on a task to plot it here.</div>"));
       return;
     }
     var layout = computeCostBenefitLayout(project);
@@ -10366,7 +10854,7 @@ self.onmessage = function(e) {
       var t = p.task;
       var prio = getPriority(t.priority);
       var labelOffset = p.radius + 6;
-      return '<g class="kf-cb-point' + (t.archived ? " kf-cb-point-archived" : "") + '" data-task-id="' + t.id + '"><title>' + escapeHTML8(t.key) + " \u2014 " + escapeHTML8(t.title) + " (Cost " + p.cost + ", Value " + p.value + ")" + (t.archived ? " [Archived]" : "") + '</title><circle class="kf-cb-dot" cx="' + p.x + '" cy="' + p.y + '" r="' + p.radius + '" fill="' + prio.accent + '" style="stroke:var(--kf-surface);" stroke-width="1.5"></circle><text x="' + (p.x + labelOffset) + '" y="' + (p.y + 4) + '" font-size="10" font-weight="600" style="fill:var(--kf-text-secondary);">' + escapeHTML8(t.key) + "</text></g>";
+      return '<g class="kf-cb-point' + (t.archived ? " kf-cb-point-archived" : "") + '" data-task-id="' + t.id + '"><title>' + escapeHTML9(t.key) + " \u2014 " + escapeHTML9(t.title) + " (Cost " + p.cost + ", Value " + p.value + ")" + (t.archived ? " [Archived]" : "") + '</title><circle class="kf-cb-dot" cx="' + p.x + '" cy="' + p.y + '" r="' + p.radius + '" fill="' + prio.accent + '" style="stroke:var(--kf-surface);" stroke-width="1.5"></circle><text x="' + (p.x + labelOffset) + '" y="' + (p.y + 4) + '" font-size="10" font-weight="600" style="fill:var(--kf-text-secondary);">' + escapeHTML9(t.key) + "</text></g>";
     }).join("");
     inner.innerHTML = '<svg width="' + CB_WIDTH + '" height="' + CB_HEIGHT + '" viewBox="0 0 ' + CB_WIDTH + " " + CB_HEIGHT + '" xmlns="http://www.w3.org/2000/svg">' + quadrantsHTML + axesHTML + quadrantLabelsHTML + ticksHTML + axisTitlesHTML + pointsHTML + "</svg>";
     applyCbZoom();
@@ -10426,7 +10914,7 @@ self.onmessage = function(e) {
   function openCostBenefitOverlay() {
     var project = getCurrentProject();
     if (!project) {
-      _toast8("No project selected.");
+      _toast9("No project selected.");
       return;
     }
     cbZoomState.scale = 1;
@@ -10447,7 +10935,7 @@ self.onmessage = function(e) {
   }
 
   // src/js/features/export.js
-  var _toast9 = function(msg) {
+  var _toast10 = function(msg) {
     console.error(msg);
   };
   function buildHierarchy(project) {
@@ -10670,18 +11158,18 @@ self.onmessage = function(e) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    _toast9("Exported " + doc.totalTasks + " tasks and " + doc.members.length + " team member(s) to " + a.download);
+    _toast10("Exported " + doc.totalTasks + " tasks and " + doc.members.length + " team member(s) to " + a.download);
   }
 
   // src/js/features/import.js
-  var _toast10 = function(msg) {
+  var _toast11 = function(msg) {
     console.error(msg);
   };
   var _renderAll = function() {
   };
   var _resetFilters = function() {
   };
-  function escapeHTML9(str) {
+  function escapeHTML10(str) {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function flattenImportedHierarchy(nodes, out) {
@@ -11418,27 +11906,27 @@ self.onmessage = function(e) {
     if (!file) return;
     var reader = new FileReader();
     reader.onerror = function() {
-      _toast10("Could not read that file.");
+      _toast11("Could not read that file.");
     };
     reader.onload = function() {
       var parsed;
       try {
         parsed = JSON.parse(reader.result);
       } catch (e) {
-        _toast10("That file isn't valid JSON.");
+        _toast11("That file isn't valid JSON.");
         return;
       }
       var result;
       try {
         result = buildProjectFromExportDoc(parsed);
       } catch (e) {
-        _toast10(e.message || "Could not import that file.");
+        _toast11(e.message || "Could not import that file.");
         return;
       }
       var conflict = findConflictingProject(result.project.name, result.project.key);
       if (conflict) {
         pendingImport = { result, conflictId: conflict.id };
-        var msg = "A project named \u201C" + escapeHTML9(conflict.name) + "\u201D (" + conflict.key + ") already exists on this board. Would you like to overwrite it with the imported data, or keep both as separate projects?";
+        var msg = "A project named \u201C" + escapeHTML10(conflict.name) + "\u201D (" + conflict.key + ") already exists on this board. Would you like to overwrite it with the imported data, or keep both as separate projects?";
         document.getElementById("importConflictMessage").innerHTML = msg;
         document.getElementById("importConflictOverlay").classList.remove("hidden");
         return;
@@ -11463,7 +11951,7 @@ self.onmessage = function(e) {
     if (result.unresolvedTaskTypes > 0) msg += " Skipped " + result.unresolvedTaskTypes + " task type reference(s) that could not be matched.";
     var unresolvedDocLinks = (result.unresolvedDocOwners || 0) + (result.unresolvedDocTasks || 0) + (result.unresolvedDocRelated || 0) + (result.unresolvedRiskOwners || 0) + (result.unresolvedRiskTasks || 0) + (result.unresolvedRiskDocs || 0) + (result.unresolvedDecisionOwners || 0) + (result.unresolvedDecisionTasks || 0) + (result.unresolvedDecisionDocs || 0) + (result.unresolvedDecisionRisks || 0) + (result.unresolvedRiskPrinciples || 0) + (result.unresolvedRiskObjectives || 0) + (result.unresolvedObjectivePrinciples || 0) + (result.unresolvedDecisionPrinciples || 0) + (result.unresolvedDecisionObjectives || 0) + (result.unresolvedTcParents || 0) + (result.unresolvedTcMembers || 0) + (result.unresolvedMemberReportsTo || 0) + (result.unresolvedWorkflowNodes || 0) + (result.unresolvedWorkflowEdges || 0);
     if (unresolvedDocLinks > 0) msg += " Skipped " + unresolvedDocLinks + " document/risk/decision/principle/objective/team/workflow reference(s) that could not be matched.";
-    _toast10(msg);
+    _toast11(msg);
   }
   function closeImportConflictModal() {
     document.getElementById("importConflictOverlay").classList.add("hidden");
@@ -11471,7 +11959,7 @@ self.onmessage = function(e) {
   }
 
   // src/js/features/bulk-edit.js
-  function buildEl4(tag, className, innerHTML) {
+  function buildEl5(tag, className, innerHTML) {
     var el = document.createElement(tag);
     if (className) el.className = className;
     if (innerHTML !== void 0) el.innerHTML = innerHTML;
@@ -11523,7 +12011,7 @@ self.onmessage = function(e) {
   function renderBulkEditHeader() {
     var header = document.getElementById("bulkEditHeader");
     header.innerHTML = BULKEDIT_COLUMNS.map(function(col) {
-      return "<div>" + escapeHTML2(col.label) + "</div>";
+      return "<div>" + escapeHTML3(col.label) + "</div>";
     }).join("");
   }
   function updateBulkEditPendingState() {
@@ -11571,8 +12059,8 @@ self.onmessage = function(e) {
     var row = document.createElement("div");
     row.className = "kf-bulkedit-row" + (t.archived ? " kf-bulkedit-archived-row" : "");
     row.setAttribute("data-task-id", t.id);
-    var keyEl = buildEl4("span", "kf-bulkedit-key", escapeHTML2(t.key));
-    var titleEl = buildEl4("span", "kf-bulkedit-title", escapeHTML2(t.title));
+    var keyEl = buildEl5("span", "kf-bulkedit-key", escapeHTML3(t.key));
+    var titleEl = buildEl5("span", "kf-bulkedit-title", escapeHTML3(t.title));
     titleEl.title = t.title;
     row.appendChild(keyEl);
     row.appendChild(titleEl);
@@ -11685,7 +12173,7 @@ self.onmessage = function(e) {
       setBulkEditField(project, t.id, "taskCost", clampTaskScore(costInput.value), t.taskCost, costInput);
     });
     row.appendChild(costInput);
-    var statusEl = buildEl4("span", "kf-bulkedit-status-badge", t.archived ? "Archived" : "Active");
+    var statusEl = buildEl5("span", "kf-bulkedit-status-badge", t.archived ? "Archived" : "Active");
     row.appendChild(statusEl);
     return row;
   }
@@ -11851,7 +12339,7 @@ self.onmessage = function(e) {
       var row = document.createElement("label");
       row.className = "kf-archived-row";
       var checked = ui.archivedSelected.has(t.id);
-      row.innerHTML = '<input type="checkbox" ' + (checked ? "checked" : "") + '><span class="kf-dep-key">' + escapeHTML2(t.key) + '</span><span class="kf-archived-row-title">' + escapeHTML2(t.title) + '</span><span class="kf-priority-pill" style="color:' + prio.color + ";background:" + prio.bg + ';">' + iconSvg(prio.icon, 12) + escapeHTML2(prio.label) + "</span>";
+      row.innerHTML = '<input type="checkbox" ' + (checked ? "checked" : "") + '><span class="kf-dep-key">' + escapeHTML3(t.key) + '</span><span class="kf-archived-row-title">' + escapeHTML3(t.title) + '</span><span class="kf-priority-pill" style="color:' + prio.color + ";background:" + prio.bg + ';">' + iconSvg(prio.icon, 12) + escapeHTML3(prio.label) + "</span>";
       row.querySelector("input").addEventListener("change", function(e) {
         if (e.target.checked) ui.archivedSelected.add(t.id);
         else ui.archivedSelected.delete(t.id);
@@ -12116,7 +12604,7 @@ self.onmessage = function(e) {
       if (!t) return;
       var chip = document.createElement("span");
       chip.className = "kf-dep-chip-removable";
-      chip.innerHTML = "<span>" + escapeHTML2(t.key) + '</span><button type="button" aria-label="Remove dependency">' + iconSvg("close", 12) + "</button>";
+      chip.innerHTML = "<span>" + escapeHTML3(t.key) + '</span><button type="button" aria-label="Remove dependency">' + iconSvg("close", 12) + "</button>";
       chip.querySelector("button").addEventListener("click", function() {
         ui.taskModalDeps = ui.taskModalDeps.filter(function(id) {
           return id !== depId;
@@ -12152,7 +12640,7 @@ self.onmessage = function(e) {
       var isDisallowed = disallowed.has(t.id);
       row.className = "kf-dep-row" + (isDisallowed ? " disabled" : "");
       var checked = ui.taskModalDeps.indexOf(t.id) !== -1;
-      row.innerHTML = '<input type="checkbox" ' + (checked ? "checked" : "") + (isDisallowed ? "disabled" : "") + '><span class="kf-dep-key">' + escapeHTML2(t.key) + '</span><span class="kf-dep-title">' + escapeHTML2(t.title) + "</span>";
+      row.innerHTML = '<input type="checkbox" ' + (checked ? "checked" : "") + (isDisallowed ? "disabled" : "") + '><span class="kf-dep-key">' + escapeHTML3(t.key) + '</span><span class="kf-dep-title">' + escapeHTML3(t.title) + "</span>";
       if (isDisallowed) {
         row.title = "Selecting this would create a circular dependency";
       }
@@ -12375,7 +12863,7 @@ self.onmessage = function(e) {
       var row = document.createElement("div");
       row.className = "kf-member-row";
       row.setAttribute("data-member-id", m.id);
-      row.innerHTML = '<span class="kf-avatar kf-avatar-md" style="background:' + m.color + ';">' + escapeHTML2(memberInitials(m.name)) + '</span><input type="text" class="kf-member-name-input" value="' + escapeHTML2(m.name) + '" maxlength="60" aria-label="Member name"><input type="text" class="kf-member-role-input" value="' + escapeHTML2(m.role || "") + '" maxlength="60" list="memberRoleOptions" placeholder="Role" aria-label="Member role"><button class="kf-btn kf-btn-ghost" data-action="remove-member" title="Remove from project">' + iconSvg("trash", 14) + "</button>";
+      row.innerHTML = '<span class="kf-avatar kf-avatar-md" style="background:' + m.color + ';">' + escapeHTML3(memberInitials(m.name)) + '</span><input type="text" class="kf-member-name-input" value="' + escapeHTML3(m.name) + '" maxlength="60" aria-label="Member name"><input type="text" class="kf-member-role-input" value="' + escapeHTML3(m.role || "") + '" maxlength="60" list="memberRoleOptions" placeholder="Role" aria-label="Member role"><button class="kf-btn kf-btn-ghost" data-action="remove-member" title="Remove from project">' + iconSvg("trash", 14) + "</button>";
       var nameInput = row.querySelector(".kf-member-name-input");
       nameInput.addEventListener("change", function() {
         renameMember(project, m.id, nameInput.value);
@@ -12409,9 +12897,9 @@ self.onmessage = function(e) {
         return a.name.localeCompare(b.name, void 0, { sensitivity: "base" });
       });
       var optionsHTML = '<option value="">No one</option>' + otherMembers.map(function(other) {
-        return '<option value="' + other.id + '"' + (m.reportsToId === other.id ? " selected" : "") + ">" + escapeHTML2(other.name) + "</option>";
+        return '<option value="' + other.id + '"' + (m.reportsToId === other.id ? " selected" : "") + ">" + escapeHTML3(other.name) + "</option>";
       }).join("");
-      reportsToRow.innerHTML = '<label for="reportsTo-' + m.id + '">Reports to</label><select id="reportsTo-' + m.id + '" class="kf-member-reportsto-select" aria-label="' + escapeHTML2(m.name) + ' reports to">' + optionsHTML + "</select>";
+      reportsToRow.innerHTML = '<label for="reportsTo-' + m.id + '">Reports to</label><select id="reportsTo-' + m.id + '" class="kf-member-reportsto-select" aria-label="' + escapeHTML3(m.name) + ' reports to">' + optionsHTML + "</select>";
       var reportsToSelect = reportsToRow.querySelector("select");
       reportsToSelect.addEventListener("change", function() {
         setMemberReportsTo(project, m.id, reportsToSelect.value || null);
@@ -12474,7 +12962,7 @@ self.onmessage = function(e) {
       row.className = "kf-member-row";
       row.setAttribute("data-tasktype-id", tt.id);
       var triggerIconHTML = tt.iconName ? iconSvg(tt.iconName, 16) : iconSvg("tag", 16);
-      row.innerHTML = '<div class="kf-tasktype-icon-wrap"><button type="button" class="kf-tasktype-icon-trigger' + (tt.iconName ? "" : " kf-tasktype-icon-unset") + '" title="' + (tt.iconName ? "Change icon (" + escapeHTML2(getTaskTypeIconLabel(tt.iconName)) + ")" : "Choose an icon") + '" aria-label="Choose an icon for this task type">' + triggerIconHTML + '</button><div class="kf-tasktype-icon-panel hidden"><div class="kf-tasktype-icon-grid">' + buildTaskTypeIconGridHTML(tt.iconName) + '</div><div class="kf-dropdown-filter-divider"></div><button type="button" class="kf-dropdown-filter-clear kf-tasktype-icon-clear">No icon</button></div></div><input type="text" class="kf-member-name-input" value="' + escapeHTML2(tt.name) + '" maxlength="40" aria-label="Task type name"><button class="kf-btn kf-btn-ghost" data-action="remove-tasktype" title="Remove from project">' + iconSvg("trash", 14) + "</button>";
+      row.innerHTML = '<div class="kf-tasktype-icon-wrap"><button type="button" class="kf-tasktype-icon-trigger' + (tt.iconName ? "" : " kf-tasktype-icon-unset") + '" title="' + (tt.iconName ? "Change icon (" + escapeHTML3(getTaskTypeIconLabel(tt.iconName)) + ")" : "Choose an icon") + '" aria-label="Choose an icon for this task type">' + triggerIconHTML + '</button><div class="kf-tasktype-icon-panel hidden"><div class="kf-tasktype-icon-grid">' + buildTaskTypeIconGridHTML(tt.iconName) + '</div><div class="kf-dropdown-filter-divider"></div><button type="button" class="kf-dropdown-filter-clear kf-tasktype-icon-clear">No icon</button></div></div><input type="text" class="kf-member-name-input" value="' + escapeHTML3(tt.name) + '" maxlength="40" aria-label="Task type name"><button class="kf-btn kf-btn-ghost" data-action="remove-tasktype" title="Remove from project">' + iconSvg("trash", 14) + "</button>";
       var triggerBtn = row.querySelector(".kf-tasktype-icon-trigger");
       var iconPanel = row.querySelector(".kf-tasktype-icon-panel");
       triggerBtn.addEventListener("click", function(e) {
@@ -12620,13 +13108,13 @@ self.onmessage = function(e) {
       }
       var metaHTML = "";
       if (owner) {
-        metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML2(memberInitials(owner.name)) + "</span><span>" + escapeHTML2(owner.name) + "</span>";
+        metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML3(memberInitials(owner.name)) + "</span><span>" + escapeHTML3(owner.name) + "</span>";
       } else {
         metaHTML += "<span>Unassigned</span>";
       }
-      if (dateRangeText) metaHTML += "<span>" + escapeHTML2(dateRangeText) + "</span>";
+      if (dateRangeText) metaHTML += "<span>" + escapeHTML3(dateRangeText) + "</span>";
       metaHTML += '<span class="kf-release-task-count">' + taskCount + " task" + (taskCount === 1 ? "" : "s") + "</span>";
-      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-release-name">' + escapeHTML2(r.name) + '</span><span class="kf-release-status-pill ' + normalizeReleaseStatus(r.status) + '">' + escapeHTML2(statusMeta.label) + '</span></div><div class="kf-release-row-meta">' + metaHTML + "</div>";
+      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-release-name">' + escapeHTML3(r.name) + '</span><span class="kf-release-status-pill ' + normalizeReleaseStatus(r.status) + '">' + escapeHTML3(statusMeta.label) + '</span></div><div class="kf-release-row-meta">' + metaHTML + "</div>";
       row.addEventListener("click", function() {
         showReleasesFormView(r.id);
       });
@@ -12698,7 +13186,7 @@ self.onmessage = function(e) {
       var row = document.createElement("label");
       row.className = "kf-risk-doc-picker-row";
       var checked = selectedDocIds.indexOf(d.id) !== -1;
-      row.innerHTML = '<input type="checkbox" data-doc-id="' + d.id + '" ' + (checked ? "checked" : "") + '><span class="kf-dep-key">' + escapeHTML2(d.key) + '</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML2(d.title) + "</span>";
+      row.innerHTML = '<input type="checkbox" data-doc-id="' + d.id + '" ' + (checked ? "checked" : "") + '><span class="kf-dep-key">' + escapeHTML3(d.key) + '</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML3(d.title) + "</span>";
       wrap.appendChild(row);
     });
   }
@@ -12721,7 +13209,7 @@ self.onmessage = function(e) {
       var row = document.createElement("label");
       row.className = "kf-risk-doc-picker-row";
       var checked = selectedRiskIds.indexOf(r.id) !== -1;
-      row.innerHTML = '<input type="checkbox" data-risk-id="' + r.id + '" ' + (checked ? "checked" : "") + '><span class="kf-dep-key">' + escapeHTML2(r.key) + '</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML2(r.title) + "</span>";
+      row.innerHTML = '<input type="checkbox" data-risk-id="' + r.id + '" ' + (checked ? "checked" : "") + '><span class="kf-dep-key">' + escapeHTML3(r.key) + '</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML3(r.title) + "</span>";
       wrap.appendChild(row);
     });
   }
@@ -12737,14 +13225,14 @@ self.onmessage = function(e) {
       return a.key.localeCompare(b.key, void 0, { numeric: true });
     });
     if (sorted.length === 0) {
-      wrap.innerHTML = '<div class="kf-risk-doc-picker-empty">' + escapeHTML2(emptyMessage || "Nothing in this project yet.") + "</div>";
+      wrap.innerHTML = '<div class="kf-risk-doc-picker-empty">' + escapeHTML3(emptyMessage || "Nothing in this project yet.") + "</div>";
       return;
     }
     sorted.forEach(function(item) {
       var row = document.createElement("label");
       row.className = "kf-risk-doc-picker-row";
       var checked = selectedIds.indexOf(item.id) !== -1;
-      row.innerHTML = '<input type="checkbox" data-item-id="' + item.id + '" ' + (checked ? "checked" : "") + '><span class="kf-dep-key">' + escapeHTML2(item.key) + '</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML2(item.title) + "</span>";
+      row.innerHTML = '<input type="checkbox" data-item-id="' + item.id + '" ' + (checked ? "checked" : "") + '><span class="kf-dep-key">' + escapeHTML3(item.key) + '</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML3(item.title) + "</span>";
       wrap.appendChild(row);
     });
   }
@@ -12767,7 +13255,7 @@ self.onmessage = function(e) {
       var row = document.createElement("label");
       row.className = "kf-risk-doc-picker-row";
       var checked = selectedIds.indexOf(m.id) !== -1;
-      row.innerHTML = '<input type="checkbox" data-item-id="' + m.id + '" ' + (checked ? "checked" : "") + '><span class="kf-avatar kf-avatar-sm" style="background:' + m.color + ';">' + escapeHTML2(memberInitials(m.name)) + '</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML2(m.name) + "</span>";
+      row.innerHTML = '<input type="checkbox" data-item-id="' + m.id + '" ' + (checked ? "checked" : "") + '><span class="kf-avatar kf-avatar-sm" style="background:' + m.color + ';">' + escapeHTML3(memberInitials(m.name)) + '</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML3(m.name) + "</span>";
       wrap.appendChild(row);
     });
   }
@@ -13044,8 +13532,8 @@ self.onmessage = function(e) {
       var owner = getMemberById(project, d.ownerId);
       var title = d.title.length > 24 ? d.title.slice(0, 23) + "\u2026" : d.title;
       var linkBadge = d.url ? '<g transform="translate(' + (DOCMAP_NODE_W - 24) + ',8)" style="color:var(--kf-text-secondary);"><title>Has a linked URL</title>' + iconSvg("externalLink", 16) + "</g>" : "";
-      var ownerBadge = owner ? "<g><title>" + escapeHTML2(owner.name) + '</title><circle cx="' + (DOCMAP_NODE_W - 18) + '" cy="' + (DOCMAP_NODE_H - 16) + '" r="10" fill="' + owner.color + '"></circle><text x="' + (DOCMAP_NODE_W - 18) + '" y="' + (DOCMAP_NODE_H - 12.5) + '" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">' + escapeHTML2(memberInitials(owner.name)) + "</text></g>" : "";
-      return '<g class="kf-docmap-node' + (n.isolated ? " kf-docmap-node-isolated" : "") + '" data-document-id="' + d.id + '" transform="translate(' + n.x + "," + n.y + ')"><rect class="kf-docmap-node-box" x="0" y="0" width="' + DOCMAP_NODE_W + '" height="' + DOCMAP_NODE_H + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border);" stroke-width="1.5"></rect><text x="16" y="20" font-size="10" font-weight="700" style="fill:var(--kf-text-faint);">' + escapeHTML2(d.key) + '</text><text x="16" y="38" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML2(d.title) + "</title>" + escapeHTML2(title) + "</text>" + linkBadge + ownerBadge + "</g>";
+      var ownerBadge = owner ? "<g><title>" + escapeHTML3(owner.name) + '</title><circle cx="' + (DOCMAP_NODE_W - 18) + '" cy="' + (DOCMAP_NODE_H - 16) + '" r="10" fill="' + owner.color + '"></circle><text x="' + (DOCMAP_NODE_W - 18) + '" y="' + (DOCMAP_NODE_H - 12.5) + '" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">' + escapeHTML3(memberInitials(owner.name)) + "</text></g>" : "";
+      return '<g class="kf-docmap-node' + (n.isolated ? " kf-docmap-node-isolated" : "") + '" data-document-id="' + d.id + '" transform="translate(' + n.x + "," + n.y + ')"><rect class="kf-docmap-node-box" x="0" y="0" width="' + DOCMAP_NODE_W + '" height="' + DOCMAP_NODE_H + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border);" stroke-width="1.5"></rect><text x="16" y="20" font-size="10" font-weight="700" style="fill:var(--kf-text-faint);">' + escapeHTML3(d.key) + '</text><text x="16" y="38" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML3(d.title) + "</title>" + escapeHTML3(title) + "</text>" + linkBadge + ownerBadge + "</g>";
     }).join("");
     chartEl.innerHTML = '<svg width="' + layout.width + '" height="' + layout.height + '" viewBox="0 0 ' + layout.width + " " + layout.height + '" xmlns="http://www.w3.org/2000/svg">' + edgesHTML + nodesHTML + "</svg>";
     legendEl.innerHTML = '<span class="kf-health-legend-item"><span class="kf-health-legend-swatch" style="background:var(--kf-border-strong);"></span>Line = related documents</span><span class="kf-health-legend-item" style="opacity:0.85;"><span class="kf-health-legend-swatch" style="background:var(--kf-border-strong);opacity:0.6;"></span>Faded node = no related documents yet</span><span class="kf-health-legend-item">' + iconSvg("externalLink", 12) + " Has a linked URL</span>";
@@ -13158,7 +13646,7 @@ self.onmessage = function(e) {
       return hay.indexOf(term) !== -1;
     }) : allDocs;
     if (docs.length === 0) {
-      listEl.innerHTML = '<div class="kf-releases-empty">No documents match \u201C' + escapeHTML2(ui.documentsSearchTerm.trim()) + "\u201D.</div>";
+      listEl.innerHTML = '<div class="kf-releases-empty">No documents match \u201C' + escapeHTML3(ui.documentsSearchTerm.trim()) + "\u201D.</div>";
       renderDocumentMap();
       return;
     }
@@ -13170,17 +13658,17 @@ self.onmessage = function(e) {
       row.setAttribute("data-document-id", d.id);
       var metaHTML = "";
       if (owner) {
-        metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML2(memberInitials(owner.name)) + "</span><span>" + escapeHTML2(owner.name) + "</span>";
+        metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML3(memberInitials(owner.name)) + "</span><span>" + escapeHTML3(owner.name) + "</span>";
       } else {
         metaHTML += "<span>Unassigned</span>";
       }
-      metaHTML += "<span>Added " + escapeHTML2(utcISOToLocalDisplayDate(d.dateCreated)) + "</span>";
-      if (linkedTask) metaHTML += "<span>" + escapeHTML2(linkedTask.key) + "</span>";
+      metaHTML += "<span>Added " + escapeHTML3(utcISOToLocalDisplayDate(d.dateCreated)) + "</span>";
+      if (linkedTask) metaHTML += "<span>" + escapeHTML3(linkedTask.key) + "</span>";
       if (d.relatedDocumentIds && d.relatedDocumentIds.length > 0) {
         metaHTML += "<span>" + d.relatedDocumentIds.length + " related</span>";
       }
-      var urlLinkHTML = d.url ? '<a class="kf-doc-row-link" href="' + escapeHTML2(d.url) + '" target="_blank" rel="noopener noreferrer" title="Open ' + escapeHTML2(d.url) + ' in a new tab" aria-label="Open document link in a new tab">' + iconSvg("externalLink", 14) + "</a>" : "";
-      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-dep-key">' + escapeHTML2(d.key) + '</span><span class="kf-release-name">' + escapeHTML2(d.title) + "</span>" + urlLinkHTML + '</div><div class="kf-release-row-meta">' + metaHTML + "</div>";
+      var urlLinkHTML = d.url ? '<a class="kf-doc-row-link" href="' + escapeHTML3(d.url) + '" target="_blank" rel="noopener noreferrer" title="Open ' + escapeHTML3(d.url) + ' in a new tab" aria-label="Open document link in a new tab">' + iconSvg("externalLink", 14) + "</a>" : "";
+      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-dep-key">' + escapeHTML3(d.key) + '</span><span class="kf-release-name">' + escapeHTML3(d.title) + "</span>" + urlLinkHTML + '</div><div class="kf-release-row-meta">' + metaHTML + "</div>";
       var urlLinkEl = row.querySelector(".kf-doc-row-link");
       if (urlLinkEl) {
         urlLinkEl.addEventListener("click", function(e) {
@@ -13364,7 +13852,7 @@ self.onmessage = function(e) {
       row.setAttribute("data-risk-id", r.id);
       var metaHTML = "";
       if (owner) {
-        metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML2(memberInitials(owner.name)) + "</span><span>" + escapeHTML2(owner.name) + "</span>";
+        metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML3(memberInitials(owner.name)) + "</span><span>" + escapeHTML3(owner.name) + "</span>";
       } else {
         metaHTML += "<span>Unassigned</span>";
       }
@@ -13378,7 +13866,7 @@ self.onmessage = function(e) {
       if (r.objectiveIds && r.objectiveIds.length > 0) {
         metaHTML += "<span>" + r.objectiveIds.length + " objective" + (r.objectiveIds.length === 1 ? "" : "s") + "</span>";
       }
-      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-dep-key">' + escapeHTML2(r.key) + '</span><span class="kf-release-name">' + escapeHTML2(r.title) + '</span><span class="kf-risk-status-pill ' + normalizeRiskStatus(r.status) + '">' + escapeHTML2(statusMeta.label) + '</span></div><div class="kf-release-row-meta">' + metaHTML + "</div>";
+      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-dep-key">' + escapeHTML3(r.key) + '</span><span class="kf-release-name">' + escapeHTML3(r.title) + '</span><span class="kf-risk-status-pill ' + normalizeRiskStatus(r.status) + '">' + escapeHTML3(statusMeta.label) + '</span></div><div class="kf-release-row-meta">' + metaHTML + "</div>";
       row.addEventListener("click", function() {
         showRisksFormView(r.id);
       });
@@ -13735,7 +14223,7 @@ self.onmessage = function(e) {
     return '<svg viewBox="0 0 ' + size + " " + size * 0.72 + '" width="' + size + '" height="' + size * 0.72 + '" class="kf-gauge-svg" data-target-pct="' + (pct === null ? "" : pct) + '" data-size="' + size + '"><path d="' + trackPath + '" fill="none" stroke="var(--kf-border)" stroke-width="' + strokeW + '" stroke-linecap="round"/><path class="kf-gauge-value-path" d="' + valuePathD + '" fill="none" stroke="' + valueColor + '" stroke-width="' + strokeW + '" stroke-linecap="round"/><text class="kf-gauge-value-text" x="' + cx + '" y="' + (cy - r * 0.15) + '" text-anchor="middle" font-size="' + size * 0.17 + '" font-weight="700" fill="var(--kf-text)">' + labelText + "</text></svg>";
   }
   function buildGaugeBlock(pct, label, size, startAtZero) {
-    return '<div class="kf-health-gauge-block">' + buildGaugeSvg(pct, size, startAtZero) + '<div class="kf-health-gauge-label">' + escapeHTML2(label) + "</div></div>";
+    return '<div class="kf-health-gauge-block">' + buildGaugeSvg(pct, size, startAtZero) + '<div class="kf-health-gauge-label">' + escapeHTML3(label) + "</div></div>";
   }
   var HEALTH_GAUGE_ANIM_DELAY_MS = 500;
   var HEALTH_GAUGE_ANIM_DURATION_MS = 900;
@@ -13849,7 +14337,7 @@ self.onmessage = function(e) {
     for (var li = 0; li <= numXLabels; li++) {
       var labelDate = xMin + (xMax - xMin) * (li / numXLabels);
       var lx = xPos(labelDate);
-      xLabelsHTML += '<text x="' + lx + '" y="' + (marginTop + plotH + 16) + '" font-size="10" text-anchor="middle" fill="var(--kf-text-secondary)">' + escapeHTML2(new Date(labelDate).toLocaleDateString(void 0, { month: "short", day: "numeric" })) + "</text>";
+      xLabelsHTML += '<text x="' + lx + '" y="' + (marginTop + plotH + 16) + '" font-size="10" text-anchor="middle" fill="var(--kf-text-secondary)">' + escapeHTML3(new Date(labelDate).toLocaleDateString(void 0, { month: "short", day: "numeric" })) + "</text>";
     }
     var ySteps = [0, Math.round(yMax * 0.25), Math.round(yMax * 0.5), Math.round(yMax * 0.75), yMax];
     var yGridHTML = ySteps.map(function(v) {
@@ -13931,7 +14419,7 @@ self.onmessage = function(e) {
       chartEl.innerHTML = buildBurndownChartSvg(project, burndown, 760, 280) + '<div class="kf-health-legend"><span class="kf-health-legend-item"><span class="kf-health-legend-swatch" style="background:var(--kf-border-strong);"></span>Ideal pace</span><span class="kf-health-legend-item"><span class="kf-health-legend-swatch" style="background:#0c66e4;"></span>Actual remaining</span><span class="kf-health-legend-item"><span class="kf-health-legend-swatch" style="background:' + (burndown.isOverrun ? "#ae2e24" : "var(--kf-text-faint)") + ';"></span>Projected</span></div>';
       if (burndown.isOverrun) {
         warningEl.classList.remove("hidden");
-        warningEl.innerHTML = '<span class="kf-icon" data-icon="warning" data-size="16"></span><span>At the current velocity (' + burndown.velocityPerWeek.toFixed(1) + " tasks/week), remaining work is projected to finish on " + escapeHTML2(utcISOToLocalDisplayDate(new Date(burndown.projectedCompletionDate).toISOString())) + " \u2014 after the planned end date of " + escapeHTML2(utcISOToLocalDisplayDate(new Date(burndown.endDate).toISOString())) + ".</span>";
+        warningEl.innerHTML = '<span class="kf-icon" data-icon="warning" data-size="16"></span><span>At the current velocity (' + burndown.velocityPerWeek.toFixed(1) + " tasks/week), remaining work is projected to finish on " + escapeHTML3(utcISOToLocalDisplayDate(new Date(burndown.projectedCompletionDate).toISOString())) + " \u2014 after the planned end date of " + escapeHTML3(utcISOToLocalDisplayDate(new Date(burndown.endDate).toISOString())) + ".</span>";
         hydrateIcons(warningEl);
       } else {
         warningEl.classList.add("hidden");
@@ -13964,7 +14452,7 @@ self.onmessage = function(e) {
       var maxCount = topMembers[0].count;
       topMembersEl.innerHTML = topMembers.map(function(row, idx) {
         var barPct = maxCount > 0 ? row.count / maxCount * 100 : 0;
-        return '<div class="kf-health-top-member-row"><span class="kf-health-top-member-rank">' + (idx + 1) + '</span><span class="kf-avatar kf-avatar-sm" style="background:' + row.color + ';">' + escapeHTML2(memberInitials(row.name)) + '</span><span class="kf-health-top-member-name">' + escapeHTML2(row.name) + (row.role ? ' <span class="kf-health-top-member-role">' + escapeHTML2(row.role) + "</span>" : "") + '</span><span class="kf-health-top-member-bar-track"><span class="kf-health-top-member-bar-fill" style="width:' + barPct + '%;"></span></span><span class="kf-health-top-member-count">' + row.count + "</span></div>";
+        return '<div class="kf-health-top-member-row"><span class="kf-health-top-member-rank">' + (idx + 1) + '</span><span class="kf-avatar kf-avatar-sm" style="background:' + row.color + ';">' + escapeHTML3(memberInitials(row.name)) + '</span><span class="kf-health-top-member-name">' + escapeHTML3(row.name) + (row.role ? ' <span class="kf-health-top-member-role">' + escapeHTML3(row.role) + "</span>" : "") + '</span><span class="kf-health-top-member-bar-track"><span class="kf-health-top-member-bar-fill" style="width:' + barPct + '%;"></span></span><span class="kf-health-top-member-count">' + row.count + "</span></div>";
       }).join("");
     }
     startHealthGaugeAnimation();
@@ -14092,13 +14580,13 @@ self.onmessage = function(e) {
       row.setAttribute("data-decision-id", dec.id);
       var metaHTML = "";
       if (owner) {
-        metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML2(memberInitials(owner.name)) + "</span><span>" + escapeHTML2(owner.name) + "</span>";
+        metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML3(memberInitials(owner.name)) + "</span><span>" + escapeHTML3(owner.name) + "</span>";
       } else {
         metaHTML += "<span>Unassigned</span>";
       }
-      metaHTML += "<span>Added " + escapeHTML2(utcISOToLocalDisplayDate(dec.dateCreated)) + "</span>";
-      if (dec.approver) metaHTML += "<span>Approver: " + escapeHTML2(dec.approver) + "</span>";
-      if (linkedTask) metaHTML += "<span>" + escapeHTML2(linkedTask.key) + "</span>";
+      metaHTML += "<span>Added " + escapeHTML3(utcISOToLocalDisplayDate(dec.dateCreated)) + "</span>";
+      if (dec.approver) metaHTML += "<span>Approver: " + escapeHTML3(dec.approver) + "</span>";
+      if (linkedTask) metaHTML += "<span>" + escapeHTML3(linkedTask.key) + "</span>";
       if (dec.documentIds && dec.documentIds.length > 0) {
         metaHTML += "<span>" + dec.documentIds.length + " doc" + (dec.documentIds.length === 1 ? "" : "s") + "</span>";
       }
@@ -14111,7 +14599,7 @@ self.onmessage = function(e) {
       if (dec.objectiveIds && dec.objectiveIds.length > 0) {
         metaHTML += "<span>" + dec.objectiveIds.length + " objective" + (dec.objectiveIds.length === 1 ? "" : "s") + "</span>";
       }
-      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-dep-key">' + escapeHTML2(dec.key) + '</span><span class="kf-release-name">' + escapeHTML2(dec.title) + '</span><span class="kf-decision-type-pill">' + escapeHTML2(typeMeta.label) + '</span><span class="kf-decision-status-pill ' + normalizeDecisionStatus(dec.status) + '">' + escapeHTML2(statusMeta.label) + '</span></div><div class="kf-release-row-meta">' + metaHTML + "</div>";
+      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-dep-key">' + escapeHTML3(dec.key) + '</span><span class="kf-release-name">' + escapeHTML3(dec.title) + '</span><span class="kf-decision-type-pill">' + escapeHTML3(typeMeta.label) + '</span><span class="kf-decision-status-pill ' + normalizeDecisionStatus(dec.status) + '">' + escapeHTML3(statusMeta.label) + '</span></div><div class="kf-release-row-meta">' + metaHTML + "</div>";
       row.addEventListener("click", function() {
         showDecisionsFormView(dec.id);
       });
@@ -14235,16 +14723,16 @@ self.onmessage = function(e) {
       return hay.indexOf(term) !== -1;
     }) : allPrinciples;
     if (principles.length === 0) {
-      listEl.innerHTML = '<div class="kf-releases-empty">No principles match \u201C' + escapeHTML2(ui.principlesSearchTerm.trim()) + "\u201D.</div>";
+      listEl.innerHTML = '<div class="kf-releases-empty">No principles match \u201C' + escapeHTML3(ui.principlesSearchTerm.trim()) + "\u201D.</div>";
       return;
     }
     principles.forEach(function(p) {
       var row = document.createElement("div");
       row.className = "kf-release-row";
       row.setAttribute("data-principle-id", p.id);
-      var metaHTML = "<span>Added " + escapeHTML2(utcISOToLocalDisplayDate(p.dateCreated)) + "</span>";
-      var urlLinkHTML = p.documentUrl ? '<a class="kf-doc-row-link" href="' + escapeHTML2(p.documentUrl) + '" target="_blank" rel="noopener noreferrer" title="Open ' + escapeHTML2(p.documentUrl) + ' in a new tab" aria-label="Open document link in a new tab">' + iconSvg("externalLink", 14) + "</a>" : "";
-      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-dep-key">' + escapeHTML2(p.key) + '</span><span class="kf-release-name">' + escapeHTML2(p.title) + "</span>" + urlLinkHTML + '</div><div class="kf-release-row-meta">' + metaHTML + "</div>";
+      var metaHTML = "<span>Added " + escapeHTML3(utcISOToLocalDisplayDate(p.dateCreated)) + "</span>";
+      var urlLinkHTML = p.documentUrl ? '<a class="kf-doc-row-link" href="' + escapeHTML3(p.documentUrl) + '" target="_blank" rel="noopener noreferrer" title="Open ' + escapeHTML3(p.documentUrl) + ' in a new tab" aria-label="Open document link in a new tab">' + iconSvg("externalLink", 14) + "</a>" : "";
+      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-dep-key">' + escapeHTML3(p.key) + '</span><span class="kf-release-name">' + escapeHTML3(p.title) + "</span>" + urlLinkHTML + '</div><div class="kf-release-row-meta">' + metaHTML + "</div>";
       var urlLinkEl = row.querySelector(".kf-doc-row-link");
       if (urlLinkEl) urlLinkEl.addEventListener("click", function(e) {
         e.stopPropagation();
@@ -14362,18 +14850,18 @@ self.onmessage = function(e) {
       return hay.indexOf(term) !== -1;
     }) : allObjectives;
     if (objectives.length === 0) {
-      listEl.innerHTML = '<div class="kf-releases-empty">No objectives match \u201C' + escapeHTML2(ui.objectivesSearchTerm.trim()) + "\u201D.</div>";
+      listEl.innerHTML = '<div class="kf-releases-empty">No objectives match \u201C' + escapeHTML3(ui.objectivesSearchTerm.trim()) + "\u201D.</div>";
       return;
     }
     objectives.forEach(function(o) {
       var row = document.createElement("div");
       row.className = "kf-release-row";
       row.setAttribute("data-objective-id", o.id);
-      var metaHTML = "<span>Added " + escapeHTML2(utcISOToLocalDisplayDate(o.dateCreated)) + "</span>";
+      var metaHTML = "<span>Added " + escapeHTML3(utcISOToLocalDisplayDate(o.dateCreated)) + "</span>";
       if (o.principleIds && o.principleIds.length > 0) {
         metaHTML += "<span>" + o.principleIds.length + " principle" + (o.principleIds.length === 1 ? "" : "s") + "</span>";
       }
-      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-dep-key">' + escapeHTML2(o.key) + '</span><span class="kf-release-name">' + escapeHTML2(o.title) + '</span></div><div class="kf-release-row-meta">' + metaHTML + "</div>";
+      row.innerHTML = '<div class="kf-release-row-top"><span class="kf-dep-key">' + escapeHTML3(o.key) + '</span><span class="kf-release-name">' + escapeHTML3(o.title) + '</span></div><div class="kf-release-row-meta">' + metaHTML + "</div>";
       row.addEventListener("click", function() {
         showObjectivesFormView(o.id);
       });
@@ -14472,7 +14960,7 @@ self.onmessage = function(e) {
         }
       });
       if (Object.keys(visibleIds).length === 0) {
-        listEl.innerHTML = '<div class="kf-tc-empty">No teams or committees match \u201C' + escapeHTML2(ui.tcSearchTerm.trim()) + "\u201D.</div>";
+        listEl.innerHTML = '<div class="kf-tc-empty">No teams or committees match \u201C' + escapeHTML3(ui.tcSearchTerm.trim()) + "\u201D.</div>";
         return;
       }
     }
@@ -14500,10 +14988,10 @@ self.onmessage = function(e) {
         return a.name.localeCompare(b.name, void 0, { sensitivity: "base" });
       });
       var toggleHTML = hasChildren ? '<button class="kf-tc-toggle-btn" data-tc-toggle-id="' + node.id + '" aria-label="' + (isExpanded ? "Collapse" : "Expand") + '">' + iconSvg(isExpanded ? "chevronDown" : "chevronRight", 14) + "</button>" : '<span class="kf-tc-toggle-spacer"></span>';
-      html += '<div class="kf-tc-node-row" data-tc-id="' + node.id + '" style="padding-left:' + (8 + depth * 20) + 'px;">' + toggleHTML + '<span class="kf-decision-type-pill">' + escapeHTML2(TEAM_COMMITTEE_TYPES[node.type]) + '</span><span class="kf-tc-name">' + escapeHTML2(node.name) + '</span><span class="kf-tc-member-count">' + members.length + " member" + (members.length === 1 ? "" : "s") + "</span></div>";
+      html += '<div class="kf-tc-node-row" data-tc-id="' + node.id + '" style="padding-left:' + (8 + depth * 20) + 'px;">' + toggleHTML + '<span class="kf-decision-type-pill">' + escapeHTML3(TEAM_COMMITTEE_TYPES[node.type]) + '</span><span class="kf-tc-name">' + escapeHTML3(node.name) + '</span><span class="kf-tc-member-count">' + members.length + " member" + (members.length === 1 ? "" : "s") + "</span></div>";
       if (isExpanded && members.length > 0) {
         html += '<div class="kf-tc-member-list" style="padding-left:' + (8 + (depth + 1) * 20 + 18) + 'px;">' + members.map(function(m) {
-          return '<div class="kf-tc-member-item"><span class="kf-avatar kf-avatar-sm" style="background:' + m.color + ';">' + escapeHTML2(memberInitials(m.name)) + "</span>" + escapeHTML2(m.name) + (m.role ? ' <span class="kf-health-top-member-role">' + escapeHTML2(m.role) + "</span>" : "") + "</div>";
+          return '<div class="kf-tc-member-item"><span class="kf-avatar kf-avatar-sm" style="background:' + m.color + ';">' + escapeHTML3(memberInitials(m.name)) + "</span>" + escapeHTML3(m.name) + (m.role ? ' <span class="kf-health-top-member-role">' + escapeHTML3(m.role) + "</span>" : "") + "</div>";
         }).join("") + "</div>";
       }
     });
@@ -14807,26 +15295,26 @@ self.onmessage = function(e) {
       return g.results.length > 0;
     });
     if (groups.length === 0) {
-      resultsEl.innerHTML = '<div class="kf-search-empty">No results for "' + escapeHTML2(term) + '".</div>';
+      resultsEl.innerHTML = '<div class="kf-search-empty">No results for "' + escapeHTML3(term) + '".</div>';
       return;
     }
     resultsEl.innerHTML = groups.map(function(g) {
       var rowsHTML = g.results.map(function(r) {
         if (g.type === "teamsCommittees") {
-          var typePill = '<span class="kf-decision-type-pill">' + escapeHTML2(TEAM_COMMITTEE_TYPES[r.tcType] || r.tcType) + "</span>";
-          var parentLine = r.parentName ? '<div class="kf-search-result-snippet"><span class="kf-search-result-field-label">Parent:</span> ' + escapeHTML2(r.parentName) + "</div>" : "";
+          var typePill = '<span class="kf-decision-type-pill">' + escapeHTML3(TEAM_COMMITTEE_TYPES[r.tcType] || r.tcType) + "</span>";
+          var parentLine = r.parentName ? '<div class="kf-search-result-snippet"><span class="kf-search-result-field-label">Parent:</span> ' + escapeHTML3(r.parentName) + "</div>" : "";
           var membersLine = r.members.length > 0 ? '<div class="kf-search-result-snippet"><span class="kf-search-result-field-label">Members:</span> ' + r.members.map(function(m) {
-            return escapeHTML2(m.name);
+            return escapeHTML3(m.name);
           }).join(", ") + "</div>" : '<div class="kf-search-result-snippet" style="color:var(--kf-text-faint);">No members</div>';
-          var descSnippet = r.match.label && r.match.label !== null ? '<div class="kf-search-result-snippet"><span class="kf-search-result-field-label">' + escapeHTML2(r.match.label) + ":</span> " + buildSearchSnippetHTML(r.match.value, term) + "</div>" : "";
-          return '<div class="kf-search-result-row" data-result-type="teamsCommittees" data-result-id="' + r.id + '"><div class="kf-search-result-top"><a class="kf-search-result-link" data-result-type="teamsCommittees" data-result-id="' + r.id + '">' + escapeHTML2(r.title) + "</a>" + typePill + "</div>" + parentLine + membersLine + descSnippet + "</div>";
+          var descSnippet = r.match.label && r.match.label !== null ? '<div class="kf-search-result-snippet"><span class="kf-search-result-field-label">' + escapeHTML3(r.match.label) + ":</span> " + buildSearchSnippetHTML(r.match.value, term) + "</div>" : "";
+          return '<div class="kf-search-result-row" data-result-type="teamsCommittees" data-result-id="' + r.id + '"><div class="kf-search-result-top"><a class="kf-search-result-link" data-result-type="teamsCommittees" data-result-id="' + r.id + '">' + escapeHTML3(r.title) + "</a>" + typePill + "</div>" + parentLine + membersLine + descSnippet + "</div>";
         }
-        var fieldLabelHTML = r.match.label ? '<span class="kf-search-result-field-label">' + escapeHTML2(r.match.label) + ":</span> " : "";
+        var fieldLabelHTML = r.match.label ? '<span class="kf-search-result-field-label">' + escapeHTML3(r.match.label) + ":</span> " : "";
         var snippetHTML = buildSearchSnippetHTML(r.match.value, term);
-        return '<div class="kf-search-result-row" data-result-type="' + g.type + '" data-result-id="' + r.id + '"><div class="kf-search-result-top"><a class="kf-search-result-link" data-result-type="' + g.type + '" data-result-id="' + r.id + '">' + escapeHTML2(r.title) + "</a>" + (r.archived ? '<span class="kf-search-archived-badge">Archived</span>' : "") + '</div><div class="kf-search-result-snippet">' + fieldLabelHTML + snippetHTML + "</div></div>";
+        return '<div class="kf-search-result-row" data-result-type="' + g.type + '" data-result-id="' + r.id + '"><div class="kf-search-result-top"><a class="kf-search-result-link" data-result-type="' + g.type + '" data-result-id="' + r.id + '">' + escapeHTML3(r.title) + "</a>" + (r.archived ? '<span class="kf-search-archived-badge">Archived</span>' : "") + '</div><div class="kf-search-result-snippet">' + fieldLabelHTML + snippetHTML + "</div></div>";
       }).join("");
-      var moreNote = g.total > g.results.length ? '<div class="kf-search-more-note">+' + (g.total - g.results.length) + " more in " + escapeHTML2(g.label) + "</div>" : "";
-      return '<div class="kf-search-group"><h3 class="kf-search-group-title"><span class="kf-icon" data-icon="' + PROJECT_SEARCH_GROUP_ICONS[g.type] + '" data-size="13"></span>' + escapeHTML2(g.label) + " (" + g.total + ")</h3>" + rowsHTML + moreNote + "</div>";
+      var moreNote = g.total > g.results.length ? '<div class="kf-search-more-note">+' + (g.total - g.results.length) + " more in " + escapeHTML3(g.label) + "</div>" : "";
+      return '<div class="kf-search-group"><h3 class="kf-search-group-title"><span class="kf-icon" data-icon="' + PROJECT_SEARCH_GROUP_ICONS[g.type] + '" data-size="13"></span>' + escapeHTML3(g.label) + " (" + g.total + ")</h3>" + rowsHTML + moreNote + "</div>";
     }).join("");
     hydrateIcons(resultsEl);
   }
@@ -14984,6 +15472,7 @@ self.onmessage = function(e) {
   setTaskListDeps({ toast, openTaskModal });
   setDepMapDeps({ toast, openTaskModal });
   setOrgChartDeps({ toast });
+  setGovMapDeps({ toast });
   setWorkflowEditorDeps({ toast, confirmDialog });
   setTimelineDeps({ toast, openTaskModal });
   setCostBenefitDeps({ toast, openTaskModal });
@@ -15157,6 +15646,7 @@ self.onmessage = function(e) {
     document.getElementById("navDepMapBtn").addEventListener("click", openDepMapOverlay);
     document.getElementById("navCostBenefitBtn").addEventListener("click", openCostBenefitOverlay);
     document.getElementById("navOrgChartBtn").addEventListener("click", openOrgChartOverlay);
+    document.getElementById("navGovernanceMapBtn").addEventListener("click", openGovMapOverlay);
     document.getElementById("navBulkEditBtn").addEventListener("click", openBulkEditOverlay);
     document.getElementById("navArchivedBtn").addEventListener("click", openArchivedTasksOverlay);
     document.getElementById("navTaskTypesBtn").addEventListener("click", openTaskTypesModal);
@@ -15602,6 +16092,61 @@ self.onmessage = function(e) {
     document.addEventListener("click", function(e) {
       if (isOrgChartMemberPopoverOpen() && !e.target.closest("#orgChartMemberPopover") && !e.target.closest(".kf-orgnode")) closeOrgChartMemberPopover();
     });
+    document.getElementById("governanceMapBtn").addEventListener("click", openGovMapOverlay);
+    document.getElementById("govMapClose").addEventListener("click", closeGovMapOverlay);
+    document.getElementById("govMapRelationshipsToggle").addEventListener("click", toggleGovMapShowRelationships);
+    document.getElementById("govMapZoomInBtn").addEventListener("click", function() {
+      setGovMapZoom(0.1);
+    });
+    document.getElementById("govMapZoomOutBtn").addEventListener("click", function() {
+      setGovMapZoom(-0.1);
+    });
+    document.getElementById("govMapResetBtn").addEventListener("click", resetGovMapZoom);
+    document.getElementById("govMapExportAsBtn").addEventListener("click", function(e) {
+      e.stopPropagation();
+      toggleExportAsPanel("govMapExportAsPanel");
+    });
+    document.querySelectorAll("#govMapExportAsPanel .kf-export-as-option").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        closeAllExportAsPanels();
+        var project = getCurrentProject();
+        var filenameBase = (project ? project.key : "export") + "-governance-map";
+        var svgEl = document.querySelector("#govMapInner svg");
+        if (!svgEl) {
+          toast("Nothing to export.");
+          return;
+        }
+        if (btn.getAttribute("data-export-type") === "svg") exportSvgElementAsSvgFile(svgEl, filenameBase);
+        else exportSvgElementAsPng(svgEl, filenameBase, 4);
+      });
+    });
+    document.getElementById("govMapOverlay").addEventListener("mousedown", function(e) {
+      if (e.target.id === "govMapOverlay") closeGovMapOverlay();
+    });
+    document.getElementById("govMapInner").addEventListener("click", function(e) {
+      if (govMapState.panMoved) return;
+      var node = e.target.closest(".kf-govmap-hub") || e.target.closest(".kf-govmap-leaf");
+      if (!node) return;
+      var type = node.getAttribute("data-type");
+      var id = node.getAttribute("data-id");
+      closeGovMapOverlay();
+      if (type === "principles") {
+        openPrinciplesOverlay();
+        if (id) showPrinciplesFormView(id);
+      } else if (type === "objectives") {
+        openObjectivesOverlay();
+        if (id) showObjectivesFormView(id);
+      } else if (type === "documents") {
+        openDocumentsOverlay();
+        if (id) showDocumentsFormView(id);
+      } else if (type === "risks") {
+        openRisksOverlay();
+        if (id) showRisksFormView(id);
+      } else if (type === "decisions") {
+        openDecisionsOverlay();
+        if (id) showDecisionsFormView(id);
+      }
+    });
     document.getElementById("workflowBtn").addEventListener("click", openWorkflowOverlay);
     document.getElementById("navWorkflowBtn").addEventListener("click", openWorkflowOverlay);
     document.getElementById("workflowClose").addEventListener("click", closeWorkflowOverlay);
@@ -15860,6 +16405,38 @@ self.onmessage = function(e) {
         orgChartScrollEl.classList.remove("kf-depmap-panning");
       }
     });
+    var govMapScrollEl = document.getElementById("govMapScroll");
+    govMapScrollEl.addEventListener("wheel", function(e) {
+      if (!lastGovMapLayout) return;
+      e.preventDefault();
+      zoomGovMapAtPoint(e.deltaY < 0 ? 0.12 : -0.12, e.clientX, e.clientY);
+    }, { passive: false });
+    govMapScrollEl.addEventListener("mousedown", function(e) {
+      if (e.button !== 0) return;
+      govMapState.panActive = true;
+      govMapState.panMoved = false;
+      govMapState.panStartX = e.clientX;
+      govMapState.panStartY = e.clientY;
+      govMapState.panStartScrollLeft = govMapScrollEl.scrollLeft;
+      govMapState.panStartScrollTop = govMapScrollEl.scrollTop;
+      govMapScrollEl.classList.add("kf-govmap-panning");
+    });
+    document.addEventListener("mousemove", function(e) {
+      if (!govMapState.panActive) return;
+      var dx = e.clientX - govMapState.panStartX;
+      var dy = e.clientY - govMapState.panStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) govMapState.panMoved = true;
+      if (govMapState.panMoved) {
+        govMapScrollEl.scrollLeft = govMapState.panStartScrollLeft - dx;
+        govMapScrollEl.scrollTop = govMapState.panStartScrollTop - dy;
+      }
+    });
+    document.addEventListener("mouseup", function() {
+      if (govMapState.panActive) {
+        govMapState.panActive = false;
+        govMapScrollEl.classList.remove("kf-govmap-panning");
+      }
+    });
     document.getElementById("exportBtn").addEventListener("click", function() {
       var p = getCurrentProject();
       if (!p) {
@@ -16025,6 +16602,7 @@ self.onmessage = function(e) {
       else if (isDepMapOpen()) closeDepMapOverlay();
       else if (isOrgChartMemberPopoverOpen()) closeOrgChartMemberPopover();
       else if (isOrgChartOpen()) closeOrgChartOverlay();
+      else if (isGovMapOpen()) closeGovMapOverlay();
       else if (isWorkflowEdgePopoverOpen()) closeWorkflowEdgePopover();
       else if (isWorkflowOverlayOpen()) closeWorkflowOverlay();
       else if (isTimelineOverlayOpen()) closeTimelineOverlay();

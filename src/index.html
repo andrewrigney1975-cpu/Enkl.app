@@ -118,7 +118,8 @@
         <button type="button" class="kf-side-nav-item" id="navTimelineBtn" title="Timeline"><span class="kf-icon" data-icon="timeline" data-size="18"></span><span class="kf-side-nav-text">Timeline</span></button>
         <button type="button" class="kf-side-nav-item" id="navDepMapBtn" title="Dependency Map"><span class="kf-icon" data-icon="graph" data-size="18"></span><span class="kf-side-nav-text">Dependency Map</span></button>
         <button type="button" class="kf-side-nav-item" id="navCostBenefitBtn" title="Cost/Benefit Chart"><span class="kf-icon" data-icon="quadrant" data-size="18"></span><span class="kf-side-nav-text">Cost/Benefit Chart</span></button>
-        <button type="button" class="kf-side-nav-item" id="navOrgChartBtn" title="Org Chart"><span class="kf-icon" data-icon="orgChart" data-size="18"></span><span class="kf-side-nav-text">Org Chart</span></button>   
+        <button type="button" class="kf-side-nav-item" id="navOrgChartBtn" title="Org Chart"><span class="kf-icon" data-icon="orgChart" data-size="18"></span><span class="kf-side-nav-text">Org Chart</span></button>
+        <button type="button" class="kf-side-nav-item" id="navGovernanceMapBtn" title="Governance Map"><span class="kf-icon" data-icon="radar" data-size="18"></span><span class="kf-side-nav-text">Governance Map</span></button>
       </div>
       <div class="kf-side-nav-section">
         <div class="kf-side-nav-label">Tools</div>
@@ -180,6 +181,7 @@
       <button class="kf-btn kf-btn-secondary" id="depMapBtn"><span class="kf-icon" data-icon="graph" data-size="14"></span>Dependency Map</button>
       <button class="kf-btn kf-btn-secondary" id="costBenefitBtn"><span class="kf-icon" data-icon="quadrant" data-size="14"></span>Cost/Benefit Chart</button>
       <button class="kf-btn kf-btn-secondary" id="orgChartBtn"><span class="kf-icon" data-icon="orgChart" data-size="14"></span>Org Chart</button>
+      <button class="kf-btn kf-btn-secondary" id="governanceMapBtn"><span class="kf-icon" data-icon="radar" data-size="14"></span>Governance Map</button>
     </div>
     <div class="kf-toolbar-spacer"></div>
     <button class="kf-btn kf-btn-secondary" id="addColumnTopBtn"><span class="kf-icon" data-icon="plus" data-size="14"></span>Column</button>
@@ -433,6 +435,37 @@
 <div class="kf-org-member-popover hidden" id="orgChartMemberPopover">
   <div class="kf-org-member-popover-title" id="orgChartMemberPopoverTitle"></div>
   <div class="kf-org-member-popover-list" id="orgChartMemberPopoverList"></div>
+</div>
+
+<!-- Governance Map Overlay -->
+<div class="kf-overlay hidden" id="govMapOverlay">
+  <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="govMapTitle">Governance Map</h2>
+      <div class="kf-modal-header-actions">
+        <button class="kf-btn kf-btn-ghost" id="govMapRelationshipsToggle" title="Hide relationships"><span class="kf-icon" data-icon="link" data-size="16"></span><span id="govMapRelationshipsToggleLabel">Hide relationships</span></button>
+        <div class="kf-header-divider-light"></div>
+        <button class="kf-btn kf-btn-ghost" id="govMapZoomOutBtn" title="Zoom out"><span class="kf-icon" data-icon="zoomOut" data-size="16"></span></button>
+        <span id="govMapZoomLabel" class="kf-zoom-label">100%</span>
+        <button class="kf-btn kf-btn-ghost" id="govMapZoomInBtn" title="Zoom in"><span class="kf-icon" data-icon="zoomIn" data-size="16"></span></button>
+        <button class="kf-btn kf-btn-ghost" id="govMapResetBtn" title="Reset view"><span class="kf-icon" data-icon="fit" data-size="16"></span></button>
+        <div class="kf-header-divider-light"></div>
+        <div class="kf-export-as-wrap">
+          <button class="kf-btn kf-btn-ghost" id="govMapExportAsBtn" title="Export As..."><span class="kf-icon" data-icon="download" data-size="14"></span>Export As...</button>
+          <div class="kf-export-as-panel hidden" id="govMapExportAsPanel">
+            <button type="button" class="kf-export-as-option" data-export-type="svg">Export as SVG</button>
+            <button type="button" class="kf-export-as-option" data-export-type="png">Export as PNG (4x resolution)</button>
+          </div>
+        </div>
+        <div class="kf-header-divider-light"></div>
+        <button class="kf-btn kf-btn-ghost" id="govMapClose" title="Close"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+      </div>
+    </div>
+    <div class="kf-govmap-legend" id="govMapLegend"></div>
+    <div class="kf-govmap-scroll" id="govMapScroll">
+      <div id="govMapInner" class="kf-govmap-inner"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Workflow Editor Overlay -->
