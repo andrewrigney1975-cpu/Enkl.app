@@ -45,6 +45,7 @@ import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen,
 import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitteesOverlayOpen, showTeamCommitteeFormView, showTeamsCommitteesListView, renderTeamsCommitteesList, saveTeamCommitteeFromModal, deleteTeamCommitteeFromModal } from './modals/teams-committees.js';
 import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick } from './modals/project-search.js';
 import { openUfoModal, closeUfoModal, isUfoModalOpen } from './modals/ufo.js';
+import { randomise } from './features/randomise.js';
 
 /* ---- Dependency injection (break circular import chains) ---- */
 setBoardDeps({ toast, confirmDialog, openTaskModal, openColumnModal });
@@ -59,6 +60,7 @@ setMutationsToast(toast);
 
 /* ---- Console-exposed debug helpers ---- */
 window.go_ufo = openUfoModal;
+window.randomise = randomise;
 
 /* =========================================================
    BACKUP REMINDER
