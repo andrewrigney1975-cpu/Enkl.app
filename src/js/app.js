@@ -31,6 +31,8 @@ import { closeAllExportAsPanels, toggleExportAsPanel, exportSvgElementAsSvgFile,
 /* ---- Modals ---- */
 import { confirmDialog, closeConfirmDialog, getPendingConfirmAction } from './modals/confirm.js';
 import { openTaskModal, closeTaskModal, saveTaskFromModal, deleteTaskFromModal, updatePriorityIcon, updateDocUrlOpenButtonVisibility, openDocUrlInNewTab, renderDependencyPicker } from './modals/task.js';
+import { closeSetPrivateKeyModal, confirmSetPrivateKeyFromModal } from './modals/private-key-set.js';
+import { closeUnlockPrivateTaskModal, confirmUnlockFromModal, continueWithoutKeyFromModal } from './modals/private-key-unlock.js';
 import { openColumnModal, closeColumnModal, saveColumnFromModal, deleteColumnFromModal } from './modals/column.js';
 import { openProjectModal, closeProjectModal, saveProjectFromModal } from './modals/project.js';
 import { openTeamModal, closeTeamModal, addMemberFromModal } from './modals/team.js';
@@ -1063,6 +1065,21 @@ function wireEvents(){
     if(e.target.id === 'taskOverlay') closeTaskModal();
   });
 
+  document.getElementById('setPrivateKeyModalClose').addEventListener('click', closeSetPrivateKeyModal);
+  document.getElementById('setPrivateKeyCancelBtn').addEventListener('click', closeSetPrivateKeyModal);
+  document.getElementById('setPrivateKeyConfirmBtn').addEventListener('click', confirmSetPrivateKeyFromModal);
+  document.getElementById('setPrivateKeyOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'setPrivateKeyOverlay') closeSetPrivateKeyModal();
+  });
+
+  document.getElementById('unlockPrivateTaskModalClose').addEventListener('click', closeUnlockPrivateTaskModal);
+  document.getElementById('unlockPrivateTaskCancelBtn').addEventListener('click', closeUnlockPrivateTaskModal);
+  document.getElementById('unlockPrivateTaskConfirmBtn').addEventListener('click', confirmUnlockFromModal);
+  document.getElementById('unlockPrivateTaskContinueBtn').addEventListener('click', continueWithoutKeyFromModal);
+  document.getElementById('unlockPrivateTaskOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'unlockPrivateTaskOverlay') closeUnlockPrivateTaskModal();
+  });
+
   document.getElementById('columnModalClose').addEventListener('click', closeColumnModal);
   document.getElementById('columnCancelBtn').addEventListener('click', closeColumnModal);
   document.getElementById('columnSaveBtn').addEventListener('click', saveColumnFromModal);
@@ -1115,7 +1132,9 @@ function wireEvents(){
 
   document.addEventListener('keydown', function(e){
     if(e.key !== 'Escape') return;
-    if(!document.getElementById('taskOverlay').classList.contains('hidden')) closeTaskModal();
+    if(!document.getElementById('unlockPrivateTaskOverlay').classList.contains('hidden')) closeUnlockPrivateTaskModal();
+    else if(!document.getElementById('setPrivateKeyOverlay').classList.contains('hidden')) closeSetPrivateKeyModal();
+    else if(!document.getElementById('taskOverlay').classList.contains('hidden')) closeTaskModal();
     else if(!document.getElementById('columnOverlay').classList.contains('hidden')) closeColumnModal();
     else if(!document.getElementById('projectOverlay').classList.contains('hidden')) closeProjectModal();
     else if(!document.getElementById('teamOverlay').classList.contains('hidden')) closeTeamModal();

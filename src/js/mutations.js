@@ -932,6 +932,11 @@ export function addTask(project, data){
     businessValue: clampTaskScore(data.businessValue),
     taskCost: clampTaskScore(data.taskCost),
     archived: !!data.archived,
+    isPrivate: !!data.isPrivate,
+    privateSalt: data.privateSalt || null,
+    privateVerifier: data.privateVerifier || null,
+    encryptedDescription: data.encryptedDescription || null,
+    encryptionIv: data.encryptionIv || null,
     dateCreated: now,
     dateLastModified: now
   };
@@ -964,6 +969,11 @@ export function updateTask(project, taskId, data){
   t.businessValue = clampTaskScore(data.businessValue);
   t.taskCost = clampTaskScore(data.taskCost);
   t.archived = !!data.archived;
+  t.isPrivate = !!data.isPrivate;
+  t.privateSalt = data.privateSalt || null;
+  t.privateVerifier = data.privateVerifier || null;
+  t.encryptedDescription = data.encryptedDescription || null;
+  t.encryptionIv = data.encryptionIv || null;
   t.dateLastModified = new Date().toISOString();
   var blocked = null;
   if(data.columnId && data.columnId !== t.columnId){

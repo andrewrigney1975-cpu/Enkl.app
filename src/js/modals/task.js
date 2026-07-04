@@ -9,17 +9,60 @@ import { escapeHTML, renderBoard } from '../views/board.js';
 import { addTask, updateTask, deleteTask, normalizeDocumentationUrl } from '../mutations.js';
 import { confirmDialog } from './confirm.js';
 import { getReachableColumnIds } from '../features/workflow-engine.js';
+import { encryptText } from '../features/crypto.js';
+import { openSetPrivateKeyModal } from './private-key-set.js';
+import { openUnlockPrivateTaskModal } from './private-key-unlock.js';
+
+/* Toggles between the full editable form and the "private, no key
+   given" reduced view (title only, read-only, no Save). */
+function showTaskFullFields(show){
+  document.getElementById('taskFullFields').classList.toggle('hidden', !show);
+  document.getElementById('taskPrivateReducedView').classList.toggle('hidden', show);
+  document.getElementById('taskSaveBtn').classList.toggle('hidden', !show);
+}
 
 export function openTaskModal(taskId, defaultColumnId){
   var project = getCurrentProject();
   if(!project) return;
+
+  var task = taskId ? project.tasks[taskId] : null;
+
+  if(task && task.isPrivate){
+    openUnlockPrivateTaskModal(task, function(result){
+      if(result.mode === 'cancel') return;
+
+      ui.editingTaskId = taskId;
+      ui.taskModalColumnId = defaultColumnId || (project.columns[0] && project.columns[0].id);
+      ui.depSearchTerm = '';
+      ui.taskModalDeps = (task.dependencies || []).slice();
+
+      if(result.mode === 'continue'){
+        ui.taskModalUnlockedDerivedBits = null;
+        showTaskFullFields(false);
+        document.getElementById('taskModalTitle').textContent = 'Edit ' + task.key;
+        document.getElementById('taskPrivateReducedTitle').textContent = task.title;
+        document.getElementById('taskDeleteBtn').classList.remove('kf-vis-hidden');
+        document.getElementById('taskOverlay').classList.remove('hidden');
+      } else { // 'unlocked'
+        ui.taskModalUnlockedDerivedBits = result.derivedBits;
+        showTaskFullFields(true);
+        populateFullForm(project, task, result.description);
+      }
+    });
+    return;
+  }
+
   ui.editingTaskId = taskId;
   ui.taskModalColumnId = defaultColumnId || (project.columns[0] && project.columns[0].id);
   ui.depSearchTerm = '';
-
-  var task = taskId ? project.tasks[taskId] : null;
   ui.taskModalDeps = task ? (task.dependencies || []).slice() : [];
+  ui.taskModalUnlockedDerivedBits = null;
 
+  showTaskFullFields(true);
+  populateFullForm(project, task, task ? task.description : '');
+}
+
+function populateFullForm(project, task, descriptionValue){
   document.getElementById('taskModalTitle').textContent = task ? 'Edit ' + task.key : 'New task';
   var typeSelect = document.getElementById('taskTypeSelect');
   typeSelect.innerHTML = '';
@@ -36,7 +79,7 @@ export function openTaskModal(taskId, defaultColumnId){
   });
 
   document.getElementById('taskTitleInput').value = task ? task.title : '';
-  document.getElementById('taskDescInput').value = task ? task.description : '';
+  document.getElementById('taskDescInput').value = descriptionValue || '';
   document.getElementById('taskDocUrlInput').value = task && task.documentationUrl ? task.documentationUrl : '';
   updateDocUrlOpenButtonVisibility();
   document.getElementById('taskPrioritySelect').value = task ? task.priority : 'medium';
@@ -100,6 +143,7 @@ export function openTaskModal(taskId, defaultColumnId){
   document.getElementById('taskBusinessValueInput').value = task ? clampTaskScore(task.businessValue) : 1;
   document.getElementById('taskCostInput').value = task ? clampTaskScore(task.taskCost) : 1;
   document.getElementById('taskArchivedCheckbox').checked = !!(task && task.archived);
+  document.getElementById('taskPrivateCheckbox').checked = !!(task && task.isPrivate);
 
   document.getElementById('taskDeleteBtn').classList.toggle('kf-vis-hidden', !task);
   document.getElementById('depSearchInput').value = '';
@@ -200,9 +244,10 @@ export function renderDependencyPicker(){
 export function closeTaskModal(){
   document.getElementById('taskOverlay').classList.add('hidden');
   ui.editingTaskId = null;
+  ui.taskModalUnlockedDerivedBits = null;
 }
 
-export function saveTaskFromModal(){
+export async function saveTaskFromModal(){
   var project = getCurrentProject();
   var title = document.getElementById('taskTitleInput').value.trim();
   if(!title){
@@ -244,6 +289,56 @@ export function saveTaskFromModal(){
     return;
   }
 
+  var existingTask = ui.editingTaskId ? project.tasks[ui.editingTaskId] : null;
+  var wantsPrivate = document.getElementById('taskPrivateCheckbox').checked;
+
+  if(wantsPrivate && !(existingTask && existingTask.privateSalt)){
+    /* Newly made private (a brand-new task, or an existing non-private
+       one) — a key has never been set for this task, so ask for one. */
+    openSetPrivateKeyModal(async function(keyResult){
+      var enc = await encryptText(data.description, keyResult.derivedBits);
+      data.isPrivate = true;
+      data.privateSalt = keyResult.salt;
+      data.privateVerifier = keyResult.verifier;
+      data.encryptedDescription = enc.ciphertext;
+      data.encryptionIv = enc.iv;
+      data.description = '';
+      finishSave(project, data);
+    });
+    return;
+  }
+
+  if(!wantsPrivate && existingTask && existingTask.isPrivate){
+    /* Turning privacy off. Only reachable while unlocked — the checkbox
+       lives inside #taskFullFields, which reduced view never shows. */
+    data.isPrivate = false;
+    data.privateSalt = null;
+    data.privateVerifier = null;
+    data.encryptedDescription = null;
+    data.encryptionIv = null;
+    finishSave(project, data);
+    return;
+  }
+
+  if(wantsPrivate && existingTask && existingTask.isPrivate){
+    /* Stays private, already unlocked this modal session — re-encrypt
+       with the same derived bits, no re-prompt (mid-session edit, not a
+       new "view"). Fresh IV on every re-encryption. */
+    var enc = await encryptText(data.description, ui.taskModalUnlockedDerivedBits);
+    data.isPrivate = true;
+    data.privateSalt = existingTask.privateSalt;
+    data.privateVerifier = existingTask.privateVerifier;
+    data.encryptedDescription = enc.ciphertext;
+    data.encryptionIv = enc.iv;
+    data.description = '';
+    finishSave(project, data);
+    return;
+  }
+
+  finishSave(project, data);
+}
+
+function finishSave(project, data){
   if(ui.editingTaskId){
     var blocked = updateTask(project, ui.editingTaskId, data);
     if(blocked){ toast(blocked.message); return; }

@@ -44,6 +44,11 @@ export function buildHierarchy(project){
       businessValue: clampTaskScore(t.businessValue),
       taskCost: clampTaskScore(t.taskCost),
       archived: !!t.archived,
+      isPrivate: !!t.isPrivate,
+      privateSalt: t.privateSalt || null,
+      privateVerifier: t.privateVerifier || null,
+      encryptedDescription: t.encryptedDescription || null,
+      encryptionIv: t.encryptionIv || null,
       dependsOn: (t.dependencies||[]).map(function(d){ return taskMap[d] ? taskMap[d].key : d; }),
       subtasks: []
     };

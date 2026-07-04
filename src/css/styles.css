@@ -1254,6 +1254,7 @@
   }
 
   .kf-dep-chip,
+  .kf-private-chip,
   .kf-blocked-chip,
   .kf-overdue-chip {
     display: flex;
@@ -2497,6 +2498,16 @@
 
   .kf-field {
     margin-bottom: 16px;
+  }
+
+  .kf-field-error {
+    color: var(--kf-danger);
+    font-size: 12px;
+    margin: -10px 0 16px;
+  }
+
+  .kf-field-error.hidden {
+    display: none;
   }
 
   .kf-field label {

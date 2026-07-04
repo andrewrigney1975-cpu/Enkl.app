@@ -1289,6 +1289,7 @@
   }
 
   .kf-dep-chip,
+  .kf-private-chip,
   .kf-blocked-chip,
   .kf-overdue-chip {
     display: flex;
@@ -2532,6 +2533,16 @@
 
   .kf-field {
     margin-bottom: 16px;
+  }
+
+  .kf-field-error {
+    color: var(--kf-danger);
+    font-size: 12px;
+    margin: -10px 0 16px;
+  }
+
+  .kf-field-error.hidden {
+    display: none;
   }
 
   .kf-field label {
@@ -4064,6 +4075,12 @@
       <button class="kf-btn kf-btn-ghost" id="taskModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
     </div>
     <div class="kf-modal-body">
+      <div class="kf-field hidden" id="taskPrivateReducedView">
+        <label>Title</label>
+        <div id="taskPrivateReducedTitle" style="font-size:15px;font-weight:600;color:var(--kf-text);"></div>
+        <p style="font-size:12px;color:var(--kf-text-faint);margin-top:8px;">This task is private. Reopen and enter the key to view its details.</p>
+      </div>
+      <div id="taskFullFields">
       <div class="kf-field">
         <label for="taskTypeSelect">Type</label>
         <select id="taskTypeSelect"></select>
@@ -4144,11 +4161,65 @@
         <input type="checkbox" id="taskArchivedCheckbox">
         <label for="taskArchivedCheckbox" style="text-transform:none;font-weight:500;">Archived <span style="color:var(--kf-text-faint);">(hidden from the board, list view, and dependency graph)</span></label>
       </div>
+      <div class="kf-checkbox-row">
+        <input type="checkbox" id="taskPrivateCheckbox">
+        <label for="taskPrivateCheckbox" style="text-transform:none;font-weight:500;">Private <span style="color:var(--kf-text-faint);">(hides all details behind a key you set — cannot be recovered if forgotten)</span></label>
+      </div>
+      </div>
     </div>
     <div class="kf-modal-footer">
       <button class="kf-btn kf-btn-danger kf-footer-left" id="taskDeleteBtn"><span class="kf-icon" data-icon="trash" data-size="14"></span>Delete</button>
       <button class="kf-btn kf-btn-secondary" id="taskCancelBtn">Cancel</button>
       <button class="kf-btn kf-btn-primary" id="taskSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Set Private Key Modal -->
+<div class="kf-overlay hidden" id="setPrivateKeyOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>Set a Private Key</h2>
+      <button class="kf-btn kf-btn-ghost" id="setPrivateKeyModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <p style="margin:0 0 14px;color:var(--kf-text);font-size:13px;line-height:1.6;">This key is never stored anywhere. If you forget it, the description cannot be recovered by anyone, including us. Write it down somewhere safe.</p>
+      <div class="kf-field">
+        <label for="setPrivateKeyInput">Key</label>
+        <input type="password" id="setPrivateKeyInput" autocomplete="new-password" placeholder="Enter a key">
+      </div>
+      <div class="kf-field">
+        <label for="setPrivateKeyConfirmInput">Confirm key</label>
+        <input type="password" id="setPrivateKeyConfirmInput" autocomplete="new-password" placeholder="Re-enter the key">
+      </div>
+      <div class="kf-field-error hidden" id="setPrivateKeyError"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-secondary" id="setPrivateKeyCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="setPrivateKeyConfirmBtn">Set Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unlock Private Task Modal -->
+<div class="kf-overlay hidden" id="unlockPrivateTaskOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>Private Task</h2>
+      <button class="kf-btn kf-btn-ghost" id="unlockPrivateTaskModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <p style="margin:0 0 14px;color:var(--kf-text);font-size:13px;line-height:1.6;">This task is private. Enter the key to view its full details, or continue without one to see only the title.</p>
+      <div class="kf-field">
+        <label for="unlockPrivateTaskInput">Key</label>
+        <input type="password" id="unlockPrivateTaskInput" autocomplete="current-password" placeholder="Enter the key">
+      </div>
+      <div class="kf-field-error hidden" id="unlockPrivateTaskError"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-ghost kf-footer-left" id="unlockPrivateTaskContinueBtn">Continue without a key</button>
+      <button class="kf-btn kf-btn-secondary" id="unlockPrivateTaskCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="unlockPrivateTaskConfirmBtn">Unlock</button>
     </div>
   </div>
 </div>
@@ -5521,6 +5592,7 @@ self.onmessage = function(e) {
     team: '<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22.5 21v-2a4 4 0 0 0-3-3.87"/><path d="M16.5 3.13a4 4 0 0 1 0 7.75"/>',
     orgChart: '<rect x="9" y="3" width="6" height="6" rx="1"/><rect x="2" y="15" width="6" height="6" rx="1"/><rect x="16" y="15" width="6" height="6" rx="1"/><path d="M12 9v3M5 12h14M5 12v3M19 12v3"/>',
     radar: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/><path d="M12 12 19 6"/>',
+    lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1.5"/>',
     workflow: '<rect x="2" y="9" width="6" height="6" rx="1"/><rect x="16" y="2" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M8 12h4"/><path d="M12 12l4-7"/><path d="M12 12l4 7"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/>',
     moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/>',
@@ -6062,6 +6134,26 @@ self.onmessage = function(e) {
           t.archived = false;
           changed = true;
         }
+        if (t.isPrivate === void 0) {
+          t.isPrivate = false;
+          changed = true;
+        }
+        if (t.privateSalt === void 0) {
+          t.privateSalt = null;
+          changed = true;
+        }
+        if (t.privateVerifier === void 0) {
+          t.privateVerifier = null;
+          changed = true;
+        }
+        if (t.encryptedDescription === void 0) {
+          t.encryptedDescription = null;
+          changed = true;
+        }
+        if (t.encryptionIv === void 0) {
+          t.encryptionIv = null;
+          changed = true;
+        }
       });
       var validMemberIds = {};
       p.members.forEach(function(m) {
@@ -6567,6 +6659,11 @@ self.onmessage = function(e) {
         releaseId: null,
         typeId: null,
         documentationUrl: null,
+        isPrivate: false,
+        privateSalt: null,
+        privateVerifier: null,
+        encryptedDescription: null,
+        encryptionIv: null,
         dateCreated: now,
         dateLastModified: now
       };
@@ -6728,6 +6825,10 @@ self.onmessage = function(e) {
     editingTaskId: null,
     taskModalColumnId: null,
     taskModalDeps: [],
+    /* Derived key bits from a successful unlock, held only for the
+       lifetime of the current open Task modal session — never persisted,
+       never surviving a close/reopen. Cleared in closeTaskModal(). */
+    taskModalUnlockedDerivedBits: null,
     depSearchTerm: "",
     editingColumnId: null,
     editingProjectId: null,
@@ -7874,6 +7975,11 @@ self.onmessage = function(e) {
       businessValue: clampTaskScore(data.businessValue),
       taskCost: clampTaskScore(data.taskCost),
       archived: !!data.archived,
+      isPrivate: !!data.isPrivate,
+      privateSalt: data.privateSalt || null,
+      privateVerifier: data.privateVerifier || null,
+      encryptedDescription: data.encryptedDescription || null,
+      encryptionIv: data.encryptionIv || null,
       dateCreated: now,
       dateLastModified: now
     };
@@ -7898,6 +8004,11 @@ self.onmessage = function(e) {
     t.businessValue = clampTaskScore(data.businessValue);
     t.taskCost = clampTaskScore(data.taskCost);
     t.archived = !!data.archived;
+    t.isPrivate = !!data.isPrivate;
+    t.privateSalt = data.privateSalt || null;
+    t.privateVerifier = data.privateVerifier || null;
+    t.encryptedDescription = data.encryptedDescription || null;
+    t.encryptionIv = data.encryptionIv || null;
     t.dateLastModified = (/* @__PURE__ */ new Date()).toISOString();
     var blocked = null;
     if (data.columnId && data.columnId !== t.columnId) {
@@ -9014,6 +9125,9 @@ self.onmessage = function(e) {
     var depCount = (task.dependencies || []).length;
     var assignee = getMemberById(project, task.assigneeId);
     var metaHTML = '<span class="kf-card-key">' + escapeHTML3(task.key) + "</span>";
+    if (task.isPrivate) {
+      metaHTML += '<span class="kf-private-chip" title="Private task">' + iconSvg("lock", 12) + "</span>";
+    }
     var taskType = getTaskTypeById(project, task.typeId);
     if (taskType && taskType.iconName) {
       metaHTML += '<span class="kf-card-type-icon" title="' + escapeHTML3(taskType.name) + '">' + iconSvg(taskType.iconName, 13) + "</span>";
@@ -9606,15 +9720,16 @@ self.onmessage = function(e) {
       var title = t.title.length > 26 ? t.title.slice(0, 25) + "\u2026" : t.title;
       var warningBadge = blocked ? '<g transform="translate(' + (n.w - 24) + ',8)" style="color:#de350b;"><title>Blocked by unfinished dependencies</title>' + iconSvg("warning", 16) + "</g>" : "";
       var overdueBadge = overdue ? '<g transform="translate(' + (blocked ? n.w - 46 : n.w - 24) + ',8)" style="color:var(--kf-overdue-fg);"><title>Overdue \u2014 end date was ' + escapeHTML5(utcISOToLocalDisplayDate(t.endDate)) + "</title>" + iconSvg("clock", 16) + "</g>" : "";
+      var lockBadge = t.isPrivate ? '<g transform="translate(' + (n.w - 24 - ((blocked ? 1 : 0) + (overdue ? 1 : 0)) * 22) + ',8)" style="color:var(--kf-text-secondary);"><title>Private task</title>' + iconSvg("lock", 16) + "</g>" : "";
       var typeBadge = "";
       if (taskType && taskType.iconName) {
-        var precedingBadgeCount = (blocked ? 1 : 0) + (overdue ? 1 : 0);
+        var precedingBadgeCount = (blocked ? 1 : 0) + (overdue ? 1 : 0) + (t.isPrivate ? 1 : 0);
         typeBadge = '<g transform="translate(' + (n.w - 24 - precedingBadgeCount * 22) + ',8)" style="color:var(--kf-text-secondary);"><title>' + escapeHTML5(taskType.name) + "</title>" + iconSvg(taskType.iconName, 16) + "</g>";
       }
       var avatarBadge = assignee ? "<g><title>" + escapeHTML5(assignee.name) + '</title><circle cx="' + (n.w - 18) + '" cy="' + (n.h - 16) + '" r="10" fill="' + assignee.color + '"></circle><text x="' + (n.w - 18) + '" y="' + (n.h - 12.5) + '" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">' + escapeHTML5(memberInitials(assignee.name)) + "</text></g>" : "";
       var archivedBadge = t.archived ? '<g transform="translate(4,7)" style="color:var(--kf-text-faint);"><title>Archived</title>' + iconSvg("archive", 14) + "</g>" : "";
       var keyX = t.archived ? 30 : 16;
-      return '<g class="kf-depnode' + (t.archived ? " kf-depnode-archived" : "") + '" data-task-id="' + t.id + '" transform="translate(' + n.x + "," + n.y + ')"><rect class="kf-depnode-box" x="0" y="0" width="' + n.w + '" height="' + n.h + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border);" stroke-width="1.5"></rect><rect x="0" y="0" width="5" height="' + n.h + '" rx="2" fill="' + prio.accent + '"></rect>' + archivedBadge + '<text x="' + keyX + '" y="20" font-size="10" font-weight="700" style="fill:var(--kf-text-faint);">' + escapeHTML5(t.key) + '</text><text x="16" y="38" font-size="13" font-weight="600" style="fill:var(--kf-text);">' + escapeHTML5(title) + '</text><circle cx="21" cy="54" r="4" fill="' + prio.accent + '"></circle><text x="30" y="57.5" font-size="10" font-weight="700" fill="' + prio.accent + '">' + escapeHTML5(prio.label) + "</text>" + warningBadge + overdueBadge + typeBadge + avatarBadge + "</g>";
+      return '<g class="kf-depnode' + (t.archived ? " kf-depnode-archived" : "") + '" data-task-id="' + t.id + '" transform="translate(' + n.x + "," + n.y + ')"><rect class="kf-depnode-box" x="0" y="0" width="' + n.w + '" height="' + n.h + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border);" stroke-width="1.5"></rect><rect x="0" y="0" width="5" height="' + n.h + '" rx="2" fill="' + prio.accent + '"></rect>' + archivedBadge + '<text x="' + keyX + '" y="20" font-size="10" font-weight="700" style="fill:var(--kf-text-faint);">' + escapeHTML5(t.key) + '</text><text x="16" y="38" font-size="13" font-weight="600" style="fill:var(--kf-text);">' + escapeHTML5(title) + '</text><circle cx="21" cy="54" r="4" fill="' + prio.accent + '"></circle><text x="30" y="57.5" font-size="10" font-weight="700" fill="' + prio.accent + '">' + escapeHTML5(prio.label) + "</text>" + warningBadge + overdueBadge + lockBadge + typeBadge + avatarBadge + "</g>";
     }).join("");
     var svgHTML = '<svg width="' + layout.width + '" height="' + layout.height + '" viewBox="0 0 ' + layout.width + " " + layout.height + '" xmlns="http://www.w3.org/2000/svg">' + defsHTML + edgesHTML + nodesHTML + "</svg>";
     inner.innerHTML = svgHTML;
@@ -11125,6 +11240,11 @@ self.onmessage = function(e) {
         businessValue: clampTaskScore(t.businessValue),
         taskCost: clampTaskScore(t.taskCost),
         archived: !!t.archived,
+        isPrivate: !!t.isPrivate,
+        privateSalt: t.privateSalt || null,
+        privateVerifier: t.privateVerifier || null,
+        encryptedDescription: t.encryptedDescription || null,
+        encryptionIv: t.encryptionIv || null,
         dependsOn: (t.dependencies || []).map(function(d) {
           return taskMap[d] ? taskMap[d].key : d;
         }),
@@ -11353,6 +11473,11 @@ self.onmessage = function(e) {
           businessValue: n.businessValue,
           taskCost: n.taskCost,
           archived: n.archived === true,
+          isPrivate: n.isPrivate === true,
+          privateSalt: typeof n.privateSalt === "string" ? n.privateSalt.slice(0, 64) : null,
+          privateVerifier: typeof n.privateVerifier === "string" ? n.privateVerifier.slice(0, 64) : null,
+          encryptedDescription: typeof n.encryptedDescription === "string" ? n.encryptedDescription.slice(0, 6e3) : null,
+          encryptionIv: typeof n.encryptionIv === "string" ? n.encryptionIv.slice(0, 32) : null,
           dependsOnKeys
         };
       }
@@ -11671,6 +11796,11 @@ self.onmessage = function(e) {
         businessValue: clampTaskScore(t.businessValue),
         taskCost: clampTaskScore(t.taskCost),
         archived: !!t.archived,
+        isPrivate: t.isPrivate,
+        privateSalt: t.privateSalt,
+        privateVerifier: t.privateVerifier,
+        encryptedDescription: t.encryptedDescription,
+        encryptionIv: t.encryptionIv,
         dateCreated: t.dateCreated || importedAt,
         dateLastModified: t.dateLastModified || importedAt
       };
@@ -12628,15 +12758,198 @@ self.onmessage = function(e) {
     return pendingConfirmAction;
   }
 
+  // src/js/features/crypto.js
+  var PBKDF2_ITERATIONS = 275e3;
+  function b64FromBytes(bytes) {
+    var bin = "";
+    var arr = new Uint8Array(bytes);
+    for (var i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+    return btoa(bin);
+  }
+  function bytesFromB64(b64) {
+    var bin = atob(b64);
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return arr;
+  }
+  function utf8Bytes(str) {
+    return new TextEncoder().encode(str);
+  }
+  function utf8String(bytes) {
+    return new TextDecoder().decode(bytes);
+  }
+  async function generateSalt() {
+    return b64FromBytes(crypto.getRandomValues(new Uint8Array(16)));
+  }
+  async function deriveKeyMaterial(password, saltB64, iterations) {
+    var keyMaterial = await crypto.subtle.importKey("raw", utf8Bytes(password), "PBKDF2", false, ["deriveBits"]);
+    return crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt: bytesFromB64(saltB64), iterations: iterations || PBKDF2_ITERATIONS, hash: "SHA-256" },
+      keyMaterial,
+      256
+    );
+  }
+  async function computeVerifier(derivedBits) {
+    var digest = await crypto.subtle.digest("SHA-256", derivedBits);
+    return b64FromBytes(digest);
+  }
+  async function importAesKey(derivedBits) {
+    return crypto.subtle.importKey("raw", derivedBits, "AES-GCM", false, ["encrypt", "decrypt"]);
+  }
+  async function encryptText(plaintext, derivedBits) {
+    var key = await importAesKey(derivedBits);
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, utf8Bytes(plaintext));
+    return { ciphertext: b64FromBytes(ciphertext), iv: b64FromBytes(iv) };
+  }
+  async function decryptText(ciphertextB64, ivB64, derivedBits) {
+    var key = await importAesKey(derivedBits);
+    var plainBytes = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: bytesFromB64(ivB64) },
+      key,
+      bytesFromB64(ciphertextB64)
+    );
+    return utf8String(plainBytes);
+  }
+
+  // src/js/modals/private-key-set.js
+  var pendingOnSuccess = null;
+  function showSetPrivateKeyError(message) {
+    var el = document.getElementById("setPrivateKeyError");
+    el.textContent = message;
+    el.classList.remove("hidden");
+  }
+  function openSetPrivateKeyModal(onSuccess) {
+    pendingOnSuccess = onSuccess;
+    document.getElementById("setPrivateKeyInput").value = "";
+    document.getElementById("setPrivateKeyConfirmInput").value = "";
+    document.getElementById("setPrivateKeyError").classList.add("hidden");
+    document.getElementById("setPrivateKeyOverlay").classList.remove("hidden");
+    document.getElementById("setPrivateKeyInput").focus();
+  }
+  function closeSetPrivateKeyModal() {
+    document.getElementById("setPrivateKeyOverlay").classList.add("hidden");
+    document.getElementById("setPrivateKeyInput").value = "";
+    document.getElementById("setPrivateKeyConfirmInput").value = "";
+    pendingOnSuccess = null;
+  }
+  async function confirmSetPrivateKeyFromModal() {
+    var key = document.getElementById("setPrivateKeyInput").value;
+    var confirmKey = document.getElementById("setPrivateKeyConfirmInput").value;
+    if (!key) {
+      showSetPrivateKeyError("Please enter a key.");
+      return;
+    }
+    if (key !== confirmKey) {
+      showSetPrivateKeyError("Keys don't match.");
+      return;
+    }
+    var onSuccess = pendingOnSuccess;
+    var salt = await generateSalt();
+    var derivedBits = await deriveKeyMaterial(key, salt);
+    var verifier = await computeVerifier(derivedBits);
+    closeSetPrivateKeyModal();
+    if (onSuccess) await onSuccess({ salt, verifier, derivedBits });
+  }
+
+  // src/js/modals/private-key-unlock.js
+  var pendingTask = null;
+  var pendingOnResult = null;
+  function showUnlockError(message) {
+    var el = document.getElementById("unlockPrivateTaskError");
+    el.textContent = message;
+    el.classList.remove("hidden");
+  }
+  function openUnlockPrivateTaskModal(task, onResult) {
+    pendingTask = task;
+    pendingOnResult = onResult;
+    document.getElementById("unlockPrivateTaskInput").value = "";
+    document.getElementById("unlockPrivateTaskError").classList.add("hidden");
+    document.getElementById("unlockPrivateTaskOverlay").classList.remove("hidden");
+    document.getElementById("unlockPrivateTaskInput").focus();
+  }
+  function closeUnlockPrivateTaskModal() {
+    document.getElementById("unlockPrivateTaskOverlay").classList.add("hidden");
+    document.getElementById("unlockPrivateTaskInput").value = "";
+    var onResult = pendingOnResult;
+    pendingTask = null;
+    pendingOnResult = null;
+    if (onResult) onResult({ mode: "cancel" });
+  }
+  async function confirmUnlockFromModal() {
+    var task = pendingTask;
+    var onResult = pendingOnResult;
+    if (!task || !onResult) return;
+    var key = document.getElementById("unlockPrivateTaskInput").value;
+    var derivedBits = await deriveKeyMaterial(key, task.privateSalt);
+    var verifier = await computeVerifier(derivedBits);
+    if (verifier !== task.privateVerifier) {
+      showUnlockError("Incorrect key.");
+      return;
+    }
+    var description;
+    try {
+      description = await decryptText(task.encryptedDescription, task.encryptionIv, derivedBits);
+    } catch (e) {
+      showUnlockError("Could not decrypt this task\u2019s description \u2014 the stored data may be corrupted.");
+      return;
+    }
+    pendingTask = null;
+    pendingOnResult = null;
+    document.getElementById("unlockPrivateTaskOverlay").classList.add("hidden");
+    document.getElementById("unlockPrivateTaskInput").value = "";
+    onResult({ mode: "unlocked", description, derivedBits });
+  }
+  function continueWithoutKeyFromModal() {
+    var onResult = pendingOnResult;
+    pendingTask = null;
+    pendingOnResult = null;
+    document.getElementById("unlockPrivateTaskOverlay").classList.add("hidden");
+    document.getElementById("unlockPrivateTaskInput").value = "";
+    if (onResult) onResult({ mode: "continue" });
+  }
+
   // src/js/modals/task.js
+  function showTaskFullFields(show) {
+    document.getElementById("taskFullFields").classList.toggle("hidden", !show);
+    document.getElementById("taskPrivateReducedView").classList.toggle("hidden", show);
+    document.getElementById("taskSaveBtn").classList.toggle("hidden", !show);
+  }
   function openTaskModal(taskId, defaultColumnId) {
     var project = getCurrentProject();
     if (!project) return;
+    var task = taskId ? project.tasks[taskId] : null;
+    if (task && task.isPrivate) {
+      openUnlockPrivateTaskModal(task, function(result) {
+        if (result.mode === "cancel") return;
+        ui.editingTaskId = taskId;
+        ui.taskModalColumnId = defaultColumnId || project.columns[0] && project.columns[0].id;
+        ui.depSearchTerm = "";
+        ui.taskModalDeps = (task.dependencies || []).slice();
+        if (result.mode === "continue") {
+          ui.taskModalUnlockedDerivedBits = null;
+          showTaskFullFields(false);
+          document.getElementById("taskModalTitle").textContent = "Edit " + task.key;
+          document.getElementById("taskPrivateReducedTitle").textContent = task.title;
+          document.getElementById("taskDeleteBtn").classList.remove("kf-vis-hidden");
+          document.getElementById("taskOverlay").classList.remove("hidden");
+        } else {
+          ui.taskModalUnlockedDerivedBits = result.derivedBits;
+          showTaskFullFields(true);
+          populateFullForm(project, task, result.description);
+        }
+      });
+      return;
+    }
     ui.editingTaskId = taskId;
     ui.taskModalColumnId = defaultColumnId || project.columns[0] && project.columns[0].id;
     ui.depSearchTerm = "";
-    var task = taskId ? project.tasks[taskId] : null;
     ui.taskModalDeps = task ? (task.dependencies || []).slice() : [];
+    ui.taskModalUnlockedDerivedBits = null;
+    showTaskFullFields(true);
+    populateFullForm(project, task, task ? task.description : "");
+  }
+  function populateFullForm(project, task, descriptionValue) {
     document.getElementById("taskModalTitle").textContent = task ? "Edit " + task.key : "New task";
     var typeSelect = document.getElementById("taskTypeSelect");
     typeSelect.innerHTML = "";
@@ -12652,7 +12965,7 @@ self.onmessage = function(e) {
       typeSelect.appendChild(opt);
     });
     document.getElementById("taskTitleInput").value = task ? task.title : "";
-    document.getElementById("taskDescInput").value = task ? task.description : "";
+    document.getElementById("taskDescInput").value = descriptionValue || "";
     document.getElementById("taskDocUrlInput").value = task && task.documentationUrl ? task.documentationUrl : "";
     updateDocUrlOpenButtonVisibility();
     document.getElementById("taskPrioritySelect").value = task ? task.priority : "medium";
@@ -12715,6 +13028,7 @@ self.onmessage = function(e) {
     document.getElementById("taskBusinessValueInput").value = task ? clampTaskScore(task.businessValue) : 1;
     document.getElementById("taskCostInput").value = task ? clampTaskScore(task.taskCost) : 1;
     document.getElementById("taskArchivedCheckbox").checked = !!(task && task.archived);
+    document.getElementById("taskPrivateCheckbox").checked = !!(task && task.isPrivate);
     document.getElementById("taskDeleteBtn").classList.toggle("kf-vis-hidden", !task);
     document.getElementById("depSearchInput").value = "";
     renderDependencyPicker();
@@ -12809,8 +13123,9 @@ self.onmessage = function(e) {
   function closeTaskModal() {
     document.getElementById("taskOverlay").classList.add("hidden");
     ui.editingTaskId = null;
+    ui.taskModalUnlockedDerivedBits = null;
   }
-  function saveTaskFromModal() {
+  async function saveTaskFromModal() {
     var project = getCurrentProject();
     var title = document.getElementById("taskTitleInput").value.trim();
     if (!title) {
@@ -12848,6 +13163,44 @@ self.onmessage = function(e) {
       toast("That would create a circular dependency. Please review your selections.");
       return;
     }
+    var existingTask = ui.editingTaskId ? project.tasks[ui.editingTaskId] : null;
+    var wantsPrivate = document.getElementById("taskPrivateCheckbox").checked;
+    if (wantsPrivate && !(existingTask && existingTask.privateSalt)) {
+      openSetPrivateKeyModal(async function(keyResult) {
+        var enc2 = await encryptText(data.description, keyResult.derivedBits);
+        data.isPrivate = true;
+        data.privateSalt = keyResult.salt;
+        data.privateVerifier = keyResult.verifier;
+        data.encryptedDescription = enc2.ciphertext;
+        data.encryptionIv = enc2.iv;
+        data.description = "";
+        finishSave(project, data);
+      });
+      return;
+    }
+    if (!wantsPrivate && existingTask && existingTask.isPrivate) {
+      data.isPrivate = false;
+      data.privateSalt = null;
+      data.privateVerifier = null;
+      data.encryptedDescription = null;
+      data.encryptionIv = null;
+      finishSave(project, data);
+      return;
+    }
+    if (wantsPrivate && existingTask && existingTask.isPrivate) {
+      var enc = await encryptText(data.description, ui.taskModalUnlockedDerivedBits);
+      data.isPrivate = true;
+      data.privateSalt = existingTask.privateSalt;
+      data.privateVerifier = existingTask.privateVerifier;
+      data.encryptedDescription = enc.ciphertext;
+      data.encryptionIv = enc.iv;
+      data.description = "";
+      finishSave(project, data);
+      return;
+    }
+    finishSave(project, data);
+  }
+  function finishSave(project, data) {
     if (ui.editingTaskId) {
       var blocked = updateTask(project, ui.editingTaskId, data);
       if (blocked) {
@@ -16714,6 +17067,19 @@ self.onmessage = function(e) {
     document.getElementById("taskOverlay").addEventListener("mousedown", function(e) {
       if (e.target.id === "taskOverlay") closeTaskModal();
     });
+    document.getElementById("setPrivateKeyModalClose").addEventListener("click", closeSetPrivateKeyModal);
+    document.getElementById("setPrivateKeyCancelBtn").addEventListener("click", closeSetPrivateKeyModal);
+    document.getElementById("setPrivateKeyConfirmBtn").addEventListener("click", confirmSetPrivateKeyFromModal);
+    document.getElementById("setPrivateKeyOverlay").addEventListener("mousedown", function(e) {
+      if (e.target.id === "setPrivateKeyOverlay") closeSetPrivateKeyModal();
+    });
+    document.getElementById("unlockPrivateTaskModalClose").addEventListener("click", closeUnlockPrivateTaskModal);
+    document.getElementById("unlockPrivateTaskCancelBtn").addEventListener("click", closeUnlockPrivateTaskModal);
+    document.getElementById("unlockPrivateTaskConfirmBtn").addEventListener("click", confirmUnlockFromModal);
+    document.getElementById("unlockPrivateTaskContinueBtn").addEventListener("click", continueWithoutKeyFromModal);
+    document.getElementById("unlockPrivateTaskOverlay").addEventListener("mousedown", function(e) {
+      if (e.target.id === "unlockPrivateTaskOverlay") closeUnlockPrivateTaskModal();
+    });
     document.getElementById("columnModalClose").addEventListener("click", closeColumnModal);
     document.getElementById("columnCancelBtn").addEventListener("click", closeColumnModal);
     document.getElementById("columnSaveBtn").addEventListener("click", saveColumnFromModal);
@@ -16759,7 +17125,9 @@ self.onmessage = function(e) {
     });
     document.addEventListener("keydown", function(e) {
       if (e.key !== "Escape") return;
-      if (!document.getElementById("taskOverlay").classList.contains("hidden")) closeTaskModal();
+      if (!document.getElementById("unlockPrivateTaskOverlay").classList.contains("hidden")) closeUnlockPrivateTaskModal();
+      else if (!document.getElementById("setPrivateKeyOverlay").classList.contains("hidden")) closeSetPrivateKeyModal();
+      else if (!document.getElementById("taskOverlay").classList.contains("hidden")) closeTaskModal();
       else if (!document.getElementById("columnOverlay").classList.contains("hidden")) closeColumnModal();
       else if (!document.getElementById("projectOverlay").classList.contains("hidden")) closeProjectModal();
       else if (!document.getElementById("teamOverlay").classList.contains("hidden")) closeTeamModal();

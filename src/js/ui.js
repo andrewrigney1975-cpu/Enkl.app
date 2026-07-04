@@ -166,6 +166,10 @@ export var ui = {
   editingTaskId: null,
   taskModalColumnId: null,
   taskModalDeps: [],
+  /* Derived key bits from a successful unlock, held only for the
+     lifetime of the current open Task modal session — never persisted,
+     never surviving a close/reopen. Cleared in closeTaskModal(). */
+  taskModalUnlockedDerivedBits: null,
   depSearchTerm: '',
   editingColumnId: null,
   editingProjectId: null,

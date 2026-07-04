@@ -60,6 +60,11 @@ export function flattenImportedHierarchy(nodes, out){
         businessValue: n.businessValue,
         taskCost: n.taskCost,
         archived: n.archived === true,
+        isPrivate: n.isPrivate === true,
+        privateSalt: typeof n.privateSalt === 'string' ? n.privateSalt.slice(0,64) : null,
+        privateVerifier: typeof n.privateVerifier === 'string' ? n.privateVerifier.slice(0,64) : null,
+        encryptedDescription: typeof n.encryptedDescription === 'string' ? n.encryptedDescription.slice(0,6000) : null,
+        encryptionIv: typeof n.encryptionIv === 'string' ? n.encryptionIv.slice(0,32) : null,
         dependsOnKeys: dependsOnKeys
       };
     }
@@ -412,6 +417,11 @@ export function buildProjectFromExportDoc(doc){
       businessValue: clampTaskScore(t.businessValue),
       taskCost: clampTaskScore(t.taskCost),
       archived: !!t.archived,
+      isPrivate: t.isPrivate,
+      privateSalt: t.privateSalt,
+      privateVerifier: t.privateVerifier,
+      encryptedDescription: t.encryptedDescription,
+      encryptionIv: t.encryptionIv,
       dateCreated: t.dateCreated || importedAt,
       dateLastModified: t.dateLastModified || importedAt
     };

@@ -204,6 +204,12 @@
       <button class="kf-btn kf-btn-ghost" id="taskModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
     </div>
     <div class="kf-modal-body">
+      <div class="kf-field hidden" id="taskPrivateReducedView">
+        <label>Title</label>
+        <div id="taskPrivateReducedTitle" style="font-size:15px;font-weight:600;color:var(--kf-text);"></div>
+        <p style="font-size:12px;color:var(--kf-text-faint);margin-top:8px;">This task is private. Reopen and enter the key to view its details.</p>
+      </div>
+      <div id="taskFullFields">
       <div class="kf-field">
         <label for="taskTypeSelect">Type</label>
         <select id="taskTypeSelect"></select>
@@ -284,11 +290,65 @@
         <input type="checkbox" id="taskArchivedCheckbox">
         <label for="taskArchivedCheckbox" style="text-transform:none;font-weight:500;">Archived <span style="color:var(--kf-text-faint);">(hidden from the board, list view, and dependency graph)</span></label>
       </div>
+      <div class="kf-checkbox-row">
+        <input type="checkbox" id="taskPrivateCheckbox">
+        <label for="taskPrivateCheckbox" style="text-transform:none;font-weight:500;">Private <span style="color:var(--kf-text-faint);">(hides all details behind a key you set — cannot be recovered if forgotten)</span></label>
+      </div>
+      </div>
     </div>
     <div class="kf-modal-footer">
       <button class="kf-btn kf-btn-danger kf-footer-left" id="taskDeleteBtn"><span class="kf-icon" data-icon="trash" data-size="14"></span>Delete</button>
       <button class="kf-btn kf-btn-secondary" id="taskCancelBtn">Cancel</button>
       <button class="kf-btn kf-btn-primary" id="taskSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Set Private Key Modal -->
+<div class="kf-overlay hidden" id="setPrivateKeyOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>Set a Private Key</h2>
+      <button class="kf-btn kf-btn-ghost" id="setPrivateKeyModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <p style="margin:0 0 14px;color:var(--kf-text);font-size:13px;line-height:1.6;">This key is never stored anywhere. If you forget it, the description cannot be recovered by anyone, including us. Write it down somewhere safe.</p>
+      <div class="kf-field">
+        <label for="setPrivateKeyInput">Key</label>
+        <input type="password" id="setPrivateKeyInput" autocomplete="new-password" placeholder="Enter a key">
+      </div>
+      <div class="kf-field">
+        <label for="setPrivateKeyConfirmInput">Confirm key</label>
+        <input type="password" id="setPrivateKeyConfirmInput" autocomplete="new-password" placeholder="Re-enter the key">
+      </div>
+      <div class="kf-field-error hidden" id="setPrivateKeyError"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-secondary" id="setPrivateKeyCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="setPrivateKeyConfirmBtn">Set Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unlock Private Task Modal -->
+<div class="kf-overlay hidden" id="unlockPrivateTaskOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>Private Task</h2>
+      <button class="kf-btn kf-btn-ghost" id="unlockPrivateTaskModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <p style="margin:0 0 14px;color:var(--kf-text);font-size:13px;line-height:1.6;">This task is private. Enter the key to view its full details, or continue without one to see only the title.</p>
+      <div class="kf-field">
+        <label for="unlockPrivateTaskInput">Key</label>
+        <input type="password" id="unlockPrivateTaskInput" autocomplete="current-password" placeholder="Enter the key">
+      </div>
+      <div class="kf-field-error hidden" id="unlockPrivateTaskError"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-ghost kf-footer-left" id="unlockPrivateTaskContinueBtn">Continue without a key</button>
+      <button class="kf-btn kf-btn-secondary" id="unlockPrivateTaskCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="unlockPrivateTaskConfirmBtn">Unlock</button>
     </div>
   </div>
 </div>

@@ -721,6 +721,9 @@ export function renderCard(project, task){
   var assignee = getMemberById(project, task.assigneeId);
 
   var metaHTML = '<span class="kf-card-key">' + escapeHTML(task.key) + '</span>';
+  if(task.isPrivate){
+    metaHTML += '<span class="kf-private-chip" title="Private task">' + iconSvg('lock',12) + '</span>';
+  }
   var taskType = getTaskTypeById(project, task.typeId);
   if(taskType && taskType.iconName){
     metaHTML += '<span class="kf-card-type-icon" title="' + escapeHTML(taskType.name) + '">' + iconSvg(taskType.iconName, 13) + '</span>';

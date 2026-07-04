@@ -114,6 +114,11 @@ export function migrateDB(){
       if(t.businessValue === undefined){ t.businessValue = 1; changed = true; }
       if(t.taskCost === undefined){ t.taskCost = 1; changed = true; }
       if(t.archived === undefined){ t.archived = false; changed = true; }
+      if(t.isPrivate === undefined){ t.isPrivate = false; changed = true; }
+      if(t.privateSalt === undefined){ t.privateSalt = null; changed = true; }
+      if(t.privateVerifier === undefined){ t.privateVerifier = null; changed = true; }
+      if(t.encryptedDescription === undefined){ t.encryptedDescription = null; changed = true; }
+      if(t.encryptionIv === undefined){ t.encryptionIv = null; changed = true; }
     });
 
     var validMemberIds = {};
@@ -420,6 +425,11 @@ export function createSeedDB(){
       releaseId: null,
       typeId: null,
       documentationUrl: null,
+      isPrivate: false,
+      privateSalt: null,
+      privateVerifier: null,
+      encryptedDescription: null,
+      encryptionIv: null,
       dateCreated: now,
       dateLastModified: now
     };

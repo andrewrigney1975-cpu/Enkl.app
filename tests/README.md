@@ -162,6 +162,7 @@ Tests that show this behaviour (but are clean in isolation):
 | `bulk_edit_release_test.js` | Bulk-assigning tasks to a release |
 | `bulk_edit_task_type_test.js` | Bulk-changing task types |
 | `bulk_edit_grid_tracks_test.js` | Bulk edit modal grid layout |
+| `private_task_test.js` | Private tasks: encrypted description, unlock/continue-without-key flows, board/dep-map lock badges, export/import round-trip |
 
 ### Task Types & Releases
 
@@ -325,3 +326,4 @@ Some tests need to mock browser APIs that jsdom doesn't implement. Copy the rele
 | `URL.createObjectURL` + `Blob` (export) | `export_as_test.js` |
 | `HTMLCanvasElement.toBlob` (PNG export) | `health_risk_matrix_test.js` |
 | `Image` (SVG export) | `export_as_test.js` |
+| `crypto.subtle` (private tasks — jsdom has no Web Crypto implementation) | `private_task_test.js` |

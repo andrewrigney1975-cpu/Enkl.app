@@ -184,9 +184,12 @@ export function renderDependencyMap(){
     var overdueBadge = overdue
       ? '<g transform="translate(' + (blocked ? n.w - 46 : n.w - 24) + ',8)" style="color:var(--kf-overdue-fg);"><title>Overdue — end date was ' + escapeHTML(utcISOToLocalDisplayDate(t.endDate)) + '</title>' + iconSvg('clock',16) + '</g>'
       : '';
+    var lockBadge = t.isPrivate
+      ? '<g transform="translate(' + (n.w - 24 - ((blocked?1:0)+(overdue?1:0)) * 22) + ',8)" style="color:var(--kf-text-secondary);"><title>Private task</title>' + iconSvg('lock',16) + '</g>'
+      : '';
     var typeBadge = '';
     if(taskType && taskType.iconName){
-      var precedingBadgeCount = (blocked ? 1 : 0) + (overdue ? 1 : 0);
+      var precedingBadgeCount = (blocked ? 1 : 0) + (overdue ? 1 : 0) + (t.isPrivate ? 1 : 0);
       typeBadge = '<g transform="translate(' + (n.w - 24 - precedingBadgeCount * 22) + ',8)" style="color:var(--kf-text-secondary);"><title>' + escapeHTML(taskType.name) + '</title>' + iconSvg(taskType.iconName,16) + '</g>';
     }
     var avatarBadge = assignee
@@ -208,6 +211,7 @@ export function renderDependencyMap(){
         '<text x="30" y="57.5" font-size="10" font-weight="700" fill="' + prio.accent + '">' + escapeHTML(prio.label) + '</text>' +
         warningBadge +
         overdueBadge +
+        lockBadge +
         typeBadge +
         avatarBadge +
       '</g>'
