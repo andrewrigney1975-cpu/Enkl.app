@@ -1479,6 +1479,14 @@
     display: none;
   }
 
+  #taskFullFields.hidden {
+    display: none;
+  }
+
+  #taskPrivateReducedView.hidden {
+    display: none;
+  }
+
   #documentsBtn.hidden {
     display: none;
   }
