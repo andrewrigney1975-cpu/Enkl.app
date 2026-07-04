@@ -38,7 +38,7 @@ async function build() {
     entryPoints: [join(__dirname, 'src/js/app.js')],
     bundle: true,
     format: 'iife',
-    minify: false,
+    minify: true,
     write: false,
     sourcemap: false,
   });
