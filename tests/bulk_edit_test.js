@@ -38,11 +38,12 @@ function rowFor(doc, title){
   log('active task shows "Active" status', activeRow.textContent.indexOf('Active') !== -1);
   log('count summary mentions archived inclusion', doc.getElementById('bulkEditCount').textContent.indexOf('archived') !== -1, doc.getElementById('bulkEditCount').textContent);
 
-  // ── 3. Each row exposes all 8 editable fields ─────────────────────────────
+  // ── 3. Each row exposes all editable fields (Progress included, since Time
+  //      Tracking is enabled by default) ────────────────────────────────────
   const selects = activeRow.querySelectorAll('select');
   const inputs = activeRow.querySelectorAll('input');
   log('row has 5 selects (Column, Release, Priority, Type, Assignee)', selects.length === 5, selects.length);
-  log('row has 4 inputs (Start, End, Business Value, Task Cost)', inputs.length === 4, inputs.length);
+  log('row has 5 inputs (Start, End, Business Value, Task Cost, Progress)', inputs.length === 5, inputs.length);
 
   // ── 4. Save button starts disabled; editing a cell enables it ────────────
   log('Save button starts disabled (no pending edits)', doc.getElementById('bulkEditSaveBtn').disabled);

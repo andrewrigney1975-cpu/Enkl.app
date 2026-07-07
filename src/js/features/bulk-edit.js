@@ -2,10 +2,10 @@
 import { ui, toast, getPriority } from '../ui.js';
 import { getCurrentProject } from '../store.js';
 import { getTasksArray } from '../utils.js';
-import { PRIORITY_ORDER, TASK_SCORE_MIN, TASK_SCORE_MAX, PRIORITY_META } from '../config.js';
-import { clampTaskScore, utcISOToLocalDateValue, localDateValueToUTCISO } from '../date-utils.js';
+import { PRIORITY_ORDER, TASK_SCORE_MIN, TASK_SCORE_MAX, TASK_PROGRESS_MIN, TASK_PROGRESS_MAX, PRIORITY_META } from '../config.js';
+import { clampTaskScore, clampProgress, utcISOToLocalDateValue, localDateValueToUTCISO } from '../date-utils.js';
 import { moveTaskToColumn } from '../mutations.js';
-import { saveDB } from "../storage.js";
+import { saveDB, isTimeTrackingEnabled } from "../storage.js";
 import { escapeHTML, renderBoard } from '../views/board.js';
 
 function buildEl(tag, className, innerHTML){ var el = document.createElement(tag); if(className) el.className = className; if(innerHTML !== undefined) el.innerHTML = innerHTML; return el; }
@@ -17,11 +17,18 @@ export function setBulkEditDeps(deps){
   if(deps.exportProjectJSON) _exportProjectJSON = deps.exportProjectJSON;
 }
 
-var BULKEDIT_COLUMNS = [
-  {label: 'Key'}, {label: 'Title'}, {label: 'Column'}, {label: 'Release'}, {label: 'Priority'},
-  {label: 'Type'}, {label: 'Assignee'}, {label: 'Start'}, {label: 'End'}, {label: 'Bus. Value'},
-  {label: 'Task Cost'}, {label: 'Status'}
-];
+/* Progress is an opt-in extra column, inserted right before the
+   (always-present, read-only) Status column. */
+function getBulkEditColumns(project){
+  var cols = [
+    {label: 'Key'}, {label: 'Title'}, {label: 'Column'}, {label: 'Release'}, {label: 'Priority'},
+    {label: 'Type'}, {label: 'Assignee'}, {label: 'Start'}, {label: 'End'}, {label: 'Bus. Value'},
+    {label: 'Task Cost'}
+  ];
+  if(isTimeTrackingEnabled(project)) cols.push({label: 'Progress'});
+  cols.push({label: 'Status'});
+  return cols;
+}
 
 export function openBulkEditOverlay(){
   var project = getCurrentProject();
@@ -42,8 +49,10 @@ export function isBulkEditOverlayOpen(){
 }
 
 function renderBulkEditHeader(){
+  var project = getCurrentProject();
   var header = document.getElementById('bulkEditHeader');
-  header.innerHTML = BULKEDIT_COLUMNS.map(function(col){
+  header.classList.toggle('kf-bulkedit-has-progress', isTimeTrackingEnabled(project));
+  header.innerHTML = getBulkEditColumns(project).map(function(col){
     return '<div>' + escapeHTML(col.label) + '</div>';
   }).join('');
 }
@@ -101,7 +110,7 @@ function setBulkEditField(project, taskId, field, newValue, originalValue, input
 
 function renderBulkEditRow(project, t){
   var row = document.createElement('div');
-  row.className = 'kf-bulkedit-row' + (t.archived ? ' kf-bulkedit-archived-row' : '');
+  row.className = 'kf-bulkedit-row' + (t.archived ? ' kf-bulkedit-archived-row' : '') + (isTimeTrackingEnabled(project) ? ' kf-bulkedit-has-progress' : '');
   row.setAttribute('data-task-id', t.id);
 
   var keyEl = buildEl('span', 'kf-bulkedit-key', escapeHTML(t.key));
@@ -235,6 +244,18 @@ function renderBulkEditRow(project, t){
   });
   row.appendChild(costInput);
 
+  // Progress (opt-in, only when Time Tracking is enabled)
+  if(isTimeTrackingEnabled(project)){
+    var progressInput = document.createElement('input');
+    progressInput.type = 'number';
+    progressInput.min = TASK_PROGRESS_MIN; progressInput.max = TASK_PROGRESS_MAX;
+    progressInput.value = bulkEditFieldValue(t.id, 'progress', clampProgress(t.progress));
+    progressInput.addEventListener('change', function(){
+      setBulkEditField(project, t.id, 'progress', clampProgress(progressInput.value), clampProgress(t.progress), progressInput);
+    });
+    row.appendChild(progressInput);
+  }
+
   // Status (read-only)
   var statusEl = buildEl('span', 'kf-bulkedit-status-badge', t.archived ? 'Archived' : 'Active');
   row.appendChild(statusEl);
@@ -303,6 +324,10 @@ function applyBulkEdits(project){
     if(edits.hasOwnProperty('taskCost')){
       var tc = clampTaskScore(edits.taskCost);
       if(tc !== t.taskCost){ t.taskCost = tc; touched = true; }
+    }
+    if(edits.hasOwnProperty('progress')){
+      var pr = clampProgress(edits.progress);
+      if(pr !== clampProgress(t.progress)){ t.progress = pr; touched = true; }
     }
     if(touched){
       t.dateLastModified = new Date().toISOString();

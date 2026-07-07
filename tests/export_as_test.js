@@ -138,7 +138,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   const csv = lastBlob.parts[0];
   const csvLines = csv.split('\r\n');
-  log('CSV header row matches the List View\u2019s column labels', csvLines[0] === 'Key,Title,Column,Assignee,Priority,Start,End,Value Prop.', csvLines[0]);
+  log('CSV header row matches the List View\u2019s column labels', csvLines[0] === 'Key,Title,Column,Assignee,Priority,Start,End,Value Prop.,Progress', csvLines[0]);
   log('CSV has one data row per non-archived seeded task (5)', csvLines.length === 6, csvLines.length);
   log('CSV includes a row for a known seeded task', csv.indexOf('Research competitor boards') !== -1);
 

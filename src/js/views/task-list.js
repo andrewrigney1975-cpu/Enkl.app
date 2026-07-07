@@ -4,8 +4,9 @@ import { getCurrentProject } from '../store.js';
 import { ui } from '../ui.js';
 import { getPriority } from '../ui.js';
 import { iconSvg } from '../icons.js';
-import { utcISOToLocalDisplayDate, utcISOToLocalDateValue, clampTaskScore, memberInitials } from '../date-utils.js';
+import { utcISOToLocalDisplayDate, utcISOToLocalDateValue, clampTaskScore, clampProgress, memberInitials } from '../date-utils.js';
 import { PRIORITY_ORDER, PRIORITY_META } from '../config.js';
+import { isTimeTrackingEnabled } from '../storage.js';
 
 function escapeHTML(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 var _toast = function(msg){ console.error(msg); };
@@ -82,6 +83,15 @@ export var TASKLIST_COLUMNS = [
 ];
 export var NO_RELEASE_GROUP_KEY = '__no_release__';
 
+/* Progress is an opt-in extra column, appended at the end so its
+   presence/absence never shifts the position of any other column
+   (tests and muscle-memory both rely on those staying put). */
+export function getTaskListColumns(project){
+  return isTimeTrackingEnabled(project)
+    ? TASKLIST_COLUMNS.concat([{field:'progress', label:'Progress'}])
+    : TASKLIST_COLUMNS;
+}
+
 export function openTaskListOverlay(){
   var project = getCurrentProject();
   if(!project){ _toast('No project selected.'); return; }
@@ -103,8 +113,11 @@ export function isTaskListOpen(){
 
 export function renderTaskListHeader(){
   var header = document.getElementById('taskListHeader');
+  var project = getCurrentProject();
+  var timeTracking = isTimeTrackingEnabled(project);
+  header.classList.toggle('kf-tasklist-has-progress', timeTracking);
   var html = '<div></div>'; // empty cell above the chevron column
-  TASKLIST_COLUMNS.forEach(function(col){
+  getTaskListColumns(project).forEach(function(col){
     var sorted = ui.taskListSort.field === col.field;
     var arrow = sorted ? (ui.taskListSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
     html += '<div class="kf-tasklist-header-cell' + (sorted ? ' sorted' : '') + '" data-sort-field="' + col.field + '">' + escapeHTML(col.label) + arrow + '</div>';
@@ -154,6 +167,9 @@ export function sortTaskListRows(project, rows){
         break;
       case 'valueProp':
         av = computeValueProposition(a); bv = computeValueProposition(b);
+        break;
+      case 'progress':
+        av = clampProgress(a.progress); bv = clampProgress(b.progress);
         break;
       case 'key':
       default:
@@ -297,7 +313,8 @@ export function csvEscapeValue(value){
 }
 export function buildTaskListCsv(project){
   var orderedTasks = getOrderedTaskListRows(project);
-  var lines = [TASKLIST_COLUMNS.map(function(c){ return csvEscapeValue(c.label); }).join(',')];
+  var timeTracking = isTimeTrackingEnabled(project);
+  var lines = [getTaskListColumns(project).map(function(c){ return csvEscapeValue(c.label); }).join(',')];
   orderedTasks.forEach(function(t){
     var assignee = getMemberById(project, t.assigneeId);
     var col = getColumn(project, t.columnId);
@@ -313,6 +330,7 @@ export function buildTaskListCsv(project){
       t.endDate ? utcISOToLocalDisplayDate(t.endDate) : '',
       formatValueProp(vp)
     ];
+    if(timeTracking) fields.push(clampProgress(t.progress));
     lines.push(fields.map(csvEscapeValue).join(','));
   });
   return lines.join('\r\n');
@@ -405,8 +423,18 @@ export function buildTaskListRow(project, t){
     typeIconHTML = '<span class="kf-tasklist-type-icon" title="' + escapeHTML(taskType.name) + '">' + iconSvg(taskType.iconName, 13) + '</span>';
   }
 
+  var timeTracking = isTimeTrackingEnabled(project);
+  var progressHTML = '';
+  if(timeTracking){
+    var progress = clampProgress(t.progress);
+    progressHTML = '<span class="kf-tasklist-progress" title="Progress: ' + progress + '%">' +
+      '<span class="kf-progress-track"><span class="kf-progress-fill" style="width:' + progress + '%;"></span></span>' +
+      '<span class="kf-progress-label">' + progress + '%</span>' +
+    '</span>';
+  }
+
   var row = document.createElement('div');
-  row.className = 'kf-tasklist-row';
+  row.className = 'kf-tasklist-row' + (timeTracking ? ' kf-tasklist-has-progress' : '');
   row.innerHTML =
     '<button type="button" class="kf-tasklist-chevron' + (expanded ? ' expanded' : '') + '" data-toggle-id="' + t.id + '" aria-label="Toggle details">' + iconSvg('chevronDown',14) + '</button>' +
     '<span class="kf-tasklist-key">' + typeIconHTML + escapeHTML(t.key) + '</span>' +
@@ -416,7 +444,8 @@ export function buildTaskListRow(project, t){
     '<span class="kf-priority-pill" style="color:' + prio.color + ';background:' + prio.bg + ';">' + iconSvg(prio.icon,12) + escapeHTML(prio.label) + '</span>' +
     '<span class="kf-tasklist-date">' + (t.startDate ? escapeHTML(utcISOToLocalDisplayDate(t.startDate)) : '—') + '</span>' +
     '<span class="kf-tasklist-date' + (overdue ? ' overdue' : '') + '">' + (t.endDate ? escapeHTML(utcISOToLocalDisplayDate(t.endDate)) : '—') + '</span>' +
-    '<span class="kf-valueprop-pill ' + vpClass + '" title="Business Value ' + t.businessValue + ' ÷ Task Cost ' + t.taskCost + '">' + formatValueProp(vp) + '</span>';
+    '<span class="kf-valueprop-pill ' + vpClass + '" title="Business Value ' + t.businessValue + ' ÷ Task Cost ' + t.taskCost + '">' + formatValueProp(vp) + '</span>' +
+    progressHTML;
   return row;
 }
 

@@ -38,17 +38,25 @@ function countGridTracks(value){
   doc.getElementById('taskListBtn').click();
   await wait(20);
 
+  // Demo project has Time Tracking enabled (the default), so the Progress
+  // column is present and both header/row pick up the ".kf-tasklist-has-progress"
+  // modifier that widens their grid-template-columns by one track.
+  const header = doc.getElementById('taskListHeader');
+  const hasProgress = header.classList.contains('kf-tasklist-has-progress');
+  const headerSelector = hasProgress ? '.kf-tasklist-header.kf-tasklist-has-progress' : '.kf-tasklist-header';
+  const rowSelector = hasProgress ? '.kf-tasklist-row.kf-tasklist-has-progress' : '.kf-tasklist-row';
+
   const headerCellCount = doc.querySelectorAll('.kf-tasklist-header > div').length;
-  const headerRule = ruleFor('.kf-tasklist-header');
-  const headerTemplateMatch = headerRule && headerRule.match(/grid-template-columns:\s*([^;]+);/);
+  const headerRule = ruleFor(headerSelector);
+  const headerTemplateMatch = headerRule && headerRule.match(/grid-template-columns:\s*([^;}]+)/);
   const headerTrackCount = headerTemplateMatch ? countGridTracks(headerTemplateMatch[1].trim()) : -1;
   log('".kf-tasklist-header" grid-template-columns has exactly one track per header cell (no implicit-row wrapping)',
       headerTrackCount === headerCellCount, `tracks=${headerTrackCount} cells=${headerCellCount}`);
 
   const row = doc.querySelector('.kf-tasklist-row');
   const rowCellCount = row.children.length;
-  const rowRule = ruleFor('.kf-tasklist-row');
-  const rowTemplateMatch = rowRule && rowRule.match(/grid-template-columns:\s*([^;]+);/);
+  const rowRule = ruleFor(rowSelector);
+  const rowTemplateMatch = rowRule && rowRule.match(/grid-template-columns:\s*([^;}]+)/);
   const rowTrackCount = rowTemplateMatch ? countGridTracks(rowTemplateMatch[1].trim()) : -1;
   log('".kf-tasklist-row" grid-template-columns has exactly one track per actual cell in a row',
       rowTrackCount === rowCellCount, `tracks=${rowTrackCount} cells=${rowCellCount}`);
@@ -59,9 +67,11 @@ function countGridTracks(value){
   const headerLabels = Array.from(doc.querySelectorAll('.kf-tasklist-header-cell')).map(c => c.textContent.trim());
   const lastHeaderLabel = headerLabels[headerLabels.length - 1];
   const lastRowCell = row.children[row.children.length - 1];
-  log('the last header label is "Value Prop."', lastHeaderLabel === 'Value Prop.', lastHeaderLabel);
-  log('the last cell in a row is the Value Proposition pill (rightmost column)', lastRowCell.classList.contains('kf-valueprop-pill'),
-      lastRowCell.className);
+  const expectedLastLabel = hasProgress ? 'Progress' : 'Value Prop.';
+  const expectedLastCellClass = hasProgress ? 'kf-tasklist-progress' : 'kf-valueprop-pill';
+  log(`the last header label is "${expectedLastLabel}"`, lastHeaderLabel === expectedLastLabel, lastHeaderLabel);
+  log('the last cell in a row is the rightmost column (Progress if Time Tracking is on, else Value Proposition)',
+      lastRowCell.classList.contains(expectedLastCellClass), lastRowCell.className);
 
   const deadRuleStillExists = ruleFor('.kf-tasklist-grid-cols') !== null;
   log('the old unused/duplicate .kf-tasklist-grid-cols rule has been removed (single source of truth)', !deadRuleStillExists);

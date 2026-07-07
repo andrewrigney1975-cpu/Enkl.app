@@ -1,10 +1,10 @@
 "use strict";
-import { state } from '../storage.js';
+import { state, isTimeTrackingEnabled } from '../storage.js';
 import { getTasksArray, getColumn, getMemberById, getTaskTypeById, isTaskBlocked, isTaskOverdue, buildChildrenMap } from '../utils.js';
 import { getCurrentProject } from '../store.js';
 import { PRIORITY_COLORS } from '../config.js';
 import { iconSvg } from '../icons.js';
-import { memberInitials, utcISOToLocalDisplayDate } from '../date-utils.js';
+import { memberInitials, utcISOToLocalDisplayDate, clampProgress } from '../date-utils.js';
 import { ui } from '../ui.js';
 import { getPriority } from '../ui.js';
 
@@ -34,7 +34,7 @@ export var DEPMAP_MAX_ZOOM = 2.5;
 export var lastDepLayout = null;
 
 export var DEPMAP_NODE_W = 200;
-export var DEPMAP_NODE_H = 64;
+export var DEPMAP_NODE_H = 80;
 export var DEPMAP_GAP_X = 100;
 export var DEPMAP_GAP_Y = 18;
 export var DEPMAP_MARGIN = 30;
@@ -141,7 +141,8 @@ export function renderDependencyMap(){
     '<span class="kf-legend-item"><span class="kf-legend-dot" style="background:' + getPriority('critical').accent + ';"></span>Left edge color = priority</span>' +
     '<span class="kf-legend-item">' + iconSvg('warning',12) + ' Task is currently blocked</span>' +
     '<span class="kf-legend-item" style="color:var(--kf-overdue-fg);">' + iconSvg('clock',12) + ' Task is overdue</span>' +
-    (ui.depMapShowArchived ? '<span class="kf-legend-item">' + iconSvg('archive',12) + ' Task is archived (greyed out)</span>' : '');
+    (ui.depMapShowArchived ? '<span class="kf-legend-item">' + iconSvg('archive',12) + ' Task is archived (greyed out)</span>' : '') +
+    (project && isTimeTrackingEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-blue);"></span>Bottom bar = progress</span>' : '');
 
   var hasVisibleTasks = project && getTasksArray(project).some(depMapTaskVisible);
   if(!hasVisibleTasks){
@@ -198,12 +199,22 @@ export function renderDependencyMap(){
       typeBadge = '<g transform="translate(' + (n.w - 24 - precedingBadgeCount * 22) + ',8)" style="color:var(--kf-text-secondary);"><title>' + escapeHTML(taskType.name) + '</title>' + iconSvg(taskType.iconName,16) + '</g>';
     }
     var avatarBadge = assignee
-      ? '<g><title>' + escapeHTML(assignee.name) + '</title><circle cx="' + (n.w - 18) + '" cy="' + (n.h - 16) + '" r="10" fill="' + assignee.color + '"></circle>' +
-        '<text x="' + (n.w - 18) + '" y="' + (n.h - 12.5) + '" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">' + escapeHTML(memberInitials(assignee.name)) + '</text></g>'
+      ? '<g><title>' + escapeHTML(assignee.name) + '</title><circle cx="' + (n.w - 18) + '" cy="' + (n.h - 22) + '" r="10" fill="' + assignee.color + '"></circle>' +
+        '<text x="' + (n.w - 18) + '" y="' + (n.h - 18.5) + '" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">' + escapeHTML(memberInitials(assignee.name)) + '</text></g>'
       : '';
     var archivedBadge = t.archived
       ? '<g transform="translate(4,7)" style="color:var(--kf-text-faint);"><title>Archived</title>' + iconSvg('archive',14) + '</g>'
       : '';
+    var progressBadge = '';
+    if(isTimeTrackingEnabled(project)){
+      var progress = clampProgress(t.progress);
+      var barX = 6, barW = n.w - 12, barY = n.h - 8, barH = 4;
+      progressBadge =
+        '<g><title>Progress: ' + progress + '%</title>' +
+          '<rect x="' + barX + '" y="' + barY + '" width="' + barW + '" height="' + barH + '" rx="1.5" fill="var(--kf-border)"></rect>' +
+          '<rect x="' + barX + '" y="' + barY + '" width="' + (barW * progress / 100) + '" height="' + barH + '" rx="1.5" fill="var(--kf-blue)"></rect>' +
+        '</g>';
+    }
     var keyX = t.archived ? 30 : 16;
     return (
       '<g class="kf-depnode' + (t.archived ? ' kf-depnode-archived' : '') + '" data-task-id="' + t.id + '" transform="translate(' + n.x + ',' + n.y + ')">' +
@@ -211,14 +222,15 @@ export function renderDependencyMap(){
         '<rect x="0" y="0" width="5" height="' + n.h + '" rx="2" fill="' + prio.accent + '"></rect>' +
         archivedBadge +
         '<text x="' + keyX + '" y="20" font-size="10" font-weight="700" style="fill:var(--kf-text-faint);">' + escapeHTML(t.key) + '</text>' +
-        '<text x="16" y="38" font-size="13" font-weight="600" style="fill:var(--kf-text);">' + escapeHTML(title) + '</text>' +
-        '<circle cx="21" cy="54" r="4" fill="' + prio.accent + '"></circle>' +
-        '<text x="30" y="57.5" font-size="10" font-weight="700" fill="' + prio.accent + '">' + escapeHTML(prio.label) + '</text>' +
+        '<text x="16" y="40" font-size="13" font-weight="600" style="fill:var(--kf-text);">' + escapeHTML(title) + '</text>' +
+        '<circle cx="21" cy="58" r="4" fill="' + prio.accent + '"></circle>' +
+        '<text x="30" y="61.5" font-size="10" font-weight="700" fill="' + prio.accent + '">' + escapeHTML(prio.label) + '</text>' +
         warningBadge +
         overdueBadge +
         lockBadge +
         typeBadge +
         avatarBadge +
+        progressBadge +
       '</g>'
     );
   }).join('');

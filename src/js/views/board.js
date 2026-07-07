@@ -1,10 +1,10 @@
 "use strict";
 import { state } from '../storage.js';
-import { normalizeHeaderButtonVisibility, saveDB } from '../storage.js';
+import { normalizeHeaderButtonVisibility, isTimeTrackingEnabled, saveDB } from '../storage.js';
 import { PRIORITY_META, PRIORITY_ORDER, PRIORITY_COLORS, MOBILE_BREAKPOINT } from '../config.js';
 import { iconSvg } from '../icons.js';
 import { getTasksArray, getColumn, getMemberById, getTaskTypeById, getTeamCommitteeById, isTaskBlocked, isTaskOverdue, getDescendants, buildChildrenMap, wouldCreateCycle } from '../utils.js';
-import { memberInitials, utcISOToLocalDisplayDate, utcISOToLocalDateValue, localDateValueToUTCISO, clampTaskScore, defaultStartDateValue, defaultEndDateValue, lightenHexColor } from '../date-utils.js';
+import { memberInitials, utcISOToLocalDisplayDate, utcISOToLocalDateValue, localDateValueToUTCISO, clampTaskScore, clampProgress, defaultStartDateValue, defaultEndDateValue, lightenHexColor } from '../date-utils.js';
 import { getCurrentProject } from '../store.js';
 import { ui } from '../ui.js';
 import { getPriority } from '../ui.js';
@@ -743,6 +743,13 @@ export function renderCard(project, task){
   }
   if(overdue){
     metaHTML += '<span class="kf-overdue-chip" title="End date was ' + escapeHTML(utcISOToLocalDisplayDate(task.endDate)) + '">' + iconSvg('clock',12) + 'Overdue</span>';
+  }
+  if(isTimeTrackingEnabled(project)){
+    var progress = clampProgress(task.progress);
+    metaHTML += '<span class="kf-progress-chip" title="Progress: ' + progress + '%">' +
+      '<span class="kf-progress-track"><span class="kf-progress-fill" style="width:' + progress + '%;"></span></span>' +
+      '<span class="kf-progress-label">' + progress + '%</span>' +
+    '</span>';
   }
   if(assignee){
     metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';" title="Assigned to ' + escapeHTML(assignee.name) + '">' + escapeHTML(memberInitials(assignee.name)) + '</span>';

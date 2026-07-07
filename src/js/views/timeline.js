@@ -4,7 +4,8 @@ import { getCurrentProject } from '../store.js';
 import { ui } from '../ui.js';
 import { getPriority } from '../ui.js';
 import { iconSvg } from '../icons.js';
-import { utcISOToLocalDisplayDate, utcISOToLocalDateValue, localDateValueToUTCISO, memberInitials } from '../date-utils.js';
+import { utcISOToLocalDisplayDate, utcISOToLocalDateValue, localDateValueToUTCISO, memberInitials, clampProgress } from '../date-utils.js';
+import { isTimeTrackingEnabled } from '../storage.js';
 
 function escapeHTML(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 function iconHTML(name, size){ return '<span class="kf-icon">'+iconSvg(name,size)+'</span>'; }
@@ -241,7 +242,8 @@ export function renderTimeline(){
     return '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:' + conf.accent + ';"></span>' + escapeHTML(conf.label) + '</span>';
   }).join('') +
   '<span class="kf-legend-item"><span class="kf-legend-dot" style="background:var(--kf-blue);"></span>Today</span>' +
-  (ui.timelineShowArchived ? '<span class="kf-legend-item">' + iconSvg('archive', 12) + ' Archived task (ghosted)</span>' : '');
+  (ui.timelineShowArchived ? '<span class="kf-legend-item">' + iconSvg('archive', 12) + ' Archived task (ghosted)</span>' : '') +
+  (isTimeTrackingEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-dot" style="background:#fff;border:1.5px solid var(--kf-text-secondary);"></span>Marker position = progress</span>' : '');
 
   var activeTasks = getTasksArray(project).filter(function(t){ return !t.archived; });
   var archivedTasks = ui.timelineShowArchived ? getTasksArray(project).filter(function(t){ return t.archived; }) : [];
@@ -368,6 +370,17 @@ export function renderTimeline(){
       bar.title = t.key + ' — ' + t.title +
         (startD ? ' · Start ' + utcISOToLocalDisplayDate(t.startDate) : '') +
         (endD ? ' · End ' + utcISOToLocalDisplayDate(t.endDate) : '');
+      if(isTimeTrackingEnabled(project)){
+        var progress = clampProgress(t.progress);
+        var marker = buildEl('span', 'kf-timeline-progress-marker' + (progress > 0 ? ' kf-timeline-progress-marker-filled' : ''), '');
+        marker.style.left = (barWidth * progress / 100) + 'px';
+        marker.title = 'Progress: ' + progress + '%';
+        /* Inserted first, not appended — it's an absolutely-positioned
+           overlay that plays no part in the bar's flex layout, so it
+           must not disturb which flex child (the type icon) ends up
+           last, since that's what other logic/tests key off of. */
+        bar.insertBefore(marker, bar.firstChild);
+      }
       track.appendChild(bar);
     } else {
       track.appendChild(buildEl('div', 'kf-timeline-no-dates-note', 'No dates set'));

@@ -1278,6 +1278,35 @@
     background: var(--kf-blocked-bg);
   }
 
+  .kf-progress-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--kf-text-secondary);
+    background: var(--kf-column-bg);
+    border-radius: 3px;
+    padding: 2px 6px;
+  }
+
+  .kf-progress-track {
+    display: block;
+    width: 36px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--kf-border);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .kf-progress-fill {
+    display: block;
+    height: 100%;
+    background: var(--kf-blue);
+    border-radius: 3px;
+  }
+
   .kf-overdue-chip {
     color: var(--kf-overdue-fg);
     background: var(--kf-overdue-bg);
@@ -2814,6 +2843,10 @@
     flex-shrink: 0;
   }
 
+  .kf-tasklist-header.kf-tasklist-has-progress {
+    grid-template-columns: 32px 92px minmax(160px, 1fr) 130px 160px 116px 100px 100px 110px 110px;
+  }
+
   .kf-tasklist-header-cell {
     display: flex;
     align-items: center;
@@ -2845,8 +2878,20 @@
     border-bottom: 1px solid var(--kf-border);
   }
 
+  .kf-tasklist-row.kf-tasklist-has-progress {
+    grid-template-columns: 32px 92px minmax(160px, 1fr) 130px 160px 116px 100px 100px 110px 110px;
+  }
+
   .kf-tasklist-row:hover {
     background: var(--kf-hover-tint);
+  }
+
+  .kf-tasklist-progress {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--kf-text-secondary);
   }
 
   .kf-tasklist-key {
@@ -3060,6 +3105,10 @@
     flex-shrink: 0;
   }
 
+  .kf-bulkedit-header.kf-bulkedit-has-progress {
+    grid-template-columns: 80px minmax(140px, 1fr) 130px 130px 120px 130px 140px 125px 125px 85px 85px 80px 84px;
+  }
+
   .kf-bulkedit-scroll {
     flex: 1;
     overflow: auto;
@@ -3072,6 +3121,10 @@
     align-items: center;
     padding: 7px 16px;
     border-bottom: 1px solid var(--kf-border);
+  }
+
+  .kf-bulkedit-row.kf-bulkedit-has-progress {
+    grid-template-columns: 80px minmax(140px, 1fr) 130px 130px 120px 130px 140px 125px 125px 85px 85px 80px 84px;
   }
 
   .kf-bulkedit-row:hover {
@@ -3732,6 +3785,23 @@
 
   .kf-timeline-bar-archived:hover {
     opacity: 0.65;
+  }
+
+  .kf-timeline-progress-marker {
+    position: absolute;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    background: transparent;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    pointer-events: none;
+  }
+
+  .kf-timeline-progress-marker-filled {
+    background: #fff;
   }
 
   .kf-timeline-no-dates-note {

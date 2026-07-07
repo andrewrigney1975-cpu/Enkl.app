@@ -38,17 +38,25 @@ function countGridTracks(value){
   doc.getElementById('bulkEditBtn').click();
   await wait(20);
 
+  // Demo project has Time Tracking enabled (the default), so the Progress
+  // column is present and both header/row pick up the ".kf-bulkedit-has-progress"
+  // modifier that widens their grid-template-columns by one track.
+  const header = doc.getElementById('bulkEditHeader');
+  const hasProgress = header.classList.contains('kf-bulkedit-has-progress');
+  const headerSelector = hasProgress ? '.kf-bulkedit-header.kf-bulkedit-has-progress' : '.kf-bulkedit-header';
+  const rowSelector = hasProgress ? '.kf-bulkedit-row.kf-bulkedit-has-progress' : '.kf-bulkedit-row';
+
   const headerLabelCount = doc.querySelectorAll('.kf-bulkedit-header > div').length;
-  const headerRule = ruleFor('.kf-bulkedit-header');
-  const headerTemplateMatch = headerRule && headerRule.match(/grid-template-columns:\s*([^;]+);/);
+  const headerRule = ruleFor(headerSelector);
+  const headerTemplateMatch = headerRule && headerRule.match(/grid-template-columns:\s*([^;}]+)/);
   const headerTrackCount = headerTemplateMatch ? countGridTracks(headerTemplateMatch[1].trim()) : -1;
   log('".kf-bulkedit-header" grid-template-columns has exactly one track per header label (no implicit-row wrapping)',
       headerTrackCount === headerLabelCount, `tracks=${headerTrackCount} labels=${headerLabelCount}`);
 
   const row = doc.querySelector('.kf-bulkedit-row');
   const rowCellCount = row.children.length;
-  const rowRule = ruleFor('.kf-bulkedit-row');
-  const rowTemplateMatch = rowRule && rowRule.match(/grid-template-columns:\s*([^;]+);/);
+  const rowRule = ruleFor(rowSelector);
+  const rowTemplateMatch = rowRule && rowRule.match(/grid-template-columns:\s*([^;}]+)/);
   const rowTrackCount = rowTemplateMatch ? countGridTracks(rowTemplateMatch[1].trim()) : -1;
   log('".kf-bulkedit-row" grid-template-columns has exactly one track per actual cell in a row',
       rowTrackCount === rowCellCount, `tracks=${rowTrackCount} cells=${rowCellCount}`);

@@ -360,6 +360,11 @@ export function normalizeHeaderButtonVisibility(value){
   };
 }
 
+export function isTimeTrackingEnabled(project){
+  if(!project) return false;
+  return normalizeHeaderButtonVisibility(project.headerButtonVisibility).timeTracking === true;
+}
+
 export function createDefaultProject(name, key){
   var now = new Date().toISOString();
   return {
