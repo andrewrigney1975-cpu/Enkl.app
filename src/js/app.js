@@ -975,6 +975,7 @@ function wireEvents(){
     exportProjectJSON(p);
   });
 
+  document.getElementById('refreshBtn').addEventListener('click', function(){ window.location.reload(); });
   document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
   document.getElementById('appSettingsBtn').addEventListener('click', openAppSettingsOverlay);
   document.getElementById('appSettingsClose').addEventListener('click', closeAppSettingsOverlay);
