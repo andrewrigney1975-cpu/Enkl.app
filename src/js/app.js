@@ -22,6 +22,7 @@ import { setTimelineDeps, openTimelineOverlay, closeTimelineOverlay, isTimelineO
 import { setCostBenefitDeps, cbZoomState, openCostBenefitOverlay, closeCostBenefitOverlay, isCostBenefitOverlayOpen, toggleCostBenefitShowArchived, setCbZoom, resetCbZoom, zoomCbAtPoint } from './views/cost-benefit.js';
 
 /* ---- Features ---- */
+import { parseTaskKeyFromHash, findTaskByKey, clearTaskHash } from './features/hash-router.js';
 import { exportProjectJSON } from './features/export.js';
 import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey } from './features/import.js';
 import { setBulkEditDeps, openBulkEditOverlay, closeBulkEditOverlay, isBulkEditOverlayOpen, saveBulkEditChanges } from './features/bulk-edit.js';
@@ -1026,6 +1027,7 @@ function wireEvents(){
     relocateViewButtonsForViewport();
     if(window.innerWidth > 1024) closeMobileDrawer();
   });
+  window.addEventListener('hashchange', openTaskFromHashIfPresent);
 
   document.getElementById('searchInput').addEventListener('input', function(e){
     ui.searchTerm = e.target.value.trim();
@@ -1183,6 +1185,30 @@ function wireEvents(){
 }
 
 /* =========================================================
+   HASHBANG TASK ROUTING
+   A URL like "#!/DEMO-1" deep-links straight to that task: switching
+   to its project first if it isn't already the active one, then
+   opening it through the same openTaskModal() path a board-card click
+   would use. ========================================================= */
+function openTaskFromHashIfPresent(){
+  var key = parseTaskKeyFromHash();
+  if(!key) return;
+  var found = findTaskByKey(key);
+  if(!found){
+    toast('No task found for "' + key + '".');
+    clearTaskHash();
+    return;
+  }
+  if(found.project.id !== state.db.currentProjectId){
+    state.db.currentProjectId = found.project.id;
+    saveDB();
+    resetFilters();
+    renderAll();
+  }
+  openTaskModal(found.task.id, found.task.columnId);
+}
+
+/* =========================================================
    INIT
    ========================================================= */
 function init(){
@@ -1190,6 +1216,7 @@ function init(){
   wireEvents();
   renderAll();
   checkOverdueAlert();
+  openTaskFromHashIfPresent();
 }
 
 if(document.readyState === 'loading'){

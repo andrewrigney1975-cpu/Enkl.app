@@ -13,6 +13,7 @@ import { getReachableColumnIds } from '../features/workflow-engine.js';
 import { encryptText } from '../features/crypto.js';
 import { openSetPrivateKeyModal } from './private-key-set.js';
 import { openUnlockPrivateTaskModal } from './private-key-unlock.js';
+import { setTaskHash, clearTaskHash } from '../features/hash-router.js';
 
 /* Toggles between the full editable form and the "private, no key
    given" reduced view (title only, read-only, no Save/Delete). */
@@ -44,6 +45,7 @@ export function openTaskModal(taskId, defaultColumnId){
         document.getElementById('taskPrivateReducedTitle').textContent = task.title;
         document.getElementById('taskDeleteBtn').classList.add('kf-vis-hidden');
         document.getElementById('taskOverlay').classList.remove('hidden');
+        setTaskHash(task.key);
       } else { // 'unlocked'
         ui.taskModalUnlockedDerivedBits = result.derivedBits;
         showTaskFullFields(true);
@@ -159,6 +161,7 @@ function populateFullForm(project, task, descriptionValue){
   renderDependencyPicker();
   document.getElementById('taskOverlay').classList.remove('hidden');
   document.getElementById('taskTitleInput').focus();
+  if(task) setTaskHash(task.key);
 }
 
 export function updatePriorityIcon(){
@@ -253,6 +256,7 @@ export function closeTaskModal(){
   document.getElementById('taskOverlay').classList.add('hidden');
   ui.editingTaskId = null;
   ui.taskModalUnlockedDerivedBits = null;
+  clearTaskHash();
 }
 
 export async function saveTaskFromModal(){
