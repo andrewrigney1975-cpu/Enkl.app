@@ -125,6 +125,17 @@ export function migrateDB(){
       if(!Array.isArray(t.auditLog)){ t.auditLog = []; changed = true; }
       if(t.parentTaskId === undefined){ t.parentTaskId = null; changed = true; }
       else if(t.parentTaskId && (t.parentTaskId === t.id || !p.tasks[t.parentTaskId])){ t.parentTaskId = null; changed = true; }
+      /* One-time backfill: a task already sitting in a Done column
+         when this field was introduced has its best-available
+         completion signal — dateLastModified — copied over, since
+         there's no better historical record of when it actually
+         finished. Every transition into Done from here on sets this
+         properly (see moveTaskToColumn in mutations.js). */
+      if(t.dateDone === undefined){
+        var doneCol = getColumn(p, t.columnId);
+        t.dateDone = (doneCol && doneCol.done) ? t.dateLastModified : null;
+        changed = true;
+      }
     });
 
     p.columns.forEach(function(c){

@@ -147,11 +147,13 @@ export function computeDecisionsHealth(project){
 }
 
 /* ---- Burndown / velocity ----
-   Velocity is inferred from dateLastModified on tasks currently
-   sitting in a Done column, over a trailing 4-week window. If there's
-   no completed-task history to measure from, hasEnoughData is false
-   and the caller must show an explicit "not enough data" message
-   rather than fabricate a projection. */
+   Velocity is inferred from dateDone on tasks currently sitting in a
+   Done column — the timestamp set when a task actually transitions
+   into Done (see moveTaskToColumn in mutations.js), not touched by
+   later unrelated edits the way dateLastModified is — over a trailing
+   4-week window. If there's no completed-task history to measure
+   from, hasEnoughData is false and the caller must show an explicit
+   "not enough data" message rather than fabricate a projection. */
 export var BURNDOWN_VELOCITY_WINDOW_MS = 28 * 24 * 60 * 60 * 1000;
 export var MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 export function computeBurndownData(project){
@@ -172,8 +174,8 @@ export function computeBurndownData(project){
   var now = Date.now();
   var windowStart = now - BURNDOWN_VELOCITY_WINDOW_MS;
   var completedInWindow = doneTasks.filter(function(t){
-    var modified = new Date(t.dateLastModified).getTime();
-    return isFinite(modified) && modified >= windowStart && modified <= now;
+    var doneAt = t.dateDone ? new Date(t.dateDone).getTime() : NaN;
+    return isFinite(doneAt) && doneAt >= windowStart && doneAt <= now;
   }).length;
 
   if(doneTasks.length === 0 || completedInWindow === 0){

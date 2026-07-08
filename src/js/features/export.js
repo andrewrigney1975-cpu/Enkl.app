@@ -39,6 +39,7 @@ export function buildHierarchy(project){
       documentationUrl: t.documentationUrl || null,
       dateCreated: t.dateCreated || null,
       dateLastModified: t.dateLastModified || null,
+      dateDone: t.dateDone || null,
       startDate: t.startDate || null,
       endDate: t.endDate || null,
       businessValue: clampTaskScore(t.businessValue),

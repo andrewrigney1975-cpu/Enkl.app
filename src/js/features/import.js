@@ -57,6 +57,7 @@ export function flattenImportedHierarchy(nodes, out){
         documentationUrl: typeof n.documentationUrl === 'string' ? n.documentationUrl.trim().slice(0,500) : null,
         dateCreated: typeof n.dateCreated === 'string' ? n.dateCreated : null,
         dateLastModified: typeof n.dateLastModified === 'string' ? n.dateLastModified : null,
+        dateDone: isValidISODateString(n.dateDone) ? n.dateDone : null,
         startDate: isValidISODateString(n.startDate) ? n.startDate : null,
         endDate: isValidISODateString(n.endDate) ? n.endDate : null,
         businessValue: n.businessValue,
@@ -490,6 +491,10 @@ export function buildProjectFromExportDoc(doc){
       encryptionIv: t.encryptionIv,
       dateCreated: t.dateCreated || importedAt,
       dateLastModified: t.dateLastModified || importedAt,
+      /* Only trusted if the task's resolved column actually is Done —
+         guards against a hand-edited file claiming a completion date
+         for a task that isn't (or is no longer) in a Done column. */
+      dateDone: (col.done && t.dateDone) ? t.dateDone : null,
       auditLog: Array.isArray(t.auditLog) ? t.auditLog : [],
       parentTaskId: null
     };

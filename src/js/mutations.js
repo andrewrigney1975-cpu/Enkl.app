@@ -1049,6 +1049,11 @@ export function addTask(project, data){
     encryptionIv: data.encryptionIv || null,
     dateCreated: now,
     dateLastModified: now,
+    /* A task can be created directly into a Done column (e.g. logging
+       already-finished work) — that counts as "transitioning to Done"
+       same as dragging it there would, so it gets a completion date
+       immediately rather than staying null until some later edit. */
+    dateDone: col.done ? now : null,
     auditLog: [],
     parentTaskId: data.parentTaskId || null
   };
@@ -1178,6 +1183,7 @@ export function moveTaskToColumn(project, taskId, targetColumnId, index){
   var t = project.tasks[taskId];
   if(!t) return;
   var oldColumnId = t.columnId;
+  var wasDone = !!(getColumn(project, oldColumnId) || {}).done;
   project.columns.forEach(function(c){ c.order = c.order.filter(function(id){ return id !== taskId; }); });
   var target = getColumn(project, targetColumnId);
   if(!target) return;
@@ -1188,7 +1194,15 @@ export function moveTaskToColumn(project, taskId, targetColumnId, index){
   }
   t.columnId = target.id;
   if(oldColumnId !== target.id) pushTaskAuditEntry(project, t, 'columnId', oldColumnId, target.id);
-  t.dateLastModified = new Date().toISOString();
+  var now = new Date().toISOString();
+  /* dateDone marks the most recent time this task actually became
+     Done — set the instant it transitions in, cleared if it's ever
+     reopened, so a stale completion date from a previous pass through
+     Done never lingers on a task that's active again. Moving between
+     two different Done columns doesn't touch it either way. */
+  if(target.done && !wasDone) t.dateDone = now;
+  else if(!target.done && wasDone) t.dateDone = null;
+  t.dateLastModified = now;
 }
 
 /* =========================================================

@@ -102,7 +102,7 @@ function buildBurndownActualPoints(project, burndown){
   var tasks = getTasksArr(project).filter(function(t){ return !t.archived; });
   var doneTasks = tasks.filter(function(t){ var c = getColumn(project, t.columnId); return c && c.done; });
   var completions = doneTasks
-    .map(function(t){ return new Date(t.dateLastModified).getTime(); })
+    .map(function(t){ return t.dateDone ? new Date(t.dateDone).getTime() : NaN; })
     .filter(function(ts){ return isFinite(ts) && ts >= burndown.startDate; })
     .sort(function(a, b){ return a - b; });
 
