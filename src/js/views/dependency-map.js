@@ -156,7 +156,7 @@ export function renderDependencyMap(){
     '<span class="kf-legend-item">' + iconSvg('warning',12) + ' Task is currently blocked</span>' +
     '<span class="kf-legend-item" style="color:var(--kf-overdue-fg);">' + iconSvg('clock',12) + ' Task is overdue</span>' +
     (ui.depMapShowArchived ? '<span class="kf-legend-item">' + iconSvg('archive',12) + ' Task is archived (greyed out)</span>' : '') +
-    (project && isTimeTrackingEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-blue);"></span>Bottom bar = progress</span>' : '') +
+    (project && isTimeTrackingEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-blue);"></span>Progress</span>' : '') +
     (project && isSubTasksEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:repeating-linear-gradient(to right,#6554c0 0 4px,transparent 4px 7px);"></span>Dashed = sub-task</span>' : '');
 
   var hasVisibleTasks = project && getTasksArray(project).some(depMapTaskVisible);
@@ -230,14 +230,19 @@ export function renderDependencyMap(){
     var archivedBadge = t.archived
       ? '<g transform="translate(4,7)" style="color:var(--kf-text-faint);"><title>Archived</title>' + iconSvg('archive',14) + '</g>'
       : '';
+    /* Same track + fill + % label as the board card's progress chip
+       (kf-progress-chip/-track/-fill in styles.css), just redrawn in
+       SVG rather than HTML/CSS — one visual language for "progress"
+       across both views. */
     var progressBadge = '';
     if(isTimeTrackingEnabled(project)){
       var progress = clampProgress(t.progress);
-      var barX = 6, barW = n.w - 12, barY = n.h - 8, barH = 4;
+      var trackX = 16, trackY = n.h - 12, trackW = 36, trackH = 5;
       progressBadge =
         '<g><title>Progress: ' + progress + '%</title>' +
-          '<rect x="' + barX + '" y="' + barY + '" width="' + barW + '" height="' + barH + '" rx="1.5" fill="var(--kf-border)"></rect>' +
-          '<rect x="' + barX + '" y="' + barY + '" width="' + (barW * progress / 100) + '" height="' + barH + '" rx="1.5" fill="var(--kf-blue)"></rect>' +
+          '<rect x="' + trackX + '" y="' + trackY + '" width="' + trackW + '" height="' + trackH + '" rx="2.5" fill="var(--kf-border)"></rect>' +
+          '<rect x="' + trackX + '" y="' + trackY + '" width="' + (trackW * progress / 100) + '" height="' + trackH + '" rx="2.5" fill="var(--kf-blue)"></rect>' +
+          '<text x="' + (trackX + trackW + 6) + '" y="' + (trackY + trackH + 1) + '" font-size="9" font-weight="600" fill="var(--kf-text-secondary)">' + progress + '%</text>' +
         '</g>';
     }
     var keyX = t.archived ? 30 : 16;
