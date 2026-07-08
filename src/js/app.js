@@ -5,8 +5,6 @@ import { state, loadDB, saveDB } from './storage.js';
 import { getCurrentProject } from './store.js';
 import { ui, toast, resetFilters, renderThemeToggleIcon, toggleTheme, relocateViewButtonsForViewport, toggleSideNav, toggleMobileDrawer, closeMobileDrawer, isMobileDrawerOpen } from './ui.js';
 import { hydrateIcons } from './icons.js';
-import { clampTaskScore, utcISOToLocalDisplayDate } from './date-utils.js';
-import { getTasksArray, isTaskOverdue, isTaskUnscored } from './utils.js';
 
 /* ---- Mutations ---- */
 import { deleteProject, closeAllTaskTypeIconPanels, setMutationsToast } from './mutations.js';
@@ -24,7 +22,8 @@ import { setCostBenefitDeps, cbZoomState, openCostBenefitOverlay, closeCostBenef
 /* ---- Features ---- */
 import { parseTaskKeyFromHash, findTaskByKey, clearTaskHash } from './features/hash-router.js';
 import { exportProjectJSON } from './features/export.js';
-import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey } from './features/import.js';
+import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck } from './features/import.js';
+import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder } from './features/session-alerts.js';
 import { setBulkEditDeps, openBulkEditOverlay, closeBulkEditOverlay, isBulkEditOverlayOpen, saveBulkEditChanges } from './features/bulk-edit.js';
 import { getArchivedTasks, openArchivedTasksOverlay, closeArchivedTasksOverlay, isArchivedTasksOverlayOpen, renderArchivedTasksList, reactivateSelectedArchivedTasks } from './features/archived-tasks.js';
 import { closeAllExportAsPanels, toggleExportAsPanel, exportSvgElementAsSvgFile, exportSvgElementAsPng } from './features/svg-export.js';
@@ -63,178 +62,11 @@ setTimelineDeps({ toast, openTaskModal });
 setCostBenefitDeps({ toast, openTaskModal });
 setBulkEditDeps({ confirmDialog, exportProjectJSON });
 setMutationsToast(toast);
+setImportSessionAlertsCheck(checkProjectAlerts);
 
 /* ---- Console-exposed debug helpers ---- */
 window.go_ufo = openUfoModal;
 window.randomise = randomise;
-
-/* =========================================================
-   BACKUP REMINDER
-   ========================================================= */
-var BACKUP_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
-var backupQueue = [];
-
-function checkOverdueAlert(){
-  var project = getCurrentProject();
-  if(!project){ checkDefaultScoreAlert(); return; }
-
-  var overdueTasks = getTasksArray(project).filter(function(t){ return isTaskOverdue(project, t); });
-  if(overdueTasks.length === 0){ checkDefaultScoreAlert(); return; }
-
-  overdueTasks.sort(function(a, b){ return new Date(a.endDate).getTime() - new Date(b.endDate).getTime(); });
-
-  var msg = '“' + project.name + '” has ' + overdueTasks.length + ' task' +
-            (overdueTasks.length === 1 ? '' : 's') + ' with an end date in the past.';
-  document.getElementById('overdueAlertMessage').textContent = msg;
-
-  var listEl = document.getElementById('overdueAlertList');
-  listEl.innerHTML = '';
-  var maxShown = 6;
-  overdueTasks.slice(0, maxShown).forEach(function(t){
-    var row = document.createElement('div');
-    row.className = 'kf-overdue-alert-row';
-    var d = document.createElement('div');
-    d.innerHTML =
-      '<span class="kf-dep-key"></span>' +
-      '<span class="kf-overdue-alert-title"></span>' +
-      '<span class="kf-overdue-alert-date"></span>';
-    d.querySelector('.kf-dep-key').textContent = t.key;
-    d.querySelector('.kf-overdue-alert-title').textContent = t.title;
-    d.querySelector('.kf-overdue-alert-date').textContent = utcISOToLocalDisplayDate(t.endDate);
-    row.appendChild(d.querySelector('.kf-dep-key'));
-    row.appendChild(d.querySelector('.kf-overdue-alert-title'));
-    row.appendChild(d.querySelector('.kf-overdue-alert-date'));
-    listEl.appendChild(row);
-  });
-  if(overdueTasks.length > maxShown){
-    var more = document.createElement('div');
-    more.className = 'kf-overdue-alert-more';
-    more.textContent = '+ ' + (overdueTasks.length - maxShown) + ' more';
-    listEl.appendChild(more);
-  }
-
-  document.getElementById('overdueAlertOverlay').classList.remove('hidden');
-  hydrateIcons(document.getElementById('overdueAlertOverlay'));
-}
-
-function closeOverdueAlert(){
-  document.getElementById('overdueAlertOverlay').classList.add('hidden');
-  checkDefaultScoreAlert();
-}
-
-function checkDefaultScoreAlert(){
-  var project = getCurrentProject();
-  if(!project){ checkBackupReminders(); return; }
-
-  var unscoredTasks = getTasksArray(project).filter(function(t){
-    return !t.archived && isTaskUnscored(t);
-  });
-  if(unscoredTasks.length === 0){ checkBackupReminders(); return; }
-
-  unscoredTasks.sort(function(a, b){ return a.key.localeCompare(b.key, undefined, {numeric: true}); });
-
-  var msg = project.name + ' has ' + unscoredTasks.length + ' task' +
-            (unscoredTasks.length === 1 ? '' : 's') + ' that ' + (unscoredTasks.length === 1 ? 'has not' : 'have not') + ' been scored — ' +
-            'Business Value and Task Cost are still at the default of 1.';
-  document.getElementById('defaultScoreAlertMessage').textContent = msg;
-
-  var listEl = document.getElementById('defaultScoreAlertList');
-  listEl.innerHTML = '';
-  var maxShown = 6;
-  unscoredTasks.slice(0, maxShown).forEach(function(t){
-    var row = document.createElement('div');
-    row.className = 'kf-defaultscore-alert-row';
-    var keyEl = document.createElement('span');
-    keyEl.className = 'kf-dep-key';
-    keyEl.textContent = t.key;
-    var titleEl = document.createElement('span');
-    titleEl.className = 'kf-defaultscore-alert-title';
-    titleEl.textContent = t.title;
-    var scoreEl = document.createElement('span');
-    scoreEl.className = 'kf-defaultscore-alert-scores';
-    scoreEl.textContent = 'BV ' + clampTaskScore(t.businessValue) + ' · Cost ' + clampTaskScore(t.taskCost);
-    row.appendChild(keyEl);
-    row.appendChild(titleEl);
-    row.appendChild(scoreEl);
-    listEl.appendChild(row);
-  });
-  if(unscoredTasks.length > maxShown){
-    var more = document.createElement('div');
-    more.className = 'kf-defaultscore-alert-more';
-    more.textContent = '+ ' + (unscoredTasks.length - maxShown) + ' more';
-    listEl.appendChild(more);
-  }
-
-  document.getElementById('defaultScoreAlertOverlay').classList.remove('hidden');
-  hydrateIcons(document.getElementById('defaultScoreAlertOverlay'));
-}
-
-function closeDefaultScoreAlert(){
-  document.getElementById('defaultScoreAlertOverlay').classList.add('hidden');
-  checkBackupReminders();
-}
-
-function checkBackupReminders(){
-  var db = state.db;
-  var now = Date.now();
-  db.projectOrder.forEach(function(pid){
-    var p = db.projects[pid];
-    if(!p) return;
-    var referenceDate = p.dateLastExported || p.dateCreated || null;
-    if(!referenceDate) return;
-    var age = now - new Date(referenceDate).getTime();
-    if(age > BACKUP_THRESHOLD_MS){
-      backupQueue.push(pid);
-    }
-  });
-  advanceBackupQueue();
-}
-
-function advanceBackupQueue(){
-  if(backupQueue.length === 0) return;
-  var db = state.db;
-  var pid = backupQueue[0];
-  var project = db.projects[pid];
-  if(!project){ backupQueue.shift(); advanceBackupQueue(); return; }
-
-  var refDate = project.dateLastExported || project.dateCreated;
-  var daysSince = Math.floor((Date.now() - new Date(refDate).getTime()) / (24 * 60 * 60 * 1000));
-  var action = project.dateLastExported ? 'last backed up' : 'created';
-  var msg =
-    '“' + project.name + '” (' + project.key + ') was ' + action + ' ' + daysSince +
-    ' day' + (daysSince === 1 ? '' : 's') + ' ago and has no recent backup. ' +
-    'Would you like to export a backup now?';
-
-  document.getElementById('backupReminderMessage').textContent = msg;
-  document.getElementById('backupReminderOverlay').classList.remove('hidden');
-  hydrateIcons(document.getElementById('backupReminderOverlay'));
-}
-
-function closeBackupReminderModal(){
-  document.getElementById('backupReminderOverlay').classList.add('hidden');
-}
-
-function dismissBackupReminder(){
-  backupQueue.shift();
-  closeBackupReminderModal();
-  if(backupQueue.length > 0){
-    setTimeout(advanceBackupQueue, 300);
-  }
-}
-
-function runBackupForReminder(){
-  var db = state.db;
-  var pid = backupQueue[0];
-  var project = pid ? db.projects[pid] : null;
-  closeBackupReminderModal();
-  backupQueue.shift();
-  if(project){
-    exportProjectJSON(project);
-  }
-  if(backupQueue.length > 0){
-    setTimeout(advanceBackupQueue, 400);
-  }
-}
 
 /* =========================================================
    EVENT WIRING
@@ -267,6 +99,7 @@ function wireEvents(){
     saveDB();
     resetFilters();
     renderAll();
+    checkProjectAlerts();
   });
   document.getElementById('newProjectBtn').addEventListener('click', function(){ openProjectModal('new'); });
   document.getElementById('importProjectBtn').addEventListener('click', function(){
@@ -544,6 +377,7 @@ function wireEvents(){
         deleteProject(p.id);
         resetFilters();
         renderAll();
+        checkProjectAlerts();
         toast('Project deleted.');
       }
     );
@@ -1165,6 +999,12 @@ function wireEvents(){
     if(e.target.id === 'overdueAlertOverlay') closeOverdueAlert();
   });
 
+  document.getElementById('overrunAlertClose').addEventListener('click', closeOverrunAlert);
+  document.getElementById('overrunAlertOkBtn').addEventListener('click', closeOverrunAlert);
+  document.getElementById('overrunAlertOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'overrunAlertOverlay') closeOverrunAlert();
+  });
+
   document.getElementById('defaultScoreAlertClose').addEventListener('click', closeDefaultScoreAlert);
   document.getElementById('defaultScoreAlertOkBtn').addEventListener('click', closeDefaultScoreAlert);
   document.getElementById('defaultScoreAlertOverlay').addEventListener('mousedown', function(e){
@@ -1208,6 +1048,7 @@ function wireEvents(){
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
     else if(!document.getElementById('importConflictOverlay').classList.contains('hidden')) closeImportConflictModal();
     else if(!document.getElementById('overdueAlertOverlay').classList.contains('hidden')) closeOverdueAlert();
+    else if(!document.getElementById('overrunAlertOverlay').classList.contains('hidden')) closeOverrunAlert();
     else if(!document.getElementById('defaultScoreAlertOverlay').classList.contains('hidden')) closeDefaultScoreAlert();
     else if(!document.getElementById('backupReminderOverlay').classList.contains('hidden')) dismissBackupReminder();
     else if(!document.getElementById('depMapColumnFilterPanel').classList.contains('hidden')) closeDepMapColumnFilterPanel();
@@ -1262,7 +1103,7 @@ function init(){
   loadDB();
   wireEvents();
   renderAll();
-  checkOverdueAlert();
+  checkProjectAlerts();
   openTaskFromHashIfPresent();
 }
 

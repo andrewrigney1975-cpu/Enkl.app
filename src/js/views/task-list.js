@@ -1,5 +1,5 @@
 "use strict";
-import { getTasksArray, getColumn, getMemberById, getTaskTypeById, getReleaseById, isTaskOverdue, isTaskBlocked } from '../utils.js';
+import { getTasksArray, getColumn, getMemberById, getTaskTypeById, getReleaseById, isTaskOverdue, isTaskBlocked, getTaskOverrunStatus } from '../utils.js';
 import { getCurrentProject } from '../store.js';
 import { ui } from '../ui.js';
 import { getPriority } from '../ui.js';
@@ -432,9 +432,11 @@ export function buildTaskListRow(project, t){
       '<span class="kf-progress-label">' + progress + '%</span>' +
     '</span>';
   }
+  var overrun = timeTracking ? getTaskOverrunStatus(project, t) : null;
 
   var row = document.createElement('div');
-  row.className = 'kf-tasklist-row' + (timeTracking ? ' kf-tasklist-has-progress' : '');
+  row.className = 'kf-tasklist-row' + (timeTracking ? ' kf-tasklist-has-progress' : '') +
+    (overrun ? (overrun.level === 'over' ? ' kf-tasklist-row-over' : ' kf-tasklist-row-atrisk') : '');
   row.innerHTML =
     '<button type="button" class="kf-tasklist-chevron' + (expanded ? ' expanded' : '') + '" data-toggle-id="' + t.id + '" aria-label="Toggle details">' + iconSvg('chevronDown',14) + '</button>' +
     '<span class="kf-tasklist-key">' + typeIconHTML + escapeHTML(t.key) + '</span>' +

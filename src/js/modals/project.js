@@ -4,6 +4,7 @@ import { state } from '../storage.js';
 import { localDateValueToUTCISO, utcISOToLocalDateValue } from '../date-utils.js';
 import { addProject, renameProject } from '../mutations.js';
 import { renderAll } from '../views/board.js';
+import { checkProjectAlerts } from '../features/session-alerts.js';
 
 export function openProjectModal(mode){
   ui.editingProjectId = mode === 'edit' ? state.db.currentProjectId : null;
@@ -31,6 +32,7 @@ export function saveProjectFromModal(){
     return;
   }
 
+  var isNewProject = !ui.editingProjectId;
   if(ui.editingProjectId){
     renameProject(ui.editingProjectId, name, key, startISO, endISO);
     toast('Project updated.');
@@ -41,4 +43,5 @@ export function saveProjectFromModal(){
   }
   closeProjectModal();
   renderAll();
+  if(isNewProject) checkProjectAlerts();
 }

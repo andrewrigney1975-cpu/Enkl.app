@@ -1601,6 +1601,23 @@
   </div>
 </div>
 
+<!-- Overrun Prediction Alert -->
+<div class="kf-overlay hidden" id="overrunAlertOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2><span class="kf-icon" data-icon="stopwatch" data-size="18" style="color:var(--kf-atrisk-fg);margin-right:6px;vertical-align:middle;"></span>Tasks at risk</h2>
+      <button class="kf-btn kf-btn-ghost" id="overrunAlertClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <p id="overrunAlertMessage" style="margin:0 0 12px;color:var(--kf-text);line-height:1.6;"></p>
+      <div id="overrunAlertList" class="kf-overrun-alert-list"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-primary" id="overrunAlertOkBtn">Got it</button>
+    </div>
+  </div>
+</div>
+
 <!-- Default Value/Cost Alert Modal -->
 <div class="kf-overlay hidden" id="defaultScoreAlertOverlay">
   <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">

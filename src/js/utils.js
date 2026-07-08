@@ -1,5 +1,7 @@
 "use strict";
 
+import { clampProgress, clampEffortHours, utcISOToLocalDisplayDate } from './date-utils.js';
+
 /* Pure project-scoped helpers — these take a `project` object as a
    parameter and never access the db state directly. */
 
@@ -139,6 +141,66 @@ export function isTaskOverdue(project, task){
   if(end.getTime() >= Date.now()) return false;
   var col = getColumn(project, task.columnId);
   return !(col && col.done);
+}
+
+/* Per-task overrun prediction — a distinct concept from the project-
+   level burndown projection in features/health.js. Compares progress
+   against actual effort logged (is it on pace to blow the estimate?)
+   and against elapsed schedule (is it on pace to miss the end date?).
+   Callers must check isTimeTrackingEnabled(project) themselves before
+   calling this — it isn't checked in here to avoid a circular import
+   (storage.js, home of that flag, already imports from this module).
+
+   Returns:
+     null                                            — no concern
+     {level: 'over',   reasons: [{type, message}]}    — already over
+     {level: 'atRisk', reasons: [{type, message}]}    — predicted to run over
+
+   A task already 'over' never also reports 'atRisk' reasons — once
+   it's actually blown the budget/date, the prediction is moot. */
+export function getTaskOverrunStatus(project, task){
+  if(task.archived) return null;
+  var col = getColumn(project, task.columnId);
+  if(col && col.done) return null;
+
+  var progress = clampProgress(task.progress);
+  var overReasons = [];
+  var atRiskReasons = [];
+
+  var estimatedEffort = clampEffortHours(task.estimatedEffort);
+  var actualEffort = clampEffortHours(task.actualEffort);
+  if(estimatedEffort > 0){
+    if(actualEffort > estimatedEffort){
+      overReasons.push({type: 'effort', message: 'Logged ' + actualEffort + 'h vs ' + estimatedEffort + 'h estimated'});
+    } else if(progress > 0 && progress < 100){
+      var projectedEffort = actualEffort * (100 / progress);
+      if(projectedEffort > estimatedEffort){
+        atRiskReasons.push({type: 'effort', message: 'Projected ' + Math.round(projectedEffort * 10) / 10 + 'h vs ' + estimatedEffort + 'h estimated'});
+      }
+    }
+  }
+
+  var start = task.startDate ? new Date(task.startDate) : null;
+  var end = task.endDate ? new Date(task.endDate) : null;
+  var validRange = start && end && !isNaN(start.getTime()) && !isNaN(end.getTime()) && end.getTime() > start.getTime();
+  if(validRange){
+    if(isTaskOverdue(project, task)){
+      overReasons.push({type: 'date', message: 'Overdue since ' + utcISOToLocalDisplayDate(task.endDate)});
+    } else if(progress > 0 && progress < 100){
+      var now = Date.now();
+      if(now > start.getTime()){
+        var elapsed = now - start.getTime();
+        var projectedFinish = start.getTime() + elapsed * (100 / progress);
+        if(projectedFinish > end.getTime()){
+          atRiskReasons.push({type: 'date', message: 'On pace to finish ' + utcISOToLocalDisplayDate(new Date(projectedFinish).toISOString()) + ', due ' + utcISOToLocalDisplayDate(task.endDate)});
+        }
+      }
+    }
+  }
+
+  if(overReasons.length > 0) return {level: 'over', reasons: overReasons};
+  if(atRiskReasons.length > 0) return {level: 'atRisk', reasons: atRiskReasons};
+  return null;
 }
 
 export function getMemberById(project, memberId){

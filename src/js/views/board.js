@@ -3,7 +3,7 @@ import { state } from '../storage.js';
 import { normalizeHeaderButtonVisibility, isTimeTrackingEnabled, saveDB } from '../storage.js';
 import { PRIORITY_META, PRIORITY_ORDER, PRIORITY_COLORS, MOBILE_BREAKPOINT } from '../config.js';
 import { iconSvg } from '../icons.js';
-import { getTasksArray, getColumn, getMemberById, getTaskTypeById, getTeamCommitteeById, isTaskBlocked, isTaskOverdue, getDescendants, buildChildrenMap, wouldCreateCycle } from '../utils.js';
+import { getTasksArray, getColumn, getMemberById, getTaskTypeById, getTeamCommitteeById, isTaskBlocked, isTaskOverdue, getTaskOverrunStatus, getDescendants, buildChildrenMap, wouldCreateCycle } from '../utils.js';
 import { memberInitials, utcISOToLocalDisplayDate, utcISOToLocalDateValue, localDateValueToUTCISO, clampTaskScore, clampProgress, defaultStartDateValue, defaultEndDateValue, lightenHexColor } from '../date-utils.js';
 import { getCurrentProject } from '../store.js';
 import { ui } from '../ui.js';
@@ -727,6 +727,8 @@ export function renderCard(project, task){
   var overdue = isTaskOverdue(project, task);
   var depCount = (task.dependencies || []).length;
   var assignee = getMemberById(project, task.assigneeId);
+  var overrun = isTimeTrackingEnabled(project) ? getTaskOverrunStatus(project, task) : null;
+  if(overrun) card.classList.add(overrun.level === 'over' ? 'kf-card-over' : 'kf-card-atrisk');
 
   var metaHTML = '<span class="kf-card-key">' + escapeHTML(task.key) + '</span>';
   if(task.isPrivate){

@@ -11,6 +11,8 @@ var _renderAll = function(){ };
 export function setImportRenderAll(fn){ _renderAll = fn; }
 var _resetFilters = function(){ };
 export function setImportResetFilters(fn){ _resetFilters = fn; }
+var _checkSessionAlerts = function(){ };
+export function setImportSessionAlertsCheck(fn){ _checkSessionAlerts = fn; }
 
 function escapeHTML(str){
   return String(str)
@@ -943,6 +945,7 @@ export function finaliseImport(result, wasOverwrite){
   saveDB();
   _resetFilters();
   _renderAll();
+  _checkSessionAlerts();
 
   var msg = (wasOverwrite ? 'Updated' : 'Imported') + ' “' + result.project.name + '” — ' +
             result.taskCount + ' task(s) across ' + result.columnCount + ' column(s)';

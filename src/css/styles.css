@@ -28,6 +28,8 @@
     --kf-blocked-bg: #ffebe6;
     --kf-overdue-fg: #974f0c;
     --kf-overdue-bg: #fff0b3;
+    --kf-atrisk-fg: #a54800;
+    --kf-atrisk-bg: #fff3eb;
     --kf-good-fg: #216e4e;
     --kf-good-bg: #dcfff1;
     --kf-release-progress-bg: #deebff;
@@ -67,6 +69,8 @@
     --kf-blocked-bg: #3d2422;
     --kf-overdue-fg: #f5cd47;
     --kf-overdue-bg: #3d2f0a;
+    --kf-atrisk-fg: #ffa057;
+    --kf-atrisk-bg: #40291b;
     --kf-good-fg: #7ee2b8;
     --kf-good-bg: #163a2c;
     --kf-release-progress-bg: #163a5c;
@@ -1218,6 +1222,14 @@
     opacity: .4;
   }
 
+  .kf-card.kf-card-atrisk {
+    border: 2px solid var(--kf-atrisk-fg);
+  }
+
+  .kf-card.kf-card-over {
+    border: 2px solid var(--kf-danger);
+  }
+
   .kf-card-title {
     font-size: 14px;
     line-height: 1.35;
@@ -2302,6 +2314,57 @@
     text-align: center;
   }
 
+  .kf-overrun-alert-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+  }
+
+  .kf-overrun-alert-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--kf-border);
+    font-size: 13px;
+    color: var(--kf-text);
+  }
+
+  .kf-overrun-alert-row:last-child {
+    border-bottom: none;
+  }
+
+  .kf-overrun-alert-row-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .kf-overrun-alert-row-main .kf-dep-key {
+    flex-shrink: 0;
+  }
+
+  .kf-overrun-alert-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kf-overrun-alert-reason {
+    color: var(--kf-atrisk-fg);
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .kf-overrun-alert-more {
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--kf-text-faint);
+    text-align: center;
+  }
+
   .kf-defaultscore-alert-list {
     max-height: 200px;
     overflow-y: auto;
@@ -2953,6 +3016,14 @@
 
   .kf-tasklist-row:hover {
     background: var(--kf-hover-tint);
+  }
+
+  .kf-tasklist-row.kf-tasklist-row-atrisk {
+    border-left: 3px solid var(--kf-atrisk-fg);
+  }
+
+  .kf-tasklist-row.kf-tasklist-row-over {
+    border-left: 3px solid var(--kf-danger);
   }
 
   .kf-tasklist-progress {
