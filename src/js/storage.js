@@ -123,6 +123,8 @@ export function migrateDB(){
       if(t.encryptedDescription === undefined){ t.encryptedDescription = null; changed = true; }
       if(t.encryptionIv === undefined){ t.encryptionIv = null; changed = true; }
       if(!Array.isArray(t.auditLog)){ t.auditLog = []; changed = true; }
+      if(t.parentTaskId === undefined){ t.parentTaskId = null; changed = true; }
+      else if(t.parentTaskId && (t.parentTaskId === t.id || !p.tasks[t.parentTaskId])){ t.parentTaskId = null; changed = true; }
     });
 
     p.columns.forEach(function(c){
@@ -362,7 +364,8 @@ export function normalizeHeaderButtonVisibility(value){
        task's stored data on every edit, so a corrupted or missing
        value must never silently start recording history the user
        never asked for. */
-    changeAuditing: v.changeAuditing === true
+    changeAuditing: v.changeAuditing === true,
+    subTasks: v.subTasks !== false
   };
 }
 
@@ -374,6 +377,11 @@ export function isTimeTrackingEnabled(project){
 export function isChangeAuditingEnabled(project){
   if(!project) return false;
   return normalizeHeaderButtonVisibility(project.headerButtonVisibility).changeAuditing === true;
+}
+
+export function isSubTasksEnabled(project){
+  if(!project) return false;
+  return normalizeHeaderButtonVisibility(project.headerButtonVisibility).subTasks === true;
 }
 
 export function createDefaultProject(name, key){

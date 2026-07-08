@@ -68,6 +68,57 @@ export function wouldCreateCycle(project, taskId, newDeps){
   return dfs(taskId);
 }
 
+/* =========================================================
+   SUB-TASKS
+   A separate, single-parent hierarchy from `dependencies` (which is a
+   general multi-parent DAG expressing "must finish first"). Each task
+   has at most one parentTaskId; "sub-tasks" are simply every task
+   whose parentTaskId points back to it — there's no separate stored
+   list of children, so the two views (a task's own Parent Task, and
+   its Sub-Tasks picker) can never drift out of sync with each other.
+   ========================================================= */
+export function getSubtasksOf(project, taskId){
+  return getTasksArray(project).filter(function(t){ return t.parentTaskId === taskId; });
+}
+
+/* All tasks transitively parented under taskId (its full sub-tree) */
+export function getSubtaskDescendantIds(project, taskId){
+  var visited = new Set();
+  var stack = getSubtasksOf(project, taskId).map(function(t){ return t.id; });
+  while(stack.length){
+    var id = stack.pop();
+    if(visited.has(id)) continue;
+    visited.add(id);
+    getSubtasksOf(project, id).forEach(function(t){ stack.push(t.id); });
+  }
+  return visited;
+}
+
+/* Every id from startParentId up to the root of the parent chain
+   (inclusive of startParentId itself). Guards against a corrupted/
+   cyclic chain hanging the walk. */
+export function getTaskAncestorIds(project, startParentId){
+  var ids = new Set();
+  var cur = startParentId;
+  var guard = 0;
+  while(cur && !ids.has(cur) && guard < 10000){
+    ids.add(cur);
+    var t = project.tasks[cur];
+    cur = t ? t.parentTaskId : null;
+    guard++;
+  }
+  return ids;
+}
+
+/* Would setting task `taskId`'s parent to `newParentId` create a
+   cycle? True if they're the same task, or if newParentId is already
+   (transitively) parented under taskId. */
+export function wouldCreateParentCycle(project, taskId, newParentId){
+  if(!newParentId) return false;
+  if(newParentId === taskId) return true;
+  return getSubtaskDescendantIds(project, taskId).has(newParentId);
+}
+
 export function isTaskBlocked(project, task){
   if(!task.dependencies || task.dependencies.length === 0) return false;
   return task.dependencies.some(function(depId){

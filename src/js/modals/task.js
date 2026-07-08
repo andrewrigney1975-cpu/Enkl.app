@@ -1,13 +1,13 @@
 "use strict";
 import { ui, toast, getPriority } from '../ui.js';
 import { getCurrentProject } from '../store.js';
-import { getTasksArray, getDescendants, wouldCreateCycle, getColumn, getMemberById, getReleaseById, getTaskTypeById } from '../utils.js';
+import { getTasksArray, getDescendants, wouldCreateCycle, getColumn, getMemberById, getReleaseById, getTaskTypeById, getTaskAncestorIds, getSubtasksOf, getSubtaskDescendantIds, wouldCreateParentCycle } from '../utils.js';
 import { clampTaskScore, clampProgress, clampEffortHours, utcISOToLocalDateValue, utcISOToLocalDisplayDate, utcISOToLocalDisplayDateTime, localDateValueToUTCISO, defaultStartDateValue, defaultEndDateValue } from '../date-utils.js';
 import { iconSvg } from '../icons.js';
 import { PRIORITY_ORDER } from '../config.js';
 import { escapeHTML, renderBoard } from '../views/board.js';
-import { addTask, updateTask, deleteTask, normalizeDocumentationUrl, getAuditFieldLabel } from '../mutations.js';
-import { normalizeHeaderButtonVisibility } from '../storage.js';
+import { addTask, updateTask, deleteTask, normalizeDocumentationUrl, getAuditFieldLabel, setTaskSubtasks } from '../mutations.js';
+import { normalizeHeaderButtonVisibility, isSubTasksEnabled } from '../storage.js';
 import { confirmDialog } from './confirm.js';
 import { getReachableColumnIds } from '../features/workflow-engine.js';
 import { encryptText } from '../features/crypto.js';
@@ -37,6 +37,9 @@ export function openTaskModal(taskId, defaultColumnId){
       ui.taskModalColumnId = defaultColumnId || (project.columns[0] && project.columns[0].id);
       ui.depSearchTerm = '';
       ui.taskModalDeps = (task.dependencies || []).slice();
+      ui.taskModalParentId = task.parentTaskId || null;
+      ui.taskModalSubtaskIds = getSubtasksOf(project, task.id).map(function(t){ return t.id; });
+      ui.subtaskSearchTerm = '';
 
       if(result.mode === 'continue'){
         ui.taskModalUnlockedDerivedBits = null;
@@ -60,6 +63,9 @@ export function openTaskModal(taskId, defaultColumnId){
   ui.depSearchTerm = '';
   ui.taskModalDeps = task ? (task.dependencies || []).slice() : [];
   ui.taskModalUnlockedDerivedBits = null;
+  ui.taskModalParentId = task ? (task.parentTaskId || null) : null;
+  ui.taskModalSubtaskIds = task ? getSubtasksOf(project, task.id).map(function(t){ return t.id; }) : [];
+  ui.subtaskSearchTerm = '';
 
   showTaskFullFields(true);
   populateFullForm(project, task, task ? task.description : '');
@@ -158,6 +164,12 @@ function populateFullForm(project, task, descriptionValue){
   document.getElementById('taskDeleteBtn').classList.toggle('kf-vis-hidden', !task);
   document.getElementById('depSearchInput').value = '';
 
+  var subTasksEnabled = isSubTasksEnabled(project);
+  document.getElementById('taskSubTasksFields').classList.toggle('kf-vis-hidden', !subTasksEnabled);
+  document.getElementById('subtaskSearchInput').value = '';
+
+  renderParentTaskSelect(project);
+  renderSubtaskPicker(project);
   renderDependencyPicker();
   renderAuditTrail(project, task);
   document.getElementById('taskOverlay').classList.remove('hidden');
@@ -175,6 +187,7 @@ function formatAuditValue(project, field, value){
   if(value === null || value === undefined || value === '') return '—';
   switch(field){
     case 'columnId': return (getColumn(project, value) || {}).name || '—';
+    case 'parentTaskId': return (project.tasks[value] || {}).key || '—';
     case 'assigneeId': return (getMemberById(project, value) || {}).name || '—';
     case 'releaseId': return (getReleaseById(project, value) || {}).name || '—';
     case 'typeId': return (getTaskTypeById(project, value) || {}).name || '—';
@@ -251,6 +264,133 @@ export function openDocUrlInNewTab(){
   var url = normalizeDocumentationUrl(raw);
   if(!url) return;
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/* Every id that would create a cycle if picked as THIS task's parent:
+   itself, its existing sub-tree, plus anything already pending in the
+   Sub-Tasks picker this session (and their existing sub-trees) — since
+   picking one of those as your own parent right now would close a
+   loop before either edit is even saved. */
+function getDisallowedParentIds(project){
+  var disallowed = new Set();
+  if(ui.editingTaskId){
+    disallowed.add(ui.editingTaskId);
+    getSubtaskDescendantIds(project, ui.editingTaskId).forEach(function(id){ disallowed.add(id); });
+  }
+  ui.taskModalSubtaskIds.forEach(function(id){
+    disallowed.add(id);
+    getSubtaskDescendantIds(project, id).forEach(function(d){ disallowed.add(d); });
+  });
+  return disallowed;
+}
+
+/* Every id that would create a cycle if picked as a sub-task of THIS
+   task: itself, plus its own ancestor chain starting from whichever
+   parent is currently pending in the Parent Task select. */
+function getDisallowedSubtaskIds(project){
+  var disallowed = new Set();
+  if(ui.editingTaskId) disallowed.add(ui.editingTaskId);
+  getTaskAncestorIds(project, ui.taskModalParentId).forEach(function(id){ disallowed.add(id); });
+  return disallowed;
+}
+
+export function renderParentTaskSelect(project){
+  var select = document.getElementById('taskParentTaskSelect');
+  select.innerHTML = '';
+  var noneOpt = document.createElement('option');
+  noneOpt.value = '';
+  noneOpt.textContent = 'No parent';
+  select.appendChild(noneOpt);
+
+  var disallowed = getDisallowedParentIds(project);
+  var currentParentId = ui.taskModalParentId;
+  getTasksArray(project).filter(function(t){
+    if(disallowed.has(t.id)) return false;
+    if(t.archived && t.id !== currentParentId) return false;
+    return true;
+  }).sort(function(a,b){ return a.key.localeCompare(b.key, undefined, {numeric:true}); }).forEach(function(t){
+    var opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.key + ' — ' + t.title;
+    if(currentParentId === t.id) opt.selected = true;
+    select.appendChild(opt);
+  });
+  if(!currentParentId) noneOpt.selected = true;
+}
+
+export function onParentTaskSelectChange(){
+  ui.taskModalParentId = document.getElementById('taskParentTaskSelect').value || null;
+  var project = getCurrentProject();
+  /* Choosing a parent can newly disallow some sub-task candidates (its
+     own ancestor chain), so the sub-task picker's candidate list needs
+     a fresh render too — not just the select itself. */
+  renderSubtaskPicker(project);
+}
+
+export function renderSubtaskPicker(project){
+  var chipsWrap = document.getElementById('subtaskChipsSelected');
+  var listWrap = document.getElementById('subtaskList');
+  chipsWrap.innerHTML = '';
+  listWrap.innerHTML = '';
+
+  if(ui.taskModalSubtaskIds.length === 0){
+    chipsWrap.innerHTML = '<span style="font-size:12px;color:var(--kf-text-faint);">No sub-tasks selected</span>';
+  }
+  ui.taskModalSubtaskIds.forEach(function(subId){
+    var t = project.tasks[subId];
+    if(!t) return;
+    var chip = document.createElement('span');
+    chip.className = 'kf-dep-chip-removable';
+    chip.innerHTML = '<span>' + escapeHTML(t.key) + '</span><button type="button" aria-label="Remove sub-task">' + iconSvg('close',12) + '</button>';
+    chip.querySelector('button').addEventListener('click', function(){
+      ui.taskModalSubtaskIds = ui.taskModalSubtaskIds.filter(function(id){ return id !== subId; });
+      renderSubtaskPicker(project);
+      renderParentTaskSelect(project);
+    });
+    chipsWrap.appendChild(chip);
+  });
+
+  var disallowed = getDisallowedSubtaskIds(project);
+
+  var candidates = getTasksArray(project).filter(function(t){
+    if(t.id === ui.editingTaskId) return false;
+    if(t.archived) return false;
+    if(ui.subtaskSearchTerm){
+      var hay = (t.key + ' ' + t.title).toLowerCase();
+      if(hay.indexOf(ui.subtaskSearchTerm.toLowerCase()) === -1) return false;
+    }
+    return true;
+  }).sort(function(a,b){ return a.key.localeCompare(b.key, undefined, {numeric:true}); });
+
+  if(candidates.length === 0){
+    listWrap.innerHTML = '<div class="kf-empty-note">No matching tasks.</div>';
+    return;
+  }
+
+  candidates.forEach(function(t){
+    var row = document.createElement('label');
+    var isDisallowed = disallowed.has(t.id);
+    row.className = 'kf-dep-row' + (isDisallowed ? ' disabled' : '');
+    var checked = ui.taskModalSubtaskIds.indexOf(t.id) !== -1;
+    row.innerHTML =
+      '<input type="checkbox" ' + (checked?'checked':'') + (isDisallowed?'disabled':'') + '>' +
+      '<span class="kf-dep-key">' + escapeHTML(t.key) + '</span>' +
+      '<span class="kf-dep-title">' + escapeHTML(t.title) + '</span>';
+    if(isDisallowed){
+      row.title = 'Selecting this would create a circular parent/sub-task relationship';
+    }
+    var cb = row.querySelector('input');
+    cb.addEventListener('change', function(){
+      if(cb.checked){
+        if(ui.taskModalSubtaskIds.indexOf(t.id) === -1) ui.taskModalSubtaskIds.push(t.id);
+      } else {
+        ui.taskModalSubtaskIds = ui.taskModalSubtaskIds.filter(function(id){ return id !== t.id; });
+      }
+      renderSubtaskPicker(project);
+      renderParentTaskSelect(project);
+    });
+    listWrap.appendChild(row);
+  });
 }
 
 export function renderDependencyPicker(){
@@ -365,12 +505,17 @@ export async function saveTaskFromModal(){
     estimatedEffort: clampEffortHours(document.getElementById('taskEstEffortInput').value),
     actualEffort: clampEffortHours(document.getElementById('taskActualEffortInput').value),
     archived: document.getElementById('taskArchivedCheckbox').checked,
-    dependencies: ui.taskModalDeps.slice()
+    dependencies: ui.taskModalDeps.slice(),
+    parentTaskId: ui.taskModalParentId || null
   };
 
   var checkId = ui.editingTaskId || '__new__';
   if(wouldCreateCycle(project, checkId, data.dependencies)){
     toast('That would create a circular dependency. Please review your selections.');
+    return;
+  }
+  if(ui.editingTaskId && wouldCreateParentCycle(project, ui.editingTaskId, data.parentTaskId)){
+    toast('That would create a circular parent/sub-task relationship. Please review your selections.');
     return;
   }
 
@@ -426,10 +571,15 @@ export async function saveTaskFromModal(){
 function finishSave(project, data){
   if(ui.editingTaskId){
     var blocked = updateTask(project, ui.editingTaskId, data);
+    /* Sub-task reconciliation is independent of the column move — it
+       still applies even if the transition above got blocked, same as
+       every other field on this task already did. */
+    setTaskSubtasks(project, ui.editingTaskId, ui.taskModalSubtaskIds);
     if(blocked){ toast(blocked.message); return; }
     toast('Task updated.');
   } else {
-    addTask(project, data);
+    var newId = addTask(project, data);
+    setTaskSubtasks(project, newId, ui.taskModalSubtaskIds);
     toast('Task created.');
   }
   closeTaskModal();

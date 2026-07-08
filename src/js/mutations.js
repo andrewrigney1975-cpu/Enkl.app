@@ -1,5 +1,5 @@
 "use strict";
-import { state, saveDB, uid, makeColumn, defaultTaskTypes, normalizeHeaderButtonVisibility, createDefaultProject, isChangeAuditingEnabled } from './storage.js';
+import { state, saveDB, uid, makeColumn, defaultTaskTypes, normalizeHeaderButtonVisibility, createDefaultProject, isChangeAuditingEnabled, isSubTasksEnabled } from './storage.js';
 import { getTasksArray, getTaskTypeById, getColumn, getMemberById, getReleaseById, getDocumentById, getRiskById, getDecisionById, getPrincipleById, getObjectiveById, getTeamCommitteeById, isValidTaskTypeIconName, TASK_TYPE_ICON_LIBRARY } from './utils.js';
 import { evaluateTransition, getWorkflowConditionField, WORKFLOW_CONDITION_OPERATORS, WORKFLOW_DEFAULT_CONDITION, computeReflowedLayout } from './features/workflow-engine.js';
 import { clampTaskScore, clampProgress, clampEffortHours, localDateValueToUTCISO, defaultStartDateValue, defaultEndDateValue, memberColorForIndex } from './date-utils.js';
@@ -932,7 +932,8 @@ var AUDIT_FIELD_LABELS = {
   actualEffort: 'Actual effort',
   archived: 'Archived',
   isPrivate: 'Private',
-  dependencies: 'Depends on'
+  dependencies: 'Depends on',
+  parentTaskId: 'Parent Task'
 };
 export function getAuditFieldLabel(field){
   return AUDIT_FIELD_LABELS[field] || field;
@@ -988,6 +989,7 @@ function normalizeAuditFieldValue(field, value){
     case 'estimatedEffort': case 'actualEffort': return clampEffortHours(value);
     case 'archived': case 'isPrivate': return !!value;
     case 'dependencies': return Array.isArray(value) ? value : [];
+    case 'parentTaskId': return value || null;
     default: return value;
   }
 }
@@ -1047,7 +1049,8 @@ export function addTask(project, data){
     encryptionIv: data.encryptionIv || null,
     dateCreated: now,
     dateLastModified: now,
-    auditLog: []
+    auditLog: [],
+    parentTaskId: data.parentTaskId || null
   };
   project.tasks[t.id] = t;
   col.order.push(t.id);
@@ -1087,6 +1090,7 @@ export function updateTask(project, taskId, data){
   t.privateVerifier = data.privateVerifier || null;
   t.encryptedDescription = data.encryptedDescription || null;
   t.encryptionIv = data.encryptionIv || null;
+  t.parentTaskId = data.parentTaskId || null;
   t.dateLastModified = new Date().toISOString();
   var blocked = null;
   if(data.columnId && data.columnId !== t.columnId){
@@ -1106,6 +1110,10 @@ export function deleteTask(project, taskId){
     if(t.dependencies && t.dependencies.indexOf(taskId) !== -1){
       t.dependencies = t.dependencies.filter(function(id){ return id !== taskId; });
     }
+    /* Its sub-tasks aren't deleted along with it — they're orphaned
+       back up to top-level, same as how a deleted release/column
+       leaves its former members intact rather than cascading. */
+    if(t.parentTaskId === taskId) t.parentTaskId = null;
   });
   (project.documents || []).forEach(function(d){
     if(d.taskId === taskId) d.taskId = null;
@@ -1117,6 +1125,40 @@ export function deleteTask(project, taskId){
     if(d.taskId === taskId) d.taskId = null;
   });
   saveDB();
+}
+
+/* Sets task `taskId`'s set of sub-tasks (children) to exactly
+   `subtaskIds` — the inverse edit of the Parent Task picker, but
+   applied to *other* tasks. There's no separate "children" list
+   stored anywhere (see the SUB-TASKS block in utils.js), so this is
+   the only place that ever needs to reconcile it: any task currently
+   parented here that's no longer in the list gets un-parented, and
+   any newly-listed task gets parented here. Self-contained (checks
+   the feature flag and calls saveDB() itself) since it's invoked
+   directly from the Task modal's save flow, a separate step from
+   updateTask(). */
+export function setTaskSubtasks(project, taskId, subtaskIds){
+  if(!isSubTasksEnabled(project)) return;
+  var desired = new Set(subtaskIds || []);
+  var now = new Date().toISOString();
+  var touched = false;
+  getTasksArray(project).forEach(function(t){
+    if(t.id === taskId) return;
+    var shouldBeChild = desired.has(t.id);
+    var isChild = t.parentTaskId === taskId;
+    if(shouldBeChild && !isChild){
+      pushTaskAuditEntry(project, t, 'parentTaskId', t.parentTaskId, taskId);
+      t.parentTaskId = taskId;
+      t.dateLastModified = now;
+      touched = true;
+    } else if(!shouldBeChild && isChild){
+      pushTaskAuditEntry(project, t, 'parentTaskId', t.parentTaskId, null);
+      t.parentTaskId = null;
+      t.dateLastModified = now;
+      touched = true;
+    }
+  });
+  if(touched) saveDB();
 }
 
 export function reactivateTasks(project, taskIds){

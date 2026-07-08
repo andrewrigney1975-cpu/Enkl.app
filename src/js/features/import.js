@@ -85,7 +85,13 @@ export function flattenImportedHierarchy(nodes, out){
             oldValue: e.oldValue === undefined ? null : e.oldValue,
             newValue: e.newValue === undefined ? null : e.newValue
           };
-        }) : []
+        }) : [],
+        /* Parent is referenced by key (like dependsOn above), resolved
+           to an original id below once every node's key is known, then
+           remapped a second time to the freshly-generated task id once
+           tasks are actually created (see idMap in
+           buildProjectFromExportDoc). */
+        parentKey: typeof n.parentKey === 'string' ? n.parentKey : null
       };
     }
     if(Array.isArray(n.subtasks) && n.subtasks.length){
@@ -122,6 +128,31 @@ export function sanitizeAcyclicGraph(byOriginalId){
     color[id] = BLACK;
   }
   Object.keys(byOriginalId).forEach(function(id){ if(color[id] === WHITE) visit(id); });
+  return removed;
+}
+
+/* Same defensive purpose as sanitizeAcyclicGraph, but for the single-
+   parent chain (`parentOriginalId`) rather than the multi-dependency
+   DAG — walks each node's chain up to the root, and nulls out the one
+   edge that would close a loop back on itself. Breaking any single
+   edge in a cycle resolves it for every node on that cycle, so a
+   single pass over all nodes is enough regardless of iteration order. */
+export function sanitizeAcyclicParents(byOriginalId){
+  var removed = 0;
+  Object.keys(byOriginalId).forEach(function(id){
+    var node = byOriginalId[id];
+    if(!node.parentOriginalId) return;
+    var seen = new Set([id]);
+    var cur = node.parentOriginalId;
+    var guard = 0;
+    while(cur && guard < 10000){
+      if(seen.has(cur)){ node.parentOriginalId = null; removed++; return; }
+      seen.add(cur);
+      var parentNode = byOriginalId[cur];
+      cur = parentNode ? parentNode.parentOriginalId : null;
+      guard++;
+    }
+  });
   return removed;
 }
 
@@ -163,6 +194,16 @@ export function buildProjectFromExportDoc(doc){
   });
 
   var cyclesRemoved = sanitizeAcyclicGraph(flat);
+
+  var unresolvedParents = 0;
+  Object.keys(flat).forEach(function(id){
+    var node = flat[id];
+    if(!node.parentKey){ node.parentOriginalId = null; return; }
+    var resolved = keyToOriginalId[node.parentKey] || (flat[node.parentKey] ? node.parentKey : null);
+    if(!resolved) unresolvedParents++;
+    node.parentOriginalId = resolved;
+  });
+  var parentCyclesRemoved = sanitizeAcyclicParents(flat);
 
   var columns = null;
   /* Old export id -> newly-generated column id, for remapping
@@ -447,7 +488,8 @@ export function buildProjectFromExportDoc(doc){
       encryptionIv: t.encryptionIv,
       dateCreated: t.dateCreated || importedAt,
       dateLastModified: t.dateLastModified || importedAt,
-      auditLog: Array.isArray(t.auditLog) ? t.auditLog : []
+      auditLog: Array.isArray(t.auditLog) ? t.auditLog : [],
+      parentTaskId: null
     };
     project.tasks[newId] = task;
     col.order.push(newId);
@@ -459,6 +501,8 @@ export function buildProjectFromExportDoc(doc){
     project.tasks[newId].dependencies = flat[originalId].dependencies
       .map(function(depOriginalId){ return idMap[depOriginalId]; })
       .filter(Boolean);
+    var parentOriginalId = flat[originalId].parentOriginalId;
+    project.tasks[newId].parentTaskId = parentOriginalId ? (idMap[parentOriginalId] || null) : null;
   });
 
   var docOldIdToNewId = {};
@@ -773,7 +817,9 @@ export function buildProjectFromExportDoc(doc){
     unresolvedDecisionRisks: unresolvedDecisionRisks,
     unresolvedDecisionPrinciples: unresolvedDecisionPrinciples,
     unresolvedDecisionObjectives: unresolvedDecisionObjectives,
-    cyclesRemoved: cyclesRemoved
+    cyclesRemoved: cyclesRemoved,
+    unresolvedParents: unresolvedParents,
+    parentCyclesRemoved: parentCyclesRemoved
   };
 }
 
@@ -903,6 +949,8 @@ export function finaliseImport(result, wasOverwrite){
   msg += result.memberCount > 0 ? ' and ' + result.memberCount + ' team member(s).' : '.';
   if(result.cyclesRemoved > 0) msg += ' Removed ' + result.cyclesRemoved + ' circular dependency link(s).';
   if(result.unresolvedDeps > 0) msg += ' Skipped ' + result.unresolvedDeps + ' dependency reference(s) that could not be matched.';
+  if(result.parentCyclesRemoved > 0) msg += ' Removed ' + result.parentCyclesRemoved + ' circular parent/sub-task link(s).';
+  if(result.unresolvedParents > 0) msg += ' Skipped ' + result.unresolvedParents + ' parent task reference(s) that could not be matched.';
   if(result.unresolvedAssignees > 0) msg += ' Skipped ' + result.unresolvedAssignees + ' assignee reference(s) that could not be matched.';
   if(result.unresolvedReleases > 0) msg += ' Skipped ' + result.unresolvedReleases + ' release reference(s) that could not be matched.';
   if(result.unresolvedTaskTypes > 0) msg += ' Skipped ' + result.unresolvedTaskTypes + ' task type reference(s) that could not be matched.';

@@ -31,7 +31,7 @@ import { closeAllExportAsPanels, toggleExportAsPanel, exportSvgElementAsSvgFile,
 
 /* ---- Modals ---- */
 import { confirmDialog, closeConfirmDialog, getPendingConfirmAction } from './modals/confirm.js';
-import { openTaskModal, closeTaskModal, saveTaskFromModal, deleteTaskFromModal, updatePriorityIcon, updateDocUrlOpenButtonVisibility, openDocUrlInNewTab, renderDependencyPicker, toggleAuditTrail } from './modals/task.js';
+import { openTaskModal, closeTaskModal, saveTaskFromModal, deleteTaskFromModal, updatePriorityIcon, updateDocUrlOpenButtonVisibility, openDocUrlInNewTab, renderDependencyPicker, toggleAuditTrail, onParentTaskSelectChange, renderSubtaskPicker } from './modals/task.js';
 import { closeSetPrivateKeyModal, confirmSetPrivateKeyFromModal } from './modals/private-key-set.js';
 import { closeUnlockPrivateTaskModal, confirmUnlockFromModal, continueWithoutKeyFromModal } from './modals/private-key-unlock.js';
 import { openColumnModal, closeColumnModal, saveColumnFromModal, deleteColumnFromModal } from './modals/column.js';
@@ -1043,6 +1043,9 @@ function wireEvents(){
       }
     );
   });
+  document.getElementById('settingsShowSubTasksBtn').addEventListener('change', function(e){
+    updateHeaderButtonVisibilitySetting('subTasks', e.target.checked);
+  });
 
   document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileDrawer);
   document.getElementById('drawerCloseBtn').addEventListener('click', closeMobileDrawer);
@@ -1102,6 +1105,11 @@ function wireEvents(){
   document.getElementById('depSearchInput').addEventListener('input', function(e){
     ui.depSearchTerm = e.target.value.trim();
     renderDependencyPicker();
+  });
+  document.getElementById('taskParentTaskSelect').addEventListener('change', onParentTaskSelectChange);
+  document.getElementById('subtaskSearchInput').addEventListener('input', function(e){
+    ui.subtaskSearchTerm = e.target.value.trim();
+    renderSubtaskPicker(getCurrentProject());
   });
   document.getElementById('taskOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'taskOverlay') closeTaskModal();

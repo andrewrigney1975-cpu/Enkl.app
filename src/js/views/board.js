@@ -93,6 +93,7 @@ export function openAppSettingsOverlay(){
   document.getElementById('settingsShowWorkflowBtn').checked = visibility.workflow;
   document.getElementById('settingsShowTimeTrackingBtn').checked = visibility.timeTracking;
   document.getElementById('settingsShowChangeAuditingBtn').checked = visibility.changeAuditing;
+  document.getElementById('settingsShowSubTasksBtn').checked = visibility.subTasks;
   document.getElementById('appSettingsOverlay').classList.remove('hidden');
 }
 export function closeAppSettingsOverlay(){

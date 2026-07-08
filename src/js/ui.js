@@ -171,6 +171,9 @@ export var ui = {
      never surviving a close/reopen. Cleared in closeTaskModal(). */
   taskModalUnlockedDerivedBits: null,
   depSearchTerm: '',
+  taskModalParentId: null,
+  taskModalSubtaskIds: [],
+  subtaskSearchTerm: '',
   editingColumnId: null,
   editingProjectId: null,
   draggedTaskId: null,

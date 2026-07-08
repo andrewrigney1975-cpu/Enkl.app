@@ -297,6 +297,18 @@
           <input type="number" id="taskCostInput" min="1" max="1000" step="1">
         </div>
       </div>
+      <div id="taskSubTasksFields" class="kf-vis-hidden">
+        <div class="kf-field">
+          <label for="taskParentTaskSelect">Parent Task</label>
+          <select id="taskParentTaskSelect"></select>
+        </div>
+        <div class="kf-field">
+          <label>Sub-Tasks</label>
+          <div class="kf-dep-chips-selected" id="subtaskChipsSelected"></div>
+          <input type="text" class="kf-dep-search" id="subtaskSearchInput" placeholder="Filter tasks...">
+          <div class="kf-dep-list" id="subtaskList"></div>
+        </div>
+      </div>
       <div class="kf-field">
         <label>Depends on <span style="font-weight:400;text-transform:none;color:var(--kf-text-faint);">(must finish first)</span></label>
         <div class="kf-dep-chips-selected" id="depChipsSelected"></div>
@@ -1278,6 +1290,11 @@
           <input type="checkbox" id="settingsShowChangeAuditingBtn">
           <span class="kf-icon" data-icon="ty_audit" data-size="14"></span>
           <span>Change Auditing</span>
+        </label>
+        <label class="kf-risk-doc-picker-row">
+          <input type="checkbox" id="settingsShowSubTasksBtn">
+          <span class="kf-icon" data-icon="orgChart" data-size="14"></span>
+          <span>Sub-Tasks</span>
         </label>
       </div>
     </div>

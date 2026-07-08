@@ -1,5 +1,5 @@
 "use strict";
-import { state, isTimeTrackingEnabled } from '../storage.js';
+import { state, isTimeTrackingEnabled, isSubTasksEnabled } from '../storage.js';
 import { getTasksArray, getColumn, getMemberById, getTaskTypeById, isTaskBlocked, isTaskOverdue, buildChildrenMap } from '../utils.js';
 import { getCurrentProject } from '../store.js';
 import { PRIORITY_COLORS } from '../config.js';
@@ -114,6 +114,19 @@ export function computeDepGraphLayout(project){
     });
   });
 
+  /* Sub-task (parentTaskId) edges — a separate relationship from
+     `dependencies` above, drawn as dashed lines over the same
+     dependency-depth layout rather than influencing it. Only ever
+     rendered when the Sub-Tasks feature is on, but computed here
+     unconditionally (cheap) so the gating lives in one place, at
+     render time, same as the progress bar's per-node gating. */
+  var subtaskEdges = [];
+  tasks.forEach(function(t){
+    if(t.parentTaskId && taskMap[t.parentTaskId]){
+      subtaskEdges.push({from: t.parentTaskId, to: t.id});
+    }
+  });
+
   var maxX = DEPMAP_MARGIN, maxY = DEPMAP_MARGIN;
   nodes.forEach(function(n){
     maxX = Math.max(maxX, n.x + n.w);
@@ -123,6 +136,7 @@ export function computeDepGraphLayout(project){
   return {
     nodes: nodes,
     edges: edges,
+    subtaskEdges: subtaskEdges,
     positions: positions,
     width: maxX + DEPMAP_MARGIN,
     height: maxY + DEPMAP_MARGIN
@@ -142,7 +156,8 @@ export function renderDependencyMap(){
     '<span class="kf-legend-item">' + iconSvg('warning',12) + ' Task is currently blocked</span>' +
     '<span class="kf-legend-item" style="color:var(--kf-overdue-fg);">' + iconSvg('clock',12) + ' Task is overdue</span>' +
     (ui.depMapShowArchived ? '<span class="kf-legend-item">' + iconSvg('archive',12) + ' Task is archived (greyed out)</span>' : '') +
-    (project && isTimeTrackingEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-blue);"></span>Bottom bar = progress</span>' : '');
+    (project && isTimeTrackingEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-blue);"></span>Bottom bar = progress</span>' : '') +
+    (project && isSubTasksEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:repeating-linear-gradient(to right,#6554c0 0 4px,transparent 4px 7px);"></span>Dashed = sub-task</span>' : '');
 
   var hasVisibleTasks = project && getTasksArray(project).some(depMapTaskVisible);
   if(!hasVisibleTasks){
@@ -175,6 +190,16 @@ export function renderDependencyMap(){
     var startMarker = e.blocked ? 'url(#kf-dot-start-blocked)' : 'url(#kf-dot-start-done)';
     return '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2" opacity="0.85" marker-start="' + startMarker + '" marker-end="' + marker + '"></path>';
   }).join('');
+
+  var subtaskEdgesHTML = (project && isSubTasksEnabled(project)) ? layout.subtaskEdges.map(function(e){
+    var fromPos = layout.positions[e.from], toPos = layout.positions[e.to];
+    if(!fromPos || !toPos) return '';
+    var x1 = fromPos.x + DEPMAP_NODE_W, y1 = fromPos.y + DEPMAP_NODE_H / 2;
+    var x2 = toPos.x, y2 = toPos.y + DEPMAP_NODE_H / 2;
+    var bend = Math.max(40, (x2 - x1) * 0.5);
+    var path = 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + bend) + ' ' + y1 + ', ' + (x2 - bend) + ' ' + y2 + ', ' + x2 + ' ' + y2;
+    return '<path d="' + path + '" fill="none" stroke="#6554c0" stroke-width="2" stroke-dasharray="5 4" opacity="0.75"></path>';
+  }).join('') : '';
 
   var nodesHTML = layout.nodes.map(function(n){
     var t = n.task;
@@ -237,7 +262,7 @@ export function renderDependencyMap(){
 
   var svgHTML =
     '<svg width="' + layout.width + '" height="' + layout.height + '" viewBox="0 0 ' + layout.width + ' ' + layout.height + '" xmlns="http://www.w3.org/2000/svg">' +
-      defsHTML + edgesHTML + nodesHTML +
+      defsHTML + subtaskEdgesHTML + edgesHTML + nodesHTML +
     '</svg>';
 
   inner.innerHTML = svgHTML;

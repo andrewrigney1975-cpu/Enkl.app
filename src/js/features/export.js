@@ -56,6 +56,12 @@ export function buildHierarchy(project){
       auditLog: (t.auditLog || []).map(function(e){
         return {timestamp: e.timestamp, field: e.field, oldValue: e.oldValue, newValue: e.newValue};
       }),
+      /* The Sub-Tasks feature's parent link, keyed the same way
+         dependsOn is above (by task key, not id — ids get regenerated
+         on import) — unrelated to this function's own `subtasks` field
+         below, which is the dependency-DAG hierarchy this whole export
+         shape is built around, not a Sub-Tasks relationship. */
+      parentKey: (t.parentTaskId && taskMap[t.parentTaskId]) ? taskMap[t.parentTaskId].key : null,
       subtasks: []
     };
     if(ancestry.has(taskId)){
