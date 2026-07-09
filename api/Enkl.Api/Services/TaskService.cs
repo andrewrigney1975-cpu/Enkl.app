@@ -129,6 +129,16 @@ public class TaskService
         return await ToTaskDtoWithRelationsAsync(task.Id);
     }
 
+    /// <summary>
+    /// Used by TasksController to capture a deleted task's key/title for its SSE broadcast *before*
+    /// DeleteAsync removes the row — there's nothing left to read it from afterward.
+    /// </summary>
+    public async Task<(Guid TaskId, string Key, string Title)?> GetTaskSummaryAsync(Guid projectId, Guid taskId)
+    {
+        var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == taskId && t.ProjectId == projectId);
+        return task is null ? null : (task.Id, task.Key, task.Title);
+    }
+
     public async Task<bool> DeleteAsync(Guid projectId, Guid taskId)
     {
         var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == taskId && t.ProjectId == projectId);
@@ -145,6 +155,10 @@ public class TaskService
         await _db.SaveChangesAsync();
         return true;
     }
+
+    /// <summary>Used by TasksController to know who to notify over SSE after a task change (see SseBroadcaster).</summary>
+    public Task<List<Guid>> GetProjectMemberUserIdsAsync(Guid projectId) =>
+        _db.ProjectMembers.Where(m => m.ProjectId == projectId).Select(m => m.UserId).ToListAsync();
 
     private async Task<TaskDto> ToTaskDtoWithRelationsAsync(Guid taskId)
     {

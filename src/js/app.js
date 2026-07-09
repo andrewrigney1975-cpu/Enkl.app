@@ -23,6 +23,7 @@ import { setCostBenefitDeps, cbZoomState, openCostBenefitOverlay, closeCostBenef
 import { parseTaskKeyFromHash, findTaskByKey, clearTaskHash } from './features/hash-router.js';
 import { exportProjectJSON } from './features/export.js';
 import { migrateProjectToServer, loginToServer, changePasswordOnServer, isServerLoggedIn, pullServerProjectsIntoLocal, setMigrationToast } from './features/migration.js';
+import { connectEventStream } from './features/live-updates.js';
 import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck } from './features/import.js';
 import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder } from './features/session-alerts.js';
 import { setBulkEditDeps, openBulkEditOverlay, closeBulkEditOverlay, isBulkEditOverlayOpen, saveBulkEditChanges } from './features/bulk-edit.js';
@@ -855,6 +856,7 @@ function wireEvents(){
     loginToServer(username, password).then(function(result){
       document.getElementById('serverLoginPasswordInput').value = '';
       closeServerLoginModal();
+      connectEventStream();
       pullServerProjectsIntoLocal().then(function(count){
         renderAll();
         if(count > 0) toast('Loaded ' + count + ' project(s) from the server.');
@@ -1191,6 +1193,7 @@ function init(){
   // pre-login-swap local copy of a project it had migrated anonymously, and kept silently editing
   // that dead-end copy forever. See pullServerProjectsIntoLocal's comment in features/migration.js.
   if(isServerLoggedIn()){
+    connectEventStream();
     pullServerProjectsIntoLocal().then(function(count){
       if(count > 0) renderAll();
     });

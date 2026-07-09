@@ -4016,6 +4016,34 @@
     animation: kf-toast-in .15s ease-out;
   }
 
+  .kf-toast-action {
+    background: rgba(255, 255, 255, .16);
+    border: none;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .kf-toast-action:hover {
+    background: rgba(255, 255, 255, .28);
+  }
+
+  .kf-toast-dismiss {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, .7);
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .kf-toast-dismiss:hover {
+    color: #fff;
+  }
+
   @keyframes kf-toast-in {
     from {
       opacity: 0;

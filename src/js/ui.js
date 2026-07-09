@@ -240,3 +240,46 @@ export function toast(message){
     setTimeout(function(){ el.remove(); }, 200);
   }, 2600);
 }
+
+/* Like toast(), but with an optional action button and a manual dismiss (x) — used where the plain
+   2.6s auto-dismiss toast wouldn't give the user time to act, e.g. features/live-updates.js's "reload
+   to see this change" prompt. Lingers for 10s (still auto-dismisses eventually rather than piling up
+   forever) instead of vanishing before it can be clicked. */
+export function toastWithAction(message, actionLabel, actionFn){
+  var wrap = document.getElementById('toastWrap');
+  var el = document.createElement('div');
+  el.className = 'kf-toast';
+
+  var textEl = document.createElement('span');
+  textEl.textContent = message;
+  el.appendChild(textEl);
+
+  function dismiss(){
+    el.style.transition = 'opacity .2s';
+    el.style.opacity = '0';
+    setTimeout(function(){ el.remove(); }, 200);
+  }
+
+  if(actionLabel && actionFn){
+    var actionBtn = document.createElement('button');
+    actionBtn.type = 'button';
+    actionBtn.className = 'kf-toast-action';
+    actionBtn.textContent = actionLabel;
+    actionBtn.addEventListener('click', function(){
+      dismiss();
+      actionFn();
+    });
+    el.appendChild(actionBtn);
+  }
+
+  var dismissBtn = document.createElement('button');
+  dismissBtn.type = 'button';
+  dismissBtn.className = 'kf-toast-dismiss';
+  dismissBtn.setAttribute('aria-label', 'Dismiss');
+  dismissBtn.textContent = '×';
+  dismissBtn.addEventListener('click', dismiss);
+  el.appendChild(dismissBtn);
+
+  wrap.appendChild(el);
+  setTimeout(dismiss, 10000);
+}

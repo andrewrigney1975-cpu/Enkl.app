@@ -7,6 +7,21 @@
 
 var TOKEN_STORAGE_KEY = 'kanbanflow_server_jwt';
 
+/* One random id per browser tab (not per user — the same user can have several tabs open), sent on
+   every request as X-Client-Session-Id and echoed back into the SSE stream's own connection (see
+   features/live-updates.js). The server uses it to skip notifying the exact tab that made a change —
+   that tab already knows, having just done it — while still notifying every OTHER tab/browser, which
+   is the actual point of the feature (see EventsController/SseBroadcaster on the API side).
+   crypto.randomUUID() needs a secure context (HTTPS or localhost); this app is often reached over
+   plain HTTP on a LAN dev box, so it falls back to a Math.random-based id there instead of throwing. */
+var CLIENT_SESSION_ID = (function(){
+  try {
+    if(window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+  } catch(e){ /* fall through to fallback below */ }
+  return 'sess_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+})();
+export function getClientSessionId(){ return CLIENT_SESSION_ID; }
+
 export function getToken(){
   try { return localStorage.getItem(TOKEN_STORAGE_KEY); } catch(e){ return null; }
 }
@@ -34,7 +49,7 @@ export function setOnAuthExpired(fn){ _onAuthExpired = fn; }
 async function apiFetch(path, options){
   var token = getToken();
   var headers = Object.assign(
-    {'Content-Type': 'application/json'},
+    {'Content-Type': 'application/json', 'X-Client-Session-Id': CLIENT_SESSION_ID},
     token ? {'Authorization': 'Bearer ' + token} : {},
     (options && options.headers) || {}
   );
