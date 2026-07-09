@@ -3678,6 +3678,13 @@
   .kf-workflow-edge-popover {
     width: 280px;
     max-width: 90vw;
+    /* Overrides .kf-org-member-popover's 260px cap (sized for a variable-length member list, which
+       this isn't) — the Conditionally Allowed state (type + If/operator row + value + message +
+       actions) runs taller than that and was scrolling unnecessarily. 520px comfortably fits every
+       field state with room to spare, while still capping height as a safety net if this ever opens
+       on a very short viewport (openWorkflowEdgePopover positions the popover near the click point but
+       doesn't account for its own height when clamping vertically). */
+    max-height: 520px;
   }
 
   .kf-workflow-edge-popover .kf-field {
