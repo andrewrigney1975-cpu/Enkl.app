@@ -1,5 +1,5 @@
 "use strict";
-import { getToken, getClientSessionId, isLoggedIn, clearToken } from '../api.js';
+import { getToken, getClientSessionId, isLoggedIn, clearToken, notifyAuthExpired } from '../api.js';
 import { getCurrentProject } from '../store.js';
 import { refreshProjectFromServer } from './migration.js';
 import { renderBoard } from '../views/board.js';
@@ -87,9 +87,12 @@ async function streamOnce(signal){
   });
 
   if(res.status === 401 || res.status === 403){
-    // Session expired/revoked — matches apiFetch's handling in api.js. Stop entirely rather than
-    // hammering the server with a reconnect loop that will just keep getting 401s.
+    // Session expired/revoked — matches apiFetch's handling in api.js, including surfacing the login
+    // modal (see setOnAuthExpired in app.js): this long-lived stream can be the first thing to notice
+    // an expired token during an otherwise idle session, well before any other request would. Stop
+    // entirely rather than hammering the server with a reconnect loop that will just keep getting 401s.
     clearToken();
+    notifyAuthExpired();
     disconnectEventStream();
     return;
   }

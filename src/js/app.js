@@ -5,6 +5,7 @@ import { state, loadDB, saveDB } from './storage.js';
 import { getCurrentProject } from './store.js';
 import { ui, toast, resetFilters, renderThemeToggleIcon, toggleTheme, relocateViewButtonsForViewport, toggleSideNav, toggleMobileDrawer, closeMobileDrawer, isMobileDrawerOpen } from './ui.js';
 import { hydrateIcons } from './icons.js';
+import { setOnAuthExpired } from './api.js';
 
 /* ---- Mutations ---- */
 import { deleteProject, closeAllTaskTypeIconPanels, setMutationsToast } from './mutations.js';
@@ -839,10 +840,16 @@ function wireEvents(){
     );
   });
 
-  document.getElementById('serverLoginBtn').addEventListener('click', function(){
+  function openServerLoginModal(){
     document.getElementById('serverLoginOverlay').classList.remove('hidden');
     document.getElementById('serverLoginUsernameInput').focus();
-  });
+  }
+  document.getElementById('serverLoginBtn').addEventListener('click', openServerLoginModal);
+  // Fires when any API call comes back 401 on a request that had a token attached — i.e. the
+  // session itself expired or was revoked, not just a bad-credentials login attempt (see api.js's
+  // apiFetch). Surfacing the login modal immediately means the user can just re-enter their
+  // password right there, rather than having to notice a toast and go hunt for the Login button.
+  setOnAuthExpired(openServerLoginModal);
   function closeServerLoginModal(){ document.getElementById('serverLoginOverlay').classList.add('hidden'); }
   document.getElementById('serverLoginClose').addEventListener('click', closeServerLoginModal);
   document.getElementById('serverLoginCancelBtn').addEventListener('click', closeServerLoginModal);

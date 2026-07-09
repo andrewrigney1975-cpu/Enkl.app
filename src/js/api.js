@@ -45,6 +45,11 @@ export class ApiError extends Error {
 
 var _onAuthExpired = function(){};
 export function setOnAuthExpired(fn){ _onAuthExpired = fn; }
+/* Exported so a caller with its own reason to know the session is dead — currently just
+   features/live-updates.js, whose long-lived SSE stream can be the first thing to notice an expired
+   token during an otherwise idle session — can trigger the same "please log in again" handling
+   apiFetch's own 401 detection below does, without duplicating that handling. */
+export function notifyAuthExpired(){ _onAuthExpired(); }
 
 async function apiFetch(path, options){
   var token = getToken();
@@ -60,7 +65,7 @@ async function apiFetch(path, options){
     // plain auth failure, not a session expiry — let it fall through to the generic handler
     // below so the caller sees the API's actual message ("Invalid username or password.").
     clearToken();
-    _onAuthExpired();
+    notifyAuthExpired();
     throw new ApiError(401, {message: 'Session expired. Please log in again.'});
   }
   if(!res.ok){
