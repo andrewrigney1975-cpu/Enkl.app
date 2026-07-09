@@ -34,6 +34,31 @@ public class ProjectsController : ControllerBase
         return detail is null ? NotFound() : Ok(detail);
     }
 
+    // No ProjectMember policy — the project doesn't exist yet, so there's nothing for that policy to
+    // check against. Any authenticated user may create a project under their own Organisation.
+    [HttpPost]
+    public async Task<IActionResult> CreateProject(CreateProjectRequest request)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+        var result = await _projects.CreateAsync(userId, request);
+        return result is null ? Unauthorized() : Ok(result);
+    }
+
+    [HttpPut("{projectId:guid}")]
+    [Authorize(Policy = "ProjectMember")]
+    public async Task<IActionResult> UpdateProject(Guid projectId, UpdateProjectRequest request)
+    {
+        var result = await _projects.UpdateAsync(projectId, request);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpDelete("{projectId:guid}")]
+    [Authorize(Policy = "ProjectMember")]
+    public async Task<IActionResult> DeleteProject(Guid projectId)
+    {
+        return await _projects.DeleteAsync(projectId) ? NoContent() : NotFound();
+    }
+
     [HttpPut("{projectId:guid}/settings")]
     [Authorize(Policy = "ProjectMember")]
     public async Task<IActionResult> UpdateSettings(Guid projectId, ProjectSettingsDto request)

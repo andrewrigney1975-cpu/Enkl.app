@@ -7,6 +7,16 @@ import { memberInitials } from '../date-utils.js';
 import { addMember, renameMember, setMemberRole, setMemberReportsTo, removeMember, getTeamsCommitteesForMember } from '../mutations.js';
 import { getMemberById } from '../utils.js';
 import { confirmDialog } from './confirm.js';
+import { memberApi } from '../api.js';
+import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+
+/* Every PUT here sends the member's full current name/role/reportsToId together, even though the UI
+   edits them via three independent inline inputs — UpdateMemberRequest has no notion of "only this
+   one field changed", same shape every other entity's server-authoritative update already uses (see
+   modals/task-types.js's combined name+iconName PUT for the same reason). */
+function buildServerMemberBody(m, overrides){
+  return Object.assign({name: m.name, role: m.role || null, reportsToId: m.reportsToId || null}, overrides || {});
+}
 
 export function openTeamModal(){
   var project = getCurrentProject();
@@ -53,13 +63,34 @@ export function renderMemberList(){
       '<input type="text" class="kf-member-role-input" value="' + escapeHTML(m.role || '') + '" maxlength="60" list="memberRoleOptions" placeholder="Role" aria-label="Member role">' +
       '<button class="kf-btn kf-btn-ghost" data-action="remove-member" title="Remove from project">' + iconSvg('trash',14) + '</button>';
     var nameInput = row.querySelector('.kf-member-name-input');
-    nameInput.addEventListener('change', function(){
+    nameInput.addEventListener('change', async function(){
+      if(isServerAuthoritative(project)){
+        try {
+          await memberApi.update(project.serverProjectId, m.id, buildServerMemberBody(m, {name: nameInput.value}));
+          await refreshProjectFromServer(project.id);
+          renderMemberList();
+          renderBoard();
+        } catch(e){
+          toast('Could not rename team member on the server: ' + (e.message || 'unknown error'));
+        }
+        return;
+      }
       renameMember(project, m.id, nameInput.value);
       renderMemberList();
       renderBoard();
     });
     var roleInput = row.querySelector('.kf-member-role-input');
-    roleInput.addEventListener('change', function(){
+    roleInput.addEventListener('change', async function(){
+      if(isServerAuthoritative(project)){
+        try {
+          await memberApi.update(project.serverProjectId, m.id, buildServerMemberBody(m, {role: roleInput.value}));
+          await refreshProjectFromServer(project.id);
+          renderMemberList();
+        } catch(e){
+          toast('Could not update role on the server: ' + (e.message || 'unknown error'));
+        }
+        return;
+      }
       setMemberRole(project, m.id, roleInput.value);
       renderMemberList();
     });
@@ -67,7 +98,20 @@ export function renderMemberList(){
       confirmDialog(
         'Remove ' + m.name + '?',
         'They will be unassigned from any tickets currently assigned to them.',
-        function(){
+        async function(){
+          if(isServerAuthoritative(project)){
+            try {
+              await memberApi.remove(project.serverProjectId, m.id);
+              await refreshProjectFromServer(project.id);
+              renderMemberList();
+              renderBoard();
+              renderAssigneeFilterChips();
+              toast('Removed ' + m.name + '.');
+            } catch(e){
+              toast('Could not remove team member on the server: ' + (e.message || 'unknown error'));
+            }
+            return;
+          }
           var unassigned = removeMember(project, m.id);
           renderMemberList();
           renderBoard();
@@ -89,7 +133,17 @@ export function renderMemberList(){
       '<label for="reportsTo-' + m.id + '">Reports to</label>' +
       '<select id="reportsTo-' + m.id + '" class="kf-member-reportsto-select" aria-label="' + escapeHTML(m.name) + ' reports to">' + optionsHTML + '</select>';
     var reportsToSelect = reportsToRow.querySelector('select');
-    reportsToSelect.addEventListener('change', function(){
+    reportsToSelect.addEventListener('change', async function(){
+      if(isServerAuthoritative(project)){
+        try {
+          await memberApi.update(project.serverProjectId, m.id, buildServerMemberBody(m, {reportsToId: reportsToSelect.value || null}));
+          await refreshProjectFromServer(project.id);
+          renderMemberList();
+        } catch(e){
+          toast('Could not update reports-to on the server: ' + (e.message || 'unknown error'));
+        }
+        return;
+      }
       setMemberReportsTo(project, m.id, reportsToSelect.value || null);
       renderMemberList();
     });
@@ -105,12 +159,27 @@ export function renderMemberList(){
   });
 }
 
-export function addMemberFromModal(){
+export async function addMemberFromModal(){
   var project = getCurrentProject();
   if(!project) return;
   var input = document.getElementById('newMemberNameInput');
   var name = input.value.trim();
   if(!name){ toast('Please enter a name.'); return; }
+
+  if(isServerAuthoritative(project)){
+    try {
+      await memberApi.create(project.serverProjectId, {name: name});
+      await refreshProjectFromServer(project.id);
+      input.value = '';
+      renderMemberList();
+      renderAssigneeFilterChips();
+      input.focus();
+    } catch(e){
+      toast('Could not add team member on the server: ' + (e.message || 'unknown error'));
+    }
+    return;
+  }
+
   addMember(project, name);
   input.value = '';
   renderMemberList();

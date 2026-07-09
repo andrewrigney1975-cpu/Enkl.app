@@ -3,8 +3,21 @@ using System.Text.Json;
 namespace Enkl.Api.Dtos;
 
 public record ProjectSummaryDto(Guid Id, string Name, string Key);
+public record CreateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate);
+public record UpdateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate);
+
+/// <summary>
+/// Creating a project changes who the caller has access to — but membership is embedded in the JWT
+/// at login time (see JwtTokenService), so the token that authenticated this very request doesn't
+/// grant access to the project it just created. A fresh token (with the new project added to its
+/// claims) rides along in the response so the frontend can swap it in immediately, exactly as if it
+/// had just logged in again — see setToken() in api.js.
+/// </summary>
+public record CreateProjectResponseDto(ProjectDetailDto Project, string Token, DateTime TokenExpiresAt, string? Warning);
 
 public record MemberDto(Guid Id, Guid UserId, string DisplayName, string Color, string? Role, Guid? ReportsToId);
+public record CreateMemberRequest(string Name);
+public record UpdateMemberRequest(string Name, string? Role, Guid? ReportsToId);
 
 public record ColumnDto(Guid Id, string Name, bool Done, string? Color, int Order);
 

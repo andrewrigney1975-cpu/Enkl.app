@@ -23,7 +23,7 @@ import { setCostBenefitDeps, cbZoomState, openCostBenefitOverlay, closeCostBenef
 /* ---- Features ---- */
 import { parseTaskKeyFromHash, findTaskByKey, clearTaskHash } from './features/hash-router.js';
 import { exportProjectJSON } from './features/export.js';
-import { migrateProjectToServer, loginToServer, changePasswordOnServer, isServerLoggedIn, pullServerProjectsIntoLocal, setMigrationToast } from './features/migration.js';
+import { migrateProjectToServer, loginToServer, changePasswordOnServer, isServerLoggedIn, isServerAuthoritative, pullServerProjectsIntoLocal, deleteProjectOnServer, setMigrationToast } from './features/migration.js';
 import { connectEventStream, disconnectEventStream } from './features/live-updates.js';
 import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck } from './features/import.js';
 import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder } from './features/session-alerts.js';
@@ -39,6 +39,7 @@ import { closeUnlockPrivateTaskModal, confirmUnlockFromModal, continueWithoutKey
 import { openColumnModal, closeColumnModal, saveColumnFromModal, deleteColumnFromModal } from './modals/column.js';
 import { openProjectModal, closeProjectModal, saveProjectFromModal } from './modals/project.js';
 import { openTeamModal, closeTeamModal, addMemberFromModal } from './modals/team.js';
+import { openOrgUsersModal, closeOrgUsersModal, createOrgUserFromModal } from './modals/organisation.js';
 import { openTaskTypesModal, closeTaskTypesModal, addTaskTypeFromModal } from './modals/task-types.js';
 import { openReleasesOverlay, closeReleasesOverlay, isReleasesOverlayOpen, showReleasesFormView, showReleasesListView, saveReleaseFromModal, deleteReleaseFromModal } from './modals/releases.js';
 import { openDocumentsOverlay, closeDocumentsOverlay, isDocumentsOverlayOpen, showDocumentsFormView, showDocumentsListView, renderDocumentsList, saveDocumentFromModal, deleteDocumentFromModal, updateDocUrlOpenButtonVisibilityFor, openUrlInputInNewTab } from './modals/documents.js';
@@ -389,7 +390,19 @@ function wireEvents(){
     confirmDialog(
       'Delete project "' + p.name + '"?',
       'This permanently deletes the project and all of its columns and tasks (' + Object.keys(p.tasks).length + ' task(s)). This cannot be undone.',
-      function(){
+      async function(){
+        if(isServerAuthoritative(p)){
+          try {
+            await deleteProjectOnServer(p);
+            resetFilters();
+            renderAll();
+            checkProjectAlerts();
+            toast('Project deleted.');
+          } catch(e){
+            toast('Could not delete project on the server: ' + (e.message || 'unknown error'));
+          }
+          return;
+        }
         deleteProject(p.id);
         resetFilters();
         renderAll();
@@ -925,6 +938,20 @@ function wireEvents(){
     changePasswordOnServer(currentPassword, newPassword).then(function(){
       closeChangePasswordModal();
     }, function(){ /* toast already shown by changePasswordOnServer */ });
+  });
+
+  document.getElementById('manageUsersLink').addEventListener('click', function(e){
+    e.preventDefault();
+    openOrgUsersModal();
+  });
+  document.getElementById('orgUsersClose').addEventListener('click', closeOrgUsersModal);
+  document.getElementById('orgUsersDoneBtn').addEventListener('click', closeOrgUsersModal);
+  document.getElementById('orgUsersOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'orgUsersOverlay') closeOrgUsersModal();
+  });
+  document.getElementById('createOrgUserBtn').addEventListener('click', createOrgUserFromModal);
+  document.getElementById('newOrgUserPasswordInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); createOrgUserFromModal(); }
   });
 
   document.getElementById('refreshBtn').addEventListener('click', function(){ window.location.reload(); });

@@ -5,6 +5,7 @@ import { localDateValueToUTCISO, utcISOToLocalDateValue } from '../date-utils.js
 import { addProject, renameProject } from '../mutations.js';
 import { renderAll } from '../views/board.js';
 import { checkProjectAlerts } from '../features/session-alerts.js';
+import { isServerAuthoritative, isServerLoggedIn, createProjectOnServer, updateProjectOnServer } from '../features/migration.js';
 
 export function openProjectModal(mode){
   ui.editingProjectId = mode === 'edit' ? state.db.currentProjectId : null;
@@ -20,7 +21,7 @@ export function openProjectModal(mode){
 export function closeProjectModal(){
   document.getElementById('projectOverlay').classList.add('hidden');
 }
-export function saveProjectFromModal(){
+export async function saveProjectFromModal(){
   var name = document.getElementById('projectNameInput').value.trim();
   if(!name){ toast('Please enter a project name.'); return; }
   var key = document.getElementById('projectKeyInput').value.trim() || name.replace(/[^A-Za-z]/g,'').slice(0,4).toUpperCase() || 'PROJ';
@@ -33,6 +34,37 @@ export function saveProjectFromModal(){
   }
 
   var isNewProject = !ui.editingProjectId;
+  var editingProject = ui.editingProjectId ? state.db.projects[ui.editingProjectId] : null;
+
+  if(!isNewProject && isServerAuthoritative(editingProject)){
+    try {
+      await updateProjectOnServer(editingProject, name, key, startISO, endISO);
+      closeProjectModal();
+      renderAll();
+      toast('Project updated.');
+    } catch(e){
+      toast('Could not update project on the server: ' + (e.message || 'unknown error'));
+    }
+    return;
+  }
+
+  // A brand new project has no server-authoritative state of its own to check (it doesn't exist
+  // yet) — if this browser is already logged in, create it directly on the server instead of making
+  // the user go through the extra local-then-Migrate-to-Server round trip.
+  if(isNewProject && isServerLoggedIn()){
+    try {
+      var result = await createProjectOnServer(name, key, startISO, endISO);
+      resetFilters();
+      closeProjectModal();
+      renderAll();
+      checkProjectAlerts();
+      toast('Project created.' + (result.warning ? ' ' + result.warning : ''));
+    } catch(e){
+      toast('Could not create project on the server: ' + (e.message || 'unknown error'));
+    }
+    return;
+  }
+
   if(ui.editingProjectId){
     renameProject(ui.editingProjectId, name, key, startISO, endISO);
     toast('Project updated.');

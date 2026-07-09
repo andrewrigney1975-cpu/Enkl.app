@@ -35,6 +35,30 @@ export function isLoggedIn(){
   return !!getToken();
 }
 
+/* JWTs aren't encrypted, just signed — the payload is plain base64url JSON, safe to read client-side
+   without validating the signature (the server re-validates on every request regardless; this is only
+   ever used to decide what to SHOW, e.g. hiding the "Manage Users" link from non-admins, never to
+   decide what to ALLOW). Returns null for a missing/malformed token rather than throwing, since a
+   stale or corrupted token should just make the UI treat this browser as not-admin. */
+function decodeTokenPayload(token){
+  try {
+    var base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    var json = decodeURIComponent(atob(base64).split('').map(function(c){
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(json);
+  } catch(e){
+    return null;
+  }
+}
+
+export function isOrgAdmin(){
+  var token = getToken();
+  if(!token) return false;
+  var payload = decodeTokenPayload(token);
+  return !!(payload && payload.orgAdmin === 'true');
+}
+
 export class ApiError extends Error {
   constructor(status, body){
     super((body && body.message) || ('Request failed with status ' + status));
@@ -84,12 +108,32 @@ export function changePasswordApi(currentPassword, newPassword){
   return apiFetch('/auth/change-password', {method: 'POST', body: JSON.stringify({currentPassword: currentPassword, newPassword: newPassword})});
 }
 
+export function getMyOrganisationApi(){
+  return apiFetch('/organisations/me', {method: 'GET'});
+}
+export function createOrgUserApi(username, displayName, password){
+  return apiFetch('/organisations/me/users', {method: 'POST', body: JSON.stringify({username: username, displayName: displayName, password: password})});
+}
+export function setOrgUserAdminApi(userId, isOrgAdmin){
+  return apiFetch('/organisations/me/users/' + userId + '/admin', {method: 'PUT', body: JSON.stringify({isOrgAdmin: isOrgAdmin})});
+}
+
 export function getProjectsApi(){
   return apiFetch('/projects', {method: 'GET'});
 }
 
 export function getProjectDetailApi(projectId){
   return apiFetch('/projects/' + projectId, {method: 'GET'});
+}
+
+export function createProjectApi(body){
+  return apiFetch('/projects', {method: 'POST', body: JSON.stringify(body)});
+}
+export function updateProjectApi(projectId, body){
+  return apiFetch('/projects/' + projectId, {method: 'PUT', body: JSON.stringify(body)});
+}
+export function deleteProjectApi(projectId){
+  return apiFetch('/projects/' + projectId, {method: 'DELETE'});
 }
 
 export function addColumnApi(projectId, name, done, color){
@@ -140,3 +184,4 @@ export var riskApi = makeEntityApi('risks');
 export var objectiveApi = makeEntityApi('objectives');
 export var teamCommitteeApi = makeEntityApi('teams-committees');
 export var decisionApi = makeEntityApi('decisions');
+export var memberApi = makeEntityApi('members');

@@ -1,7 +1,7 @@
 "use strict";
-import { state, saveDB } from '../storage.js';
+import { state, saveDB, createDefaultProject } from '../storage.js';
 import { buildExportDoc } from './export.js';
-import { migrateProjectApi, loginApi, changePasswordApi, getProjectsApi, getProjectDetailApi, taskApi, setToken, isLoggedIn } from '../api.js';
+import { migrateProjectApi, loginApi, changePasswordApi, getProjectsApi, getProjectDetailApi, createProjectApi, updateProjectApi, deleteProjectApi, taskApi, updateColumnApi, deleteColumnApi, setToken, isLoggedIn } from '../api.js';
 import { isoToServerDateOnly, serverDateOnlyToIso } from '../date-utils.js';
 
 var _toast = function(msg){ console.error(msg); };
@@ -177,6 +177,37 @@ export async function moveTaskToColumnOnServer(project, taskId, targetColumnId){
   return refreshProjectFromServer(project.id);
 }
 
+/* Used by views/board.js's column drag-and-drop reorder handler. There's no bulk "reorder columns"
+   endpoint — Column.Order (the server's explicit position field) is set one PUT at a time, same
+   batching shape as setTasksArchivedOnServer below. Computes the new order the same way
+   mutations.js's local-only reorderColumns does (splice draggedId out, reinsert before targetId)
+   without mutating local state, since a server-authoritative project's columns array is only ever
+   supposed to change via refreshProjectFromServer. */
+export async function reorderColumnsOnServer(project, draggedId, targetId){
+  var columns = project.columns.slice();
+  var fromIdx = columns.findIndex(function(c){ return c.id === draggedId; });
+  var toIdx = columns.findIndex(function(c){ return c.id === targetId; });
+  if(fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+  var moved = columns.splice(fromIdx, 1)[0];
+  columns.splice(toIdx, 0, moved);
+  for(var i = 0; i < columns.length; i++){
+    var c = columns[i];
+    await updateColumnApi(project.serverProjectId, c.id, c.name, c.done, c.color, i);
+  }
+  return refreshProjectFromServer(project.id);
+}
+
+/* Shared by modals/column.js's Edit Column modal and views/board.js's per-column quick-delete
+   button — both need the exact same "delete on the server, then refresh" behavior for a
+   server-authoritative project, so it lives here once rather than being duplicated in both UI
+   modules (which would otherwise need to import from each other to share it, and column.js already
+   imports renderBoard from board.js). The server cascades the column's tasks itself (see
+   ColumnService.DeleteAsync) — nothing extra to do here beyond the delete + refresh. */
+export async function deleteColumnOnServer(project, columnId){
+  await deleteColumnApi(project.serverProjectId, columnId);
+  return refreshProjectFromServer(project.id);
+}
+
 /* Used by the Archived Tasks panel's bulk "Reactivate" action — flips archived to false for each
    selected task, one update per task (no bulk endpoint yet), then a single refresh at the end. */
 export async function setTasksArchivedOnServer(project, taskIds, archived){
@@ -231,6 +262,53 @@ export async function refreshProjectFromServer(localProjectId){
   state.db.projects[localProjectId] = buildLocalProjectFromServerDetail(detail, existing);
   saveDB();
   return state.db.projects[localProjectId];
+}
+
+/* Used by modals/project.js's "New Project" flow when this browser is already logged in — creates
+   the project directly on the server rather than the usual local-first-then-Migrate-to-Server path,
+   since there's no reason to make a logged-in user do that extra step. See
+   CreateProjectResponseDto's own comment for why the response carries a fresh JWT: this browser's
+   current token predates the project's existence, so it isn't in the token's project-membership
+   claims yet, and every subsequent server-authoritative call for this project needs it to be. */
+export async function createProjectOnServer(name, key, startISO, endISO){
+  var response = await createProjectApi({
+    name: name, key: key,
+    startDate: isoToServerDateOnly(startISO), endDate: isoToServerDateOnly(endISO)
+  });
+  setToken(response.token);
+  var localProject = buildLocalProjectFromServerDetail(response.project, undefined);
+  state.db.projects[localProject.id] = localProject;
+  state.db.projectOrder.push(localProject.id);
+  state.db.currentProjectId = localProject.id;
+  saveDB();
+  return {project: localProject, warning: response.warning || null};
+}
+
+export async function updateProjectOnServer(project, name, key, startISO, endISO){
+  await updateProjectApi(project.serverProjectId, {
+    name: name, key: key,
+    startDate: isoToServerDateOnly(startISO), endDate: isoToServerDateOnly(endISO)
+  });
+  return refreshProjectFromServer(project.id);
+}
+
+/* Mirrors mutations.js's local-only deleteProject: never leaves the app with zero projects — if the
+   deleted one was the last, a fresh LOCAL (not server-created) project is seeded, same fallback the
+   local path already uses. */
+export async function deleteProjectOnServer(project){
+  await deleteProjectApi(project.serverProjectId);
+  delete state.db.projects[project.id];
+  state.db.projectOrder = state.db.projectOrder.filter(function(id){ return id !== project.id; });
+  if(state.db.currentProjectId === project.id){
+    state.db.currentProjectId = state.db.projectOrder[0] || null;
+  }
+  if(!state.db.currentProjectId){
+    var fallback = createDefaultProject('My Project', 'PROJ');
+    state.db.projects[fallback.id] = fallback;
+    state.db.projectOrder.push(fallback.id);
+    state.db.currentProjectId = fallback.id;
+  }
+  saveDB();
 }
 
 /* Used by openWorkflowOverlay (views/workflow-editor.js) to start each editing session from the

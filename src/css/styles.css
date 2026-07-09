@@ -1379,6 +1379,43 @@
     margin-bottom: 14px;
   }
 
+  .kf-orguser-new-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .kf-orguser-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .kf-orguser-row-name {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kf-orguser-row-name .kf-orguser-display-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kf-text);
+  }
+
+  .kf-orguser-row-name .kf-orguser-username {
+    font-size: 12px;
+    color: var(--kf-text-faint);
+  }
+
+  .kf-orguser-admin-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--kf-text-secondary);
+    white-space: nowrap;
+  }
+
   .kf-member-add-row input {
     flex: 1;
   }

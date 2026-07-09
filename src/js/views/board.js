@@ -13,8 +13,8 @@ import { reorderColumns, deleteColumn, moveTaskToColumn, updateTask, addTask, de
 import { getReleaseById } from '../utils.js';
 import { isWorkflowEnabled, evaluateTransition } from '../features/workflow-engine.js';
 import { isGovernanceMapEnabled } from './governance-map.js';
-import { isServerAuthoritative, isServerLoggedIn, moveTaskToColumnOnServer, refreshProjectFromServer } from '../features/migration.js';
-import { updateProjectSettingsApi } from '../api.js';
+import { isServerAuthoritative, isServerLoggedIn, moveTaskToColumnOnServer, refreshProjectFromServer, reorderColumnsOnServer, deleteColumnOnServer } from '../features/migration.js';
+import { updateProjectSettingsApi, isOrgAdmin } from '../api.js';
 
 export function escapeHTML(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 function iconHTML(name, size){ return '<span class="kf-icon">'+iconSvg(name,size)+'</span>'; }
@@ -172,6 +172,12 @@ export function renderToolbar(){
   var loggedIn = isServerLoggedIn();
   toggleHeaderActionButton('serverLoginBtn', !loggedIn);
   toggleHeaderActionButton('serverLogoutBtn', loggedIn);
+
+  // Manage Users has no corresponding hidden "target" button to reuse toggleHeaderActionButton's
+  // dual-element lookup with — it's a plain link with its own click handler (see app.js) — so it's
+  // just toggled directly here.
+  var manageUsersLink = document.getElementById('manageUsersLink');
+  if(manageUsersLink) manageUsersLink.classList.toggle('kf-vis-hidden', !isOrgAdmin());
 }
 
 /* Hides/shows one of the header's project-action buttons together with its corresponding link in the
@@ -642,9 +648,18 @@ export function renderColumn(project, col){
     _confirmDialog(
       'Delete column "' + col.name + '"?',
       col.order.length > 0
-        ? 'Its ' + col.order.length + ' task(s) will be moved to another column.'
+        ? 'Its ' + col.order.length + ' task(s) will be permanently deleted.'
         : 'This column has no tasks.',
-      function(){ deleteColumn(project, col.id); renderBoard(); }
+      function(){
+        if(isServerAuthoritative(project)){
+          deleteColumnOnServer(project, col.id).then(renderBoard, function(err){
+            _toast('Could not delete column on the server: ' + (err.message || 'unknown error'));
+          });
+          return;
+        }
+        deleteColumn(project, col.id);
+        renderBoard();
+      }
     );
   });
   actions.appendChild(editBtn);
@@ -665,6 +680,12 @@ export function renderColumn(project, col){
     e.preventDefault();
     var draggedId = e.dataTransfer.getData('application/x-kf-column');
     if(draggedId && draggedId !== col.id){
+      if(isServerAuthoritative(project)){
+        reorderColumnsOnServer(project, draggedId, col.id).then(renderBoard, function(err){
+          _toast('Could not reorder columns on the server: ' + (err.message || 'unknown error'));
+        });
+        return;
+      }
       reorderColumns(project, draggedId, col.id);
       renderBoard();
     }

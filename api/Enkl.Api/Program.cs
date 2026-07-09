@@ -31,6 +31,7 @@ builder.Services.AddScoped<RiskService>();
 builder.Services.AddScoped<ObjectiveService>();
 builder.Services.AddScoped<TeamCommitteeService>();
 builder.Services.AddScoped<DecisionService>();
+builder.Services.AddScoped<MemberService>();
 builder.Services.AddSingleton<SseBroadcaster>();
 
 builder.Services

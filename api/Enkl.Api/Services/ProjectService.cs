@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Enkl.Api.Auth;
 using Enkl.Api.Data;
 using Enkl.Api.Domain.Entities;
 using Enkl.Api.Dtos;
@@ -9,10 +10,16 @@ namespace Enkl.Api.Services;
 public class ProjectService
 {
     private readonly AppDbContext _db;
+    private readonly JwtTokenService _jwt;
 
-    public ProjectService(AppDbContext db)
+    // Must match MemberService.MemberPalette[0] — a brand new project's sole member (its creator)
+    // gets the same first-slot color a migrated project's first member would.
+    private const string FirstMemberColor = "#0052CC";
+
+    public ProjectService(AppDbContext db, JwtTokenService jwt)
     {
         _db = db;
+        _jwt = jwt;
     }
 
     public async Task<List<ProjectSummaryDto>> GetProjectsForUserAsync(Guid userId)
@@ -66,6 +73,112 @@ public class ProjectService
                 d.Documents.Select(x => x.DocumentId).ToList(), d.Risks.Select(x => x.RiskId).ToList(), d.Principles.Select(x => x.PrincipleId).ToList(), d.Objectives.Select(x => x.ObjectiveId).ToList())).ToList(),
             ProjectSettingsSerializer.Parse(project.HeaderButtonVisibilityJson),
             ParseWorkflow(project.WorkflowJson));
+    }
+
+    /// <summary>
+    /// Creates a brand new project (not via migration) under the caller's own Organisation, seeded
+    /// with the same default columns/task types createDefaultProject (src/js/storage.js) gives a new
+    /// local project, and adds the caller as its first member — otherwise nothing (not even the
+    /// caller) could ever pass the ProjectMember policy to read it back. See CreateProjectResponseDto
+    /// for why a fresh JWT rides along in the response.
+    /// </summary>
+    public async Task<CreateProjectResponseDto?> CreateAsync(Guid callerUserId, CreateProjectRequest request)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == callerUserId);
+        if (user is null) return null;
+
+        var name = string.IsNullOrWhiteSpace(request.Name) ? "Untitled Project" : request.Name.Trim();
+        var requestedKey = DeriveProjectKey(request.Key, name);
+        var uniqueKey = await ResolveUniqueProjectKeyAsync(requestedKey);
+        var warning = uniqueKey != requestedKey
+            ? $"Project key \"{requestedKey}\" was already in use; created as \"{uniqueKey}\" instead."
+            : null;
+
+        var now = DateTime.UtcNow;
+        var project = new Project
+        {
+            Id = Guid.NewGuid(),
+            OrganisationId = user.OrganisationId,
+            Name = name,
+            Key = uniqueKey,
+            StartDate = request.StartDate,
+            EndDate = request.EndDate,
+            DateCreated = now,
+            DateLastModified = now,
+            TaskCounter = 1
+        };
+        _db.Projects.Add(project);
+        _db.ProjectMembers.Add(new ProjectMember { Id = Guid.NewGuid(), ProjectId = project.Id, UserId = user.Id, Color = FirstMemberColor });
+
+        var columnDefs = new (string Name, bool Done)[] { ("To Do", false), ("In Progress", false), ("Done", true) };
+        for (var i = 0; i < columnDefs.Length; i++)
+        {
+            _db.Columns.Add(new Column { Id = Guid.NewGuid(), ProjectId = project.Id, Name = columnDefs[i].Name, Done = columnDefs[i].Done, Order = i });
+        }
+        foreach (var typeName in new[] { "Feature", "Bug" })
+        {
+            _db.TaskTypes.Add(new TaskType { Id = Guid.NewGuid(), ProjectId = project.Id, Name = typeName });
+        }
+
+        await _db.SaveChangesAsync();
+
+        var memberships = await _db.ProjectMembers.Where(m => m.UserId == user.Id).ToListAsync();
+        var (token, expiresAt) = _jwt.GenerateToken(user, memberships);
+        var detail = await GetProjectDetailAsync(project.Id);
+
+        return new CreateProjectResponseDto(detail!, token, expiresAt, warning);
+    }
+
+    public async Task<ProjectSummaryDto?> UpdateAsync(Guid projectId, UpdateProjectRequest request)
+    {
+        var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == projectId);
+        if (project is null) return null;
+
+        var name = string.IsNullOrWhiteSpace(request.Name) ? project.Name : request.Name.Trim();
+        var requestedKey = DeriveProjectKey(request.Key, name);
+        project.Key = requestedKey == project.Key ? project.Key : await ResolveUniqueProjectKeyAsync(requestedKey, projectId);
+        project.Name = name;
+        project.StartDate = request.StartDate;
+        project.EndDate = request.EndDate;
+        project.DateLastModified = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return new ProjectSummaryDto(project.Id, project.Name, project.Key);
+    }
+
+    public async Task<bool> DeleteAsync(Guid projectId)
+    {
+        var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == projectId);
+        if (project is null) return false;
+
+        // Every child entity's ProjectId FK is Cascade (Columns, Tasks, Members, Releases, ...), so
+        // removing the Project alone is enough — Postgres resolves the whole graph, including
+        // TaskItem.ColumnId's Restrict FK, within this same delete (no task row survives to violate
+        // it once its own Cascade-from-Project deletion has also been applied).
+        _db.Projects.Remove(project);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    private static string DeriveProjectKey(string? requestedKey, string name)
+    {
+        var trimmed = (requestedKey ?? "").Trim().ToUpperInvariant();
+        if (trimmed.Length > 0) return trimmed.Length > 20 ? trimmed[..20] : trimmed;
+
+        var fromName = new string(name.Where(char.IsLetter).ToArray()).ToUpperInvariant();
+        if (fromName.Length > 4) fromName = fromName[..4];
+        return fromName.Length > 0 ? fromName : "PROJ";
+    }
+
+    private async Task<string> ResolveUniqueProjectKeyAsync(string baseKey, Guid? excludeProjectId = null)
+    {
+        var candidate = baseKey;
+        var suffix = 1;
+        while (await _db.Projects.AnyAsync(p => p.Key == candidate && p.Id != excludeProjectId))
+        {
+            candidate = $"{baseKey}{++suffix}";
+        }
+        return candidate;
     }
 
     public async Task<ProjectSettingsDto?> UpdateProjectSettingsAsync(Guid projectId, ProjectSettingsDto settings)

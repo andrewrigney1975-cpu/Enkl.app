@@ -5,8 +5,8 @@ import { getColumn } from '../utils.js';
 import { addColumn, updateColumn, deleteColumn } from '../mutations.js';
 import { renderBoard } from '../views/board.js';
 import { confirmDialog } from './confirm.js';
-import { addColumnApi, updateColumnApi, deleteColumnApi } from '../api.js';
-import { refreshProjectFromServer, isServerAuthoritative } from '../features/migration.js';
+import { addColumnApi, updateColumnApi } from '../api.js';
+import { refreshProjectFromServer, isServerAuthoritative, deleteColumnOnServer } from '../features/migration.js';
 
 /* Once isServerAuthoritative(project) (see features/migration.js), the server is the sole source of
    truth: column CRUD goes through the API only (no local mutations.js write), and on success the
@@ -77,12 +77,11 @@ export function deleteColumnFromModal(){
   if(!col) return;
   confirmDialog(
     'Delete column "' + col.name + '"?',
-    col.order.length > 0 ? 'Its ' + col.order.length + ' task(s) will be moved to another column.' : 'This column has no tasks.',
+    col.order.length > 0 ? 'Its ' + col.order.length + ' task(s) will be permanently deleted.' : 'This column has no tasks.',
     async function(){
       if(isServerAuthoritative(project)){
         try {
-          await deleteColumnApi(project.serverProjectId, col.id);
-          await refreshProjectFromServer(project.id);
+          await deleteColumnOnServer(project, col.id);
           closeColumnModal();
           renderBoard();
           toast('Column deleted.');

@@ -32,5 +32,12 @@ public class OrganisationsController : ControllerBase
         return ok ? NoContent() : NotFound();
     }
 
+    [HttpPost("users")]
+    public async Task<IActionResult> CreateUser(CreateUserRequest request)
+    {
+        var result = await _organisations.CreateUserAsync(CallerOrgId(), request);
+        return Ok(result);
+    }
+
     private Guid CallerOrgId() => Guid.Parse(User.FindFirstValue("orgId")!);
 }

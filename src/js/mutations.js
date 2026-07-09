@@ -800,11 +800,11 @@ export function deleteColumn(project, columnId){
   }
   var col = getColumn(project, columnId);
   if(!col) return false;
-  var target = project.columns.find(function(c){ return c.id !== columnId; });
-  col.order.forEach(function(taskId){
-    var t = project.tasks[taskId];
-    if(t){ t.columnId = target.id; target.order.push(taskId); }
-  });
+  /* Cascades to every task in the column (deleteTask handles its own cleanup — dependencies,
+     sub-task orphaning, document/risk/decision unlinking) rather than reassigning them elsewhere,
+     matching the server's ColumnService.DeleteAsync. col.order is copied first since deleteTask
+     mutates every column's order array (including this one) as it goes. */
+  col.order.slice().forEach(function(taskId){ deleteTask(project, taskId); });
   project.columns = project.columns.filter(function(c){ return c.id !== columnId; });
   if(project.workflow){
     delete project.workflow.nodes[columnId];
