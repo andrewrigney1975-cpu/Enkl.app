@@ -160,6 +160,16 @@ export function renderToolbar(){
   keyEl.classList.toggle('kf-board-key-server', isServerLinked);
   keyEl.innerHTML = (isServerLinked ? iconSvg('cloud', 11) : '') + (p ? p.key : '—');
   document.getElementById('toolbarTitle').textContent = p ? p.name : 'No project';
+
+  // Once a project is fully server-authoritative there's nothing left to migrate — re-running it
+  // would just create a duplicate copy on the server (see the migrateToServerBtn handler's own
+  // "Re-migrate" confirm-dialog warning in app.js, kept as a manual fallback for the narrow window
+  // between an anonymous migration and this browser's next login/reconciliation swap).
+  var hideMigrate = isServerAuthoritative(p);
+  var migrateBtn = document.getElementById('migrateToServerBtn');
+  if(migrateBtn) migrateBtn.classList.toggle('kf-vis-hidden', hideMigrate);
+  var migrateMenuLink = document.querySelector('[data-nav-target="migrateToServerBtn"]');
+  if(migrateMenuLink) migrateMenuLink.classList.toggle('kf-vis-hidden', hideMigrate);
 }
 
 export function renderPriorityFilterChips(){
