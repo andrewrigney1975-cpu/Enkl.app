@@ -439,6 +439,16 @@
     display: none;
   }
 
+  /* Account/Refresh/Theme/Project Settings/Help sit as their own tight cluster at the end of the
+     header — a smaller gap than kf-header-controls' general 16px between its other sections. Mobile
+     resets this to display:contents (see the @media block below) so these buttons fall back to being
+     plain stacked children of the drawer, exactly as before this group wrapper existed. */
+  .kf-header-utility-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   @media (max-width: 1024px) {
     .kf-header-hamburger {
       display: flex;
@@ -554,8 +564,12 @@
       display: flex;
     }
 
-    .kf-header-controls .kf-projects-menu-wrap {
+    .kf-header-controls .kf-desktop-menu-wrap {
       display: none;
+    }
+
+    .kf-header-controls .kf-header-utility-group {
+      display: contents;
     }
 
     .kf-drawer-section-label {
@@ -2568,7 +2582,7 @@
     background: none;
     border: none;
     border-radius: 3px;
-    color: var(--kf-blue);
+    color: var(--kf-text);
     font-size: 13px;
     font-weight: 500;
     text-decoration: none;

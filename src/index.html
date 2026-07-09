@@ -92,25 +92,34 @@
         <button class="kf-header-btn kf-header-nav-projectaction" id="exportBtn" title="Export the current project"><span class="kf-icon" data-icon="download" data-size="14"></span>Export Project</button>
         <button class="kf-header-btn kf-header-nav-projectaction" id="migrateToServerBtn" title="Migrate this project to the server database"><span class="kf-icon" data-icon="upload" data-size="14"></span>Migrate to Server</button>
         <button class="kf-header-btn kf-header-nav-projectaction" id="serverLoginBtn" title="Log in to the server"><span class="kf-icon" data-icon="upload" data-size="14"></span>Login</button>
+        <button class="kf-header-btn kf-header-nav-projectaction kf-vis-hidden" id="serverLogoutBtn" title="Log out of the server"><span class="kf-icon" data-icon="logout" data-size="14"></span>Logout</button>
         <button class="kf-header-btn kf-header-nav-projectaction" id="changePasswordBtn" title="Change your server password"><span class="kf-icon" data-icon="lock" data-size="14"></span>Change Password</button>
-        <div class="kf-export-as-wrap kf-projects-menu-wrap" id="projectsMenuWrap">
+        <div class="kf-export-as-wrap kf-desktop-menu-wrap" id="projectsMenuWrap">
           <button class="kf-header-btn" id="projectsMenuBtn" title="Projects"><span class="kf-icon" data-icon="chevronDown" data-size="14"></span>Projects...</button>
           <div class="kf-export-as-panel hidden kf-header-more-panel" id="projectsMenuPanel">
             <a href="#" class="kf-header-more-link" data-nav-target="newProjectBtn">New Project</a>
             <a href="#" class="kf-header-more-link" data-nav-target="importProjectBtn">Import Project</a>
             <a href="#" class="kf-header-more-link" data-nav-target="exportBtn">Export Project</a>
             <a href="#" class="kf-header-more-link" data-nav-target="migrateToServerBtn">Migrate to Server</a>
-            <a href="#" class="kf-header-more-link" data-nav-target="serverLoginBtn">Login</a>
-            <a href="#" class="kf-header-more-link" data-nav-target="changePasswordBtn">Change Password</a>
           </div>
         </div>
       </div>
       <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
       <div class="kf-header-divider"></div>
-      <button class="kf-header-btn" id="refreshBtn" title="Refresh" aria-label="Refresh"><span class="kf-icon" data-icon="refresh" data-size="16"></span><span class="kf-appsettings-label">Refresh</span></button>
-      <button class="kf-header-btn kf-theme-toggle" id="themeToggleBtn" title="Switch to dark theme" aria-label="Switch to dark theme"></button>
-      <button class="kf-header-btn" id="appSettingsBtn" title="Project Settings" aria-label="Project Settings"><span class="kf-icon" data-icon="ty_configure" data-size="16"></span><span class="kf-appsettings-label">Project Settings</span></button>
-      <button class="kf-header-btn" id="aboutBtn" title="About" aria-label="About"><span class="kf-icon" data-icon="help" data-size="16"></span><span class="kf-appsettings-label">About</span></button>
+      <div class="kf-header-utility-group" id="headerUtilityGroup">
+        <div class="kf-export-as-wrap kf-desktop-menu-wrap" id="accountMenuWrap">
+          <button class="kf-header-btn" id="accountMenuBtn" title="Account"><span class="kf-icon" data-icon="chevronDown" data-size="14"></span>Account</button>
+          <div class="kf-export-as-panel hidden kf-header-more-panel" id="accountMenuPanel">
+            <a href="#" class="kf-header-more-link" data-nav-target="serverLoginBtn">Login</a>
+            <a href="#" class="kf-header-more-link kf-vis-hidden" data-nav-target="serverLogoutBtn">Logout</a>
+            <a href="#" class="kf-header-more-link" data-nav-target="changePasswordBtn">Change Password</a>
+          </div>
+        </div>
+        <button class="kf-header-btn" id="refreshBtn" title="Refresh" aria-label="Refresh"><span class="kf-icon" data-icon="refresh" data-size="16"></span><span class="kf-appsettings-label">Refresh</span></button>
+        <button class="kf-header-btn kf-theme-toggle" id="themeToggleBtn" title="Switch to dark theme" aria-label="Switch to dark theme"></button>
+        <button class="kf-header-btn" id="appSettingsBtn" title="Project Settings" aria-label="Project Settings"><span class="kf-icon" data-icon="ty_configure" data-size="16"></span><span class="kf-appsettings-label">Project Settings</span></button>
+        <button class="kf-header-btn" id="aboutBtn" title="About" aria-label="About"><span class="kf-icon" data-icon="help" data-size="16"></span><span class="kf-appsettings-label">About</span></button>
+      </div>
     </div>
   </header>
   <div class="kf-drawer-backdrop" id="drawerBackdrop"></div>

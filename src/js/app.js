@@ -5,7 +5,7 @@ import { state, loadDB, saveDB } from './storage.js';
 import { getCurrentProject } from './store.js';
 import { ui, toast, resetFilters, renderThemeToggleIcon, toggleTheme, relocateViewButtonsForViewport, toggleSideNav, toggleMobileDrawer, closeMobileDrawer, isMobileDrawerOpen } from './ui.js';
 import { hydrateIcons } from './icons.js';
-import { setOnAuthExpired } from './api.js';
+import { setOnAuthExpired, clearToken } from './api.js';
 
 /* ---- Mutations ---- */
 import { deleteProject, closeAllTaskTypeIconPanels, setMutationsToast } from './mutations.js';
@@ -24,7 +24,7 @@ import { setCostBenefitDeps, cbZoomState, openCostBenefitOverlay, closeCostBenef
 import { parseTaskKeyFromHash, findTaskByKey, clearTaskHash } from './features/hash-router.js';
 import { exportProjectJSON } from './features/export.js';
 import { migrateProjectToServer, loginToServer, changePasswordOnServer, isServerLoggedIn, pullServerProjectsIntoLocal, setMigrationToast } from './features/migration.js';
-import { connectEventStream } from './features/live-updates.js';
+import { connectEventStream, disconnectEventStream } from './features/live-updates.js';
 import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck } from './features/import.js';
 import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder } from './features/session-alerts.js';
 import { setBulkEditDeps, openBulkEditOverlay, closeBulkEditOverlay, isBulkEditOverlayOpen, saveBulkEditChanges } from './features/bulk-edit.js';
@@ -328,6 +328,18 @@ function wireEvents(){
     toggleExportAsPanel('projectsMenuPanel');
   });
   document.getElementById('projectsMenuPanel').addEventListener('click', function(e){
+    var link = e.target.closest('[data-nav-target]');
+    if(!link) return;
+    e.preventDefault();
+    closeAllExportAsPanels();
+    var target = document.getElementById(link.getAttribute('data-nav-target'));
+    if(target) target.click();
+  });
+  document.getElementById('accountMenuBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('accountMenuPanel');
+  });
+  document.getElementById('accountMenuPanel').addEventListener('click', function(e){
     var link = e.target.closest('[data-nav-target]');
     if(!link) return;
     e.preventDefault();
@@ -870,6 +882,16 @@ function wireEvents(){
         if(result.user.mustChangePassword) openChangePasswordModal(password);
       });
     }, function(){ /* toast already shown by loginToServer */ });
+  });
+
+  document.getElementById('serverLogoutBtn').addEventListener('click', function(){
+    clearToken();
+    disconnectEventStream();
+    // Server-authoritative projects stay exactly as they are — still flagged server-authoritative,
+    // still showing their last-synced data — they just can't push/pull further changes until logged
+    // back in (any attempt will 401 and re-open the login modal via setOnAuthExpired above).
+    renderAll();
+    toast('Logged out.');
   });
 
   document.getElementById('changePasswordBtn').addEventListener('click', function(){

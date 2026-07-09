@@ -13,7 +13,7 @@ import { reorderColumns, deleteColumn, moveTaskToColumn, updateTask, addTask, de
 import { getReleaseById } from '../utils.js';
 import { isWorkflowEnabled, evaluateTransition } from '../features/workflow-engine.js';
 import { isGovernanceMapEnabled } from './governance-map.js';
-import { isServerAuthoritative, moveTaskToColumnOnServer, refreshProjectFromServer } from '../features/migration.js';
+import { isServerAuthoritative, isServerLoggedIn, moveTaskToColumnOnServer, refreshProjectFromServer } from '../features/migration.js';
 import { updateProjectSettingsApi } from '../api.js';
 
 export function escapeHTML(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
@@ -165,11 +165,22 @@ export function renderToolbar(){
   // would just create a duplicate copy on the server (see the migrateToServerBtn handler's own
   // "Re-migrate" confirm-dialog warning in app.js, kept as a manual fallback for the narrow window
   // between an anonymous migration and this browser's next login/reconciliation swap).
-  var hideMigrate = isServerAuthoritative(p);
-  var migrateBtn = document.getElementById('migrateToServerBtn');
-  if(migrateBtn) migrateBtn.classList.toggle('kf-vis-hidden', hideMigrate);
-  var migrateMenuLink = document.querySelector('[data-nav-target="migrateToServerBtn"]');
-  if(migrateMenuLink) migrateMenuLink.classList.toggle('kf-vis-hidden', hideMigrate);
+  toggleHeaderActionButton('migrateToServerBtn', !isServerAuthoritative(p));
+
+  // Login/Logout are session-level, not tied to whichever project happens to be open — Login shows
+  // whenever there's no active session, Logout once there is one.
+  var loggedIn = isServerLoggedIn();
+  toggleHeaderActionButton('serverLoginBtn', !loggedIn);
+  toggleHeaderActionButton('serverLogoutBtn', loggedIn);
+}
+
+/* Hides/shows one of the header's project-action buttons together with its corresponding link in the
+   "Projects..." overflow menu (mobile/narrow-viewport view of the same actions). */
+function toggleHeaderActionButton(id, visible){
+  var btn = document.getElementById(id);
+  if(btn) btn.classList.toggle('kf-vis-hidden', !visible);
+  var menuLink = document.querySelector('[data-nav-target="' + id + '"]');
+  if(menuLink) menuLink.classList.toggle('kf-vis-hidden', !visible);
 }
 
 export function renderPriorityFilterChips(){
