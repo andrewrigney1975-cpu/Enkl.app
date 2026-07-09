@@ -5,6 +5,8 @@ services:
       POSTGRES_DB: enkl
       POSTGRES_USER: enkl
       POSTGRES_PASSWORD: ${DB_PASSWORD:-enkl_dev_password}
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
