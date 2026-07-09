@@ -8,7 +8,7 @@ public record MemberDto(Guid Id, Guid UserId, string DisplayName, string Color, 
 
 public record ColumnDto(Guid Id, string Name, bool Done, string? Color, int Order);
 
-public record TaskAuditLogEntryDto(Guid Id, DateTime Timestamp, string Field, string? OldValue, string? NewValue);
+public record TaskAuditLogEntryDto(Guid Id, DateTime Timestamp, string Field, string? OldValue, string? NewValue, string? ChangedBy);
 
 public record TaskDto(
     Guid Id, string Key, string Title, string? Description, string Priority,

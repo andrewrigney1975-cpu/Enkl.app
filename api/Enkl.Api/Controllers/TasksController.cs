@@ -32,7 +32,7 @@ public class TasksController : ControllerBase
     [HttpPut("{taskId:guid}")]
     public async Task<IActionResult> Update(Guid projectId, Guid taskId, UpdateTaskRequest request)
     {
-        var result = await _tasks.UpdateAsync(projectId, taskId, request);
+        var result = await _tasks.UpdateAsync(projectId, taskId, request, User.FindFirstValue("displayName"));
         if (result is null) return NotFound();
         await BroadcastAsync(projectId, result, "updated");
         return Ok(result);

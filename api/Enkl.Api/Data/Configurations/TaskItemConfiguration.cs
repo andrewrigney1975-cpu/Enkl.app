@@ -63,6 +63,7 @@ public class TaskAuditLogEntryConfiguration : IEntityTypeConfiguration<TaskAudit
     {
         b.HasKey(e => e.Id);
         b.Property(e => e.Field).HasMaxLength(100).IsRequired();
+        b.Property(e => e.ChangedBy).HasMaxLength(200);
 
         b.HasOne(e => e.Task)
             .WithMany(t => t.AuditLog)

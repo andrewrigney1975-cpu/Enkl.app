@@ -114,5 +114,5 @@ public class ProjectService
         t.DateCreated, t.DateLastModified, t.DateDone, t.StartDate, t.EndDate,
         t.BusinessValue, t.TaskCost, t.Progress, t.EstimatedEffort, t.ActualEffort, t.Archived,
         t.Dependencies.Select(d => d.DependsOnTaskId).ToList(),
-        t.AuditLog.Select(a => new TaskAuditLogEntryDto(a.Id, a.Timestamp, a.Field, a.OldValue, a.NewValue)).ToList());
+        t.AuditLog.Select(a => new TaskAuditLogEntryDto(a.Id, a.Timestamp, a.Field, a.OldValue, a.NewValue, a.ChangedBy)).ToList());
 }

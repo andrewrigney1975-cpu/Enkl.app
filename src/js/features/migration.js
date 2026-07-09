@@ -293,7 +293,7 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
       isPrivate: false, privateSalt: null, privateVerifier: null, encryptedDescription: null, encryptionIv: null,
       dateCreated: t.dateCreated, dateLastModified: t.dateLastModified, dateDone: t.dateDone || null,
       auditLog: (t.auditLog || []).map(function(a){
-        return {timestamp: a.timestamp, field: a.field, oldValue: a.oldValue, newValue: a.newValue};
+        return {timestamp: a.timestamp, field: a.field, oldValue: a.oldValue, newValue: a.newValue, changedBy: a.changedBy || null};
       })
     };
     if(columnsById[t.columnId]) columnsById[t.columnId].order.push(t.id);

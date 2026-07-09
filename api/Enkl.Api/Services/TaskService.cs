@@ -65,7 +65,7 @@ public class TaskService
         return await ToTaskDtoWithRelationsAsync(task.Id);
     }
 
-    public async Task<TaskDto?> UpdateAsync(Guid projectId, Guid taskId, UpdateTaskRequest request)
+    public async Task<TaskDto?> UpdateAsync(Guid projectId, Guid taskId, UpdateTaskRequest request, string? changedByDisplayName)
     {
         var task = await _db.Tasks
             .Include(t => t.Dependencies)
@@ -122,7 +122,7 @@ public class TaskService
         if (await IsChangeAuditingEnabledAsync(projectId))
         {
             var after = CaptureAuditSnapshot(task, newDeps);
-            RecordAuditEntries(task, before, after with { DependsOnTaskIds = newDeps });
+            RecordAuditEntries(task, before, after with { DependsOnTaskIds = newDeps }, changedByDisplayName);
         }
 
         await _db.SaveChangesAsync();
@@ -224,7 +224,7 @@ public class TaskService
         t.StartDate, t.EndDate, t.BusinessValue, t.TaskCost, t.Progress, t.EstimatedEffort, t.ActualEffort,
         t.Archived, deps ?? t.Dependencies.Select(d => d.DependsOnTaskId).ToList(), t.ParentTaskId);
 
-    private void RecordAuditEntries(TaskItem task, TaskAuditSnapshot before, TaskAuditSnapshot after)
+    private void RecordAuditEntries(TaskItem task, TaskAuditSnapshot before, TaskAuditSnapshot after, string? changedBy)
     {
         var now = DateTime.UtcNow;
         foreach (var (field, get) in AuditDiffedFields)
@@ -236,7 +236,7 @@ public class TaskService
                 _db.TaskAuditLogEntries.Add(new TaskAuditLogEntry
                 {
                     Id = Guid.NewGuid(), TaskId = task.Id, Timestamp = now, Field = field,
-                    OldValue = FormatAuditValue(oldVal), NewValue = FormatAuditValue(newVal)
+                    OldValue = FormatAuditValue(oldVal), NewValue = FormatAuditValue(newVal), ChangedBy = changedBy
                 });
             }
         }

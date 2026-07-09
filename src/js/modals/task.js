@@ -277,8 +277,12 @@ function renderAuditTrail(project, task){
     return;
   }
   body.innerHTML = entries.map(function(entry){
+    // changedBy is only ever set for a change made through the server (a logged-in user) — see
+    // TasksController.Update/RecordAuditEntries on the API side. Local-only edits have no login
+    // concept, so entry.changedBy is simply absent there and the "by ..." suffix is omitted.
+    var byWho = entry.changedBy ? ' · by ' + escapeHTML(entry.changedBy) : '';
     return '<div class="kf-audit-entry">' +
-      '<div class="kf-audit-entry-time">' + escapeHTML(utcISOToLocalDisplayDateTime(entry.timestamp)) + '</div>' +
+      '<div class="kf-audit-entry-time">' + escapeHTML(utcISOToLocalDisplayDateTime(entry.timestamp)) + byWho + '</div>' +
       '<div class="kf-audit-entry-field">' + escapeHTML(getAuditFieldLabel(entry.field)) + '</div>' +
       '<div class="kf-audit-entry-change">' +
         escapeHTML(formatAuditValue(project, entry.field, entry.oldValue)) + ' → ' + escapeHTML(formatAuditValue(project, entry.field, entry.newValue)) +
