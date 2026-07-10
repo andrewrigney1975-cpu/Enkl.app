@@ -484,11 +484,11 @@ export function createSeedDB(){
     return t.id;
   }
 
-  var t1 = addSeedTask(c1, 'Research competitor boards', 'Look at Trello, Asana and Jira for layout ideas.', 'low', [], null, 200, 80);
-  var t2 = addSeedTask(c2, 'Design data schema', 'Define how projects, columns and tasks are structured.', 'high', [t1], riley.id, 800, 150);
-  var t3 = addSeedTask(c2, 'Set up local storage layer', 'Persist app state to the browser between sessions.', 'medium', [t2], sam.id, 500, 200);
-  var t4 = addSeedTask(c3, 'Build drag-and-drop board UI', 'Columns, cards, and reordering via native HTML5 drag and drop.', 'critical', [t2, t3], riley.id, 900, 400);
-  addSeedTask(c4, 'Write project README', 'Document setup and usage instructions.', 'trivial', [], null, 100, 30);
+  var t1 = addSeedTask(c1, 'Research market', 'Look at sector for baselines and benchmarks.', 'low', [], null, 200, 80);
+  var t2 = addSeedTask(c2, 'Configure project modules, columns and details', 'Define how projects, columns and tasks are structured. Replace the default Tasks with real activities', 'high', [t1], riley.id, 800, 150);
+  var t3 = addSeedTask(c2, 'Draft project objectives', 'Work with sponsors to frame the goals of this project.', 'medium', [t2], sam.id, 500, 200);
+  var t4 = addSeedTask(c3, 'Set up Team members for this project', 'Assign people and roles to the project.', 'critical', [t2, t3], riley.id, 900, 400);
+  addSeedTask(c4, 'Create project board', 'Document setup and usage instructions.', 'trivial', [], null, 100, 30);
 
   return {
     projects: makeMap(p),
