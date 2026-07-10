@@ -1,0 +1,172 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Enkl\Api\Services;
+
+use Enkl\Api\Auth\PasswordHasher;
+use Enkl\Api\Auth\UsernameNormalizer;
+use Enkl\Api\Support\Uuid;
+use Enkl\Api\Validation\ApiValidationException;
+use PDO;
+
+/**
+ * Team member CRUD for an already-migrated project. Unlike every other per-project entity, a
+ * ProjectMember isn't a self-contained row — it's a join between the Project and a global User
+ * account, so "add a member" here does the same find-or-create-User-by-name dedup MigrationService
+ * does for a whole batch at once, just for one name at a time. Ported from Services/MemberService.cs.
+ */
+final class MemberService
+{
+    // Mirrors MEMBER_PALETTE in src/js/config.js exactly, so a member added from a browser and one
+    // added via a fresh migration land on the same color for the same position.
+    private const MEMBER_PALETTE = [
+        '#0052CC', '#00875A', '#FF8B00', '#974DE2', '#DE350B',
+        '#006644', '#5243AA', '#B04632', '#1B5E20', '#8777D9',
+    ];
+
+    public function __construct(private readonly PDO $db)
+    {
+    }
+
+    public function create(string $projectId, array $request): ?array
+    {
+        $stmt = $this->db->prepare('SELECT "OrganisationId" FROM "Projects" WHERE "Id" = :id');
+        $stmt->execute(['id' => $projectId]);
+        $project = $stmt->fetch();
+        if ($project === false) {
+            return null;
+        }
+
+        $trimmedName = trim((string) ($request['name'] ?? ''));
+        if ($trimmedName === '') {
+            throw new ApiValidationException('Please enter a name.');
+        }
+        if (strlen($trimmedName) > 60) {
+            $trimmedName = substr($trimmedName, 0, 60);
+        }
+
+        $normalized = UsernameNormalizer::normalize($trimmedName);
+
+        // Identity dedup is scoped to the Organisation, same rule migration uses — the same name in a
+        // different org is a different real person and must never be silently merged.
+        $stmt = $this->db->prepare('SELECT * FROM "Users" WHERE "NormalizedUsername" = :n AND "OrganisationId" = :org');
+        $stmt->execute(['n' => $normalized, 'org' => $project['OrganisationId']]);
+        $user = $stmt->fetch();
+
+        if ($user === false) {
+            $usernameToUse = $normalized;
+            $stmt = $this->db->prepare('SELECT 1 FROM "Users" WHERE "NormalizedUsername" = :n');
+            $stmt->execute(['n' => $normalized]);
+            if ($stmt->fetch() !== false) {
+                $usernameToUse = $this->resolveUniqueUsername($normalized);
+            }
+
+            $userId = Uuid::v4();
+            $stmt = $this->db->prepare(<<<SQL
+                INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt")
+                VALUES (:id, :orgId, :username, :normalized, :hash, :displayName, true, false, now())
+            SQL);
+            $stmt->execute([
+                'id' => $userId, 'orgId' => $project['OrganisationId'], 'username' => $usernameToUse,
+                'normalized' => $usernameToUse, 'hash' => PasswordHasher::hash('enklUserPassword'), 'displayName' => $trimmedName,
+            ]);
+            $user = ['Id' => $userId, 'DisplayName' => $trimmedName];
+        } else {
+            $stmt = $this->db->prepare('SELECT 1 FROM "ProjectMembers" WHERE "ProjectId" = :pid AND "UserId" = :uid');
+            $stmt->execute(['pid' => $projectId, 'uid' => $user['Id']]);
+            if ($stmt->fetch() !== false) {
+                throw new ApiValidationException("\"{$user['DisplayName']}\" is already a member of this project.");
+            }
+        }
+
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM "ProjectMembers" WHERE "ProjectId" = :pid');
+        $stmt->execute(['pid' => $projectId]);
+        $memberCount = (int) $stmt->fetchColumn();
+        $color = self::MEMBER_PALETTE[$memberCount % count(self::MEMBER_PALETTE)];
+
+        $memberId = Uuid::v4();
+        $this->db->prepare('INSERT INTO "ProjectMembers" ("Id", "ProjectId", "UserId", "Color") VALUES (:id, :pid, :uid, :color)')
+            ->execute(['id' => $memberId, 'pid' => $projectId, 'uid' => $user['Id'], 'color' => $color]);
+
+        return ['id' => $memberId, 'userId' => $user['Id'], 'displayName' => $user['DisplayName'], 'color' => $color, 'role' => null, 'reportsToId' => null];
+    }
+
+    public function update(string $projectId, string $memberId, array $request): ?array
+    {
+        $stmt = $this->db->prepare(<<<SQL
+            SELECT m.*, u."DisplayName" AS "UserDisplayName" FROM "ProjectMembers" m
+            JOIN "Users" u ON u."Id" = m."UserId"
+            WHERE m."Id" = :id AND m."ProjectId" = :pid
+        SQL);
+        $stmt->execute(['id' => $memberId, 'pid' => $projectId]);
+        $member = $stmt->fetch();
+        if ($member === false) {
+            return null;
+        }
+
+        $trimmedName = trim((string) ($request['name'] ?? ''));
+        $displayName = $member['UserDisplayName'];
+        if ($trimmedName !== '') {
+            $displayName = strlen($trimmedName) > 60 ? substr($trimmedName, 0, 60) : $trimmedName;
+            $this->db->prepare('UPDATE "Users" SET "DisplayName" = :name WHERE "Id" = :id')
+                ->execute(['name' => $displayName, 'id' => $member['UserId']]);
+        }
+
+        $trimmedRole = trim((string) ($request['role'] ?? ''));
+        $role = $trimmedRole === '' ? null : (strlen($trimmedRole) > 100 ? substr($trimmedRole, 0, 100) : $trimmedRole);
+
+        // Same lenient fallback-to-null as mutations.js's setMemberReportsTo — a self-reference or a
+        // target that isn't (or is no longer) a member of this project quietly clears the field rather
+        // than erroring, since the dropdown driving this should never offer an invalid option anyway.
+        $reportsToId = $request['reportsToId'] ?? null;
+        if ($reportsToId !== null && $reportsToId !== $memberId) {
+            $stmt = $this->db->prepare('SELECT 1 FROM "ProjectMembers" WHERE "Id" = :id AND "ProjectId" = :pid');
+            $stmt->execute(['id' => $reportsToId, 'pid' => $projectId]);
+            if ($stmt->fetch() === false) {
+                $reportsToId = null;
+            }
+        } else {
+            $reportsToId = null;
+        }
+
+        $this->db->prepare('UPDATE "ProjectMembers" SET "Role" = :role, "ReportsToId" = :reportsToId WHERE "Id" = :id')
+            ->execute(['role' => $role, 'reportsToId' => $reportsToId, 'id' => $memberId]);
+
+        return ['id' => $memberId, 'userId' => $member['UserId'], 'displayName' => $displayName, 'color' => $member['Color'], 'role' => $role, 'reportsToId' => $reportsToId];
+    }
+
+    public function delete(string $projectId, string $memberId): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM "ProjectMembers" WHERE "Id" = :id AND "ProjectId" = :pid');
+        $stmt->execute(['id' => $memberId, 'pid' => $projectId]);
+        if ($stmt->fetch() === false) {
+            return false;
+        }
+
+        // ReportsTo is a Restrict FK — anyone reporting to this member gets orphaned back to "no one"
+        // first, same as mutations.js's removeMember. Every other reference (task Assignee, Document/
+        // Release/Risk/Decision Owner, TeamCommitteeMember) is already SetNull/Cascade at the DB level.
+        $this->db->prepare('UPDATE "ProjectMembers" SET "ReportsToId" = NULL WHERE "ProjectId" = :pid AND "ReportsToId" = :id')
+            ->execute(['pid' => $projectId, 'id' => $memberId]);
+
+        $this->db->prepare('DELETE FROM "ProjectMembers" WHERE "Id" = :id')->execute(['id' => $memberId]);
+        return true;
+    }
+
+    private function resolveUniqueUsername(string $baseUsername): string
+    {
+        $candidate = $baseUsername;
+        $suffix = 1;
+        $stmt = $this->db->prepare('SELECT 1 FROM "Users" WHERE "NormalizedUsername" = :n');
+        do {
+            $stmt->execute(['n' => $candidate]);
+            if ($stmt->fetch() === false) {
+                break;
+            }
+            $suffix++;
+            $candidate = $baseUsername . $suffix;
+        } while (true);
+        return $candidate;
+    }
+}
