@@ -7,6 +7,8 @@ public class User
     public Organisation Organisation { get; set; } = null!;
     public string Username { get; set; } = "";
     public string NormalizedUsername { get; set; } = "";
+    public string? EmailAddress { get; set; }
+    public string? NormalizedEmailAddress { get; set; }
     public string PasswordHash { get; set; } = "";
     public string DisplayName { get; set; } = "";
     public bool MustChangePassword { get; set; }

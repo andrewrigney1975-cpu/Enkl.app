@@ -39,5 +39,12 @@ public class OrganisationsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("users/{userId:guid}/email")]
+    public async Task<IActionResult> SetUserEmail(Guid userId, SetUserEmailRequest request)
+    {
+        var ok = await _organisations.SetUserEmailAsync(CallerOrgId(), userId, request.EmailAddress);
+        return ok ? NoContent() : NotFound();
+    }
+
     private Guid CallerOrgId() => Guid.Parse(User.FindFirstValue("orgId")!);
 }

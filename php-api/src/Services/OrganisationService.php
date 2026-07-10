@@ -27,12 +27,13 @@ final class OrganisationService
         }
 
         $stmt = $this->db->prepare(
-            'SELECT "Id", "Username", "DisplayName", "IsOrgAdmin", "CreatedAt" FROM "Users" WHERE "OrganisationId" = :id'
+            'SELECT "Id", "Username", "EmailAddress", "DisplayName", "IsOrgAdmin", "CreatedAt" FROM "Users" WHERE "OrganisationId" = :id'
         );
         $stmt->execute(['id' => $organisationId]);
         $users = array_map(static fn(array $u): array => [
             'id' => $u['Id'],
             'username' => $u['Username'],
+            'emailAddress' => $u['EmailAddress'],
             'displayName' => $u['DisplayName'],
             'isOrgAdmin' => (bool) $u['IsOrgAdmin'],
             'createdAt' => $u['CreatedAt'],
@@ -62,7 +63,10 @@ final class OrganisationService
      * Explicit account creation by an OrgAdmin, distinct from the implicit account-per-name creation
      * MemberService/MigrationService do when adding a project member — here the admin sets a real
      * username and initial password directly, and the new user must change it on first login.
-     * Usernames are unique across the whole system, not just this Organisation.
+     * Usernames are unique across the whole system, not just this Organisation. Email is required
+     * here (unlike the implicit-creation paths, which can leave it blank and flag it for later)
+     * since an OrgAdmin filling out this form explicitly has no excuse not to supply one — it's the
+     * planned SAML2 identifier.
      */
     public function createUser(string $organisationId, array $request): array
     {
@@ -90,16 +94,20 @@ final class OrganisationService
             throw new ApiValidationException("Username \"{$normalized}\" is already taken.");
         }
 
+        [$email, $normalizedEmail] = EmailValidation::validateAndNormalize($this->db, $request['emailAddress'] ?? null, true, null);
+
         $id = Uuid::v4();
         $stmt = $this->db->prepare(<<<SQL
-            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt")
-            VALUES (:id, :orgId, :username, :normalized, :hash, :displayName, true, false, now())
+            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt")
+            VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, :hash, :displayName, true, false, now())
         SQL);
         $stmt->execute([
             'id' => $id,
             'orgId' => $organisationId,
             'username' => $normalized,
             'normalized' => $normalized,
+            'email' => $email,
+            'normalizedEmail' => $normalizedEmail,
             'hash' => PasswordHasher::hash($password),
             'displayName' => $displayName,
         ]);
@@ -107,9 +115,31 @@ final class OrganisationService
         return [
             'id' => $id,
             'username' => $normalized,
+            'emailAddress' => $email,
             'displayName' => $displayName,
             'isOrgAdmin' => false,
             'createdAt' => gmdate('Y-m-d\TH:i:s.v\Z'),
         ];
+    }
+
+    /**
+     * The backfill path for a User created before this field existed (or migrated without one, see
+     * MigrationService's warnings) — same validation as createUser, scoped to the caller's own
+     * Organisation the same way setUserAdmin is.
+     */
+    public function setUserEmail(string $callerOrganisationId, string $targetUserId, ?string $emailAddress): bool
+    {
+        $stmt = $this->db->prepare('SELECT "OrganisationId" FROM "Users" WHERE "Id" = :id');
+        $stmt->execute(['id' => $targetUserId]);
+        $row = $stmt->fetch();
+        if ($row === false || $row['OrganisationId'] !== $callerOrganisationId) {
+            return false;
+        }
+
+        [$email, $normalizedEmail] = EmailValidation::validateAndNormalize($this->db, $emailAddress, true, $targetUserId);
+
+        $stmt = $this->db->prepare('UPDATE "Users" SET "EmailAddress" = :email, "NormalizedEmailAddress" = :normalizedEmail WHERE "Id" = :id');
+        $stmt->execute(['email' => $email, 'normalizedEmail' => $normalizedEmail, 'id' => $targetUserId]);
+        return true;
     }
 }

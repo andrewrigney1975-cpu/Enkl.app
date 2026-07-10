@@ -21,6 +21,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('team modal opens', !teamHidden);
   const rows = doc.querySelectorAll('.kf-member-row');
   log('shows 2 existing members', rows.length === 2, rows.length);
+  log('email input is hidden for a local-only project (no account gets created)', doc.getElementById('newMemberEmailInput').classList.contains('hidden'));
 
   // Add a new member
   doc.getElementById('newMemberNameInput').value = 'Jordan Park';
@@ -119,6 +120,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   const proj = raw.projects[raw.currentProjectId];
   log('members persisted to localStorage', Array.isArray(proj.members) && proj.members.length === 2, JSON.stringify(proj.members.map(m=>m.name)));
+  log('local-only members never get an email (not required, no account created)', proj.members.every(m => !m.email), JSON.stringify(proj.members.map(m=>m.email)));
 
   console.log('\nTeam member test complete.');
   process.exit(0);

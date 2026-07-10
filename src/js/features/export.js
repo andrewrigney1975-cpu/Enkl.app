@@ -96,7 +96,7 @@ export function buildExportDoc(project, exportedAt){
     exportedAt: exportedAt,
     appVersion: APP_VERSION,
     totalTasks: Object.keys(project.tasks).length,
-    members: (project.members || []).map(function(m){ return {id: m.id, name: m.name, color: m.color, role: m.role || null, reportsToId: m.reportsToId || null}; }),
+    members: (project.members || []).map(function(m){ return {id: m.id, name: m.name, email: m.email || null, color: m.color, role: m.role || null, reportsToId: m.reportsToId || null}; }),
     releases: (project.releases || []).map(function(r){
       var owner = getMemberById(project, r.ownerId);
       return {

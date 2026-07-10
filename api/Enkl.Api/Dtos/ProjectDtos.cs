@@ -15,8 +15,8 @@ public record UpdateProjectRequest(string Name, string Key, DateOnly? StartDate,
 /// </summary>
 public record CreateProjectResponseDto(ProjectDetailDto Project, string Token, DateTime TokenExpiresAt, string? Warning);
 
-public record MemberDto(Guid Id, Guid UserId, string DisplayName, string Color, string? Role, Guid? ReportsToId);
-public record CreateMemberRequest(string Name);
+public record MemberDto(Guid Id, Guid UserId, string DisplayName, string? Email, string Color, string? Role, Guid? ReportsToId);
+public record CreateMemberRequest(string Name, string? Email);
 public record UpdateMemberRequest(string Name, string? Role, Guid? ReportsToId);
 
 public record ColumnDto(Guid Id, string Name, bool Done, string? Color, int Order);

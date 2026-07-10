@@ -137,6 +137,20 @@ public class MigrationService
                 {
                     userId = existingInOrg.Id;
                     usersMatched++;
+
+                    // Self-heal a missing email on a matched account the same way MemberService's
+                    // matched-existing-user branch does — never blocks the migration: an invalid or
+                    // already-taken email is silently dropped rather than failing the import.
+                    if (existingInOrg.EmailAddress is null && !string.IsNullOrWhiteSpace(m.Email))
+                    {
+                        try
+                        {
+                            var (backfillEmail, backfillNormalized) = await EmailValidation.ValidateAndNormalizeAsync(_db, m.Email, requireEmail: false, excludeUserId: existingInOrg.Id);
+                            existingInOrg.EmailAddress = backfillEmail;
+                            existingInOrg.NormalizedEmailAddress = backfillNormalized;
+                        }
+                        catch (ApiValidationException) { /* ignore — not the point of this import */ }
+                    }
                 }
                 else
                 {
@@ -147,6 +161,28 @@ public class MigrationService
                         warnings.Add($"User \"{m.Name}\" already exists in another organisation; created as \"{usernameToUse}\" instead.");
                     }
 
+                    // Unlike OrganisationService.CreateUserAsync/MemberService.CreateAsync, a missing or
+                    // unusable email here never blocks the migration itself (an externally-supplied batch
+                    // import shouldn't fail wholesale over one bad address) — instead it's surfaced as a
+                    // warning so the Org Admin can backfill it afterward via Manage Users.
+                    string? email = null;
+                    string? normalizedEmail = null;
+                    if (string.IsNullOrWhiteSpace(m.Email))
+                    {
+                        warnings.Add($"User \"{m.Name}\" was migrated without an email address. An organisation admin must add one in Manage Users before SAML sign-in can be enabled for them.");
+                    }
+                    else
+                    {
+                        try
+                        {
+                            (email, normalizedEmail) = await EmailValidation.ValidateAndNormalizeAsync(_db, m.Email, requireEmail: false, excludeUserId: null);
+                        }
+                        catch (ApiValidationException ex)
+                        {
+                            warnings.Add($"User \"{m.Name}\": email \"{m.Email}\" could not be used ({ex.Message}); an organisation admin must add a valid one in Manage Users.");
+                        }
+                    }
+
                     var isFirstAdminOfNewOrg = organisationCreated && !firstAdminAssigned;
                     var user = new User
                     {
@@ -154,6 +190,8 @@ public class MigrationService
                         OrganisationId = organisationId,
                         Username = usernameToUse,
                         NormalizedUsername = usernameToUse,
+                        EmailAddress = email,
+                        NormalizedEmailAddress = normalizedEmail,
                         PasswordHash = PasswordHasher.Hash("enklUserPassword"),
                         DisplayName = m.Name,
                         MustChangePassword = true,

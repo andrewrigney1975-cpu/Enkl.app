@@ -1,7 +1,7 @@
 "use strict";
 import { toast } from '../ui.js';
 import { escapeHTML, renderBoard, renderAssigneeFilterChips } from '../views/board.js';
-import { getMyOrganisationApi, createOrgUserApi, setOrgUserAdminApi, isOrgAdmin, memberApi } from '../api.js';
+import { getMyOrganisationApi, createOrgUserApi, setOrgUserAdminApi, setOrgUserEmailApi, isOrgAdmin, memberApi } from '../api.js';
 import { getCurrentProject } from '../store.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 
@@ -19,6 +19,7 @@ export function openOrgUsersModal(){
   if(!isOrgAdmin()){ toast('Only an organisation admin can manage users.'); return; }
   document.getElementById('newOrgUserUsernameInput').value = '';
   document.getElementById('newOrgUserDisplayNameInput').value = '';
+  document.getElementById('newOrgUserEmailInput').value = '';
   document.getElementById('newOrgUserPasswordInput').value = '';
   renderOrgUsersList();
   document.getElementById('orgUsersOverlay').classList.remove('hidden');
@@ -27,6 +28,10 @@ export function openOrgUsersModal(){
 export function closeOrgUsersModal(){
   document.getElementById('orgUsersOverlay').classList.add('hidden');
 }
+
+// Simple format guard mirroring EmailAddressNormalizer.IsValidFormat server-side — not full RFC
+// 5322, just enough to catch obviously-wrong input before a round trip to the server.
+var SIMPLE_EMAIL_SHAPE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export function renderOrgUsersList(){
   var listEl = document.getElementById('orgUsersList');
@@ -45,6 +50,13 @@ export function renderOrgUsersList(){
           '<div class="kf-orguser-display-name">' + escapeHTML(u.displayName) + '</div>' +
           '<div class="kf-orguser-username">@' + escapeHTML(u.username) + '</div>' +
         '</div>' +
+        (u.emailAddress
+          ? '<div class="kf-orguser-email">' + escapeHTML(u.emailAddress) + '</div>'
+          : '<div class="kf-orguser-email kf-orguser-email-missing">' +
+              '<span class="kf-orguser-email-warning" title="No email on file — required for SAML sign-in.">No email</span>' +
+              '<input type="email" class="kf-orguser-email-backfill-input" maxlength="320" placeholder="Add email address">' +
+              '<button class="kf-btn kf-btn-ghost" data-action="save-email">Save</button>' +
+            '</div>') +
         '<label class="kf-orguser-admin-toggle">' +
           '<input type="checkbox"' + (u.isOrgAdmin ? ' checked' : '') + '>Admin' +
         '</label>';
@@ -56,6 +68,19 @@ export function renderOrgUsersList(){
           toast('Could not update admin status: ' + (e.message || 'unknown error'));
         });
       });
+      var saveEmailBtn = row.querySelector('[data-action="save-email"]');
+      if(saveEmailBtn){
+        saveEmailBtn.addEventListener('click', function(){
+          var emailInput = row.querySelector('.kf-orguser-email-backfill-input');
+          var email = emailInput.value.trim();
+          if(!email || !SIMPLE_EMAIL_SHAPE.test(email)){ toast('Please enter a valid email address.'); return; }
+          setOrgUserEmailApi(u.id, email).then(function(){
+            renderOrgUsersList();
+          }, function(e){
+            toast('Could not save email address: ' + (e.message || 'unknown error'));
+          });
+        });
+      }
       listEl.appendChild(row);
     });
   }, function(e){
@@ -67,19 +92,23 @@ export function renderOrgUsersList(){
 export function createOrgUserFromModal(){
   var usernameInput = document.getElementById('newOrgUserUsernameInput');
   var displayNameInput = document.getElementById('newOrgUserDisplayNameInput');
+  var emailInput = document.getElementById('newOrgUserEmailInput');
   var passwordInput = document.getElementById('newOrgUserPasswordInput');
 
   var username = usernameInput.value.trim();
   var displayName = displayNameInput.value.trim();
+  var email = emailInput.value.trim();
   var password = passwordInput.value;
 
   if(!username){ toast('Please enter a username.'); return; }
   if(!displayName){ toast('Please enter a display name.'); return; }
+  if(!email || !SIMPLE_EMAIL_SHAPE.test(email)){ toast('Please enter a valid email address.'); return; }
   if(!password || password.length < 8){ toast('Password must be at least 8 characters.'); return; }
 
-  createOrgUserApi(username, displayName, password).then(function(){
+  createOrgUserApi(username, displayName, password, email).then(function(){
     usernameInput.value = '';
     displayNameInput.value = '';
+    emailInput.value = '';
     passwordInput.value = '';
     renderOrgUsersList();
 

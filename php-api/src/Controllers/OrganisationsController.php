@@ -35,4 +35,11 @@ final class OrganisationsController extends BaseController
         $result = $this->service()->createUser($this->callerOrgId($request), $this->body($request));
         return $this->json($response, $result);
     }
+
+    public function setUserEmail(Request $request, Response $response, array $args): Response
+    {
+        $body = $this->body($request);
+        $ok = $this->service()->setUserEmail($this->callerOrgId($request), $args['userId'], $body['emailAddress'] ?? null);
+        return $ok ? $this->noContent($response) : $this->notFound($response);
+    }
 }

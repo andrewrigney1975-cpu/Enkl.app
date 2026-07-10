@@ -62,21 +62,40 @@ final class MemberService
                 $usernameToUse = $this->resolveUniqueUsername($normalized);
             }
 
+            // This is a real User account being created, same as OrganisationService::createUser —
+            // an email is required here too, not just on the explicit OrgAdmin form.
+            [$email, $normalizedEmail] = EmailValidation::validateAndNormalize($this->db, $request['email'] ?? null, true, null);
+
             $userId = Uuid::v4();
             $stmt = $this->db->prepare(<<<SQL
-                INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt")
-                VALUES (:id, :orgId, :username, :normalized, :hash, :displayName, true, false, now())
+                INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt")
+                VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, :hash, :displayName, true, false, now())
             SQL);
             $stmt->execute([
                 'id' => $userId, 'orgId' => $project['OrganisationId'], 'username' => $usernameToUse,
-                'normalized' => $usernameToUse, 'hash' => PasswordHasher::hash('enklUserPassword'), 'displayName' => $trimmedName,
+                'normalized' => $usernameToUse, 'email' => $email, 'normalizedEmail' => $normalizedEmail,
+                'hash' => PasswordHasher::hash('enklUserPassword'), 'displayName' => $trimmedName,
             ]);
-            $user = ['Id' => $userId, 'DisplayName' => $trimmedName];
+            $user = ['Id' => $userId, 'DisplayName' => $trimmedName, 'EmailAddress' => $email];
         } else {
             $stmt = $this->db->prepare('SELECT 1 FROM "ProjectMembers" WHERE "ProjectId" = :pid AND "UserId" = :uid');
             $stmt->execute(['pid' => $projectId, 'uid' => $user['Id']]);
             if ($stmt->fetch() !== false) {
                 throw new ApiValidationException("\"{$user['DisplayName']}\" is already a member of this project.");
+            }
+
+            // Self-heal a matched user's missing email if one was supplied — same backfill idea as
+            // MigrationService's matched-existing-user case. Never blocks adding the member: an
+            // invalid/duplicate email here is silently dropped rather than failing the whole request.
+            if (($user['EmailAddress'] ?? null) === null && !empty($request['email'])) {
+                try {
+                    [$email, $normalizedEmail] = EmailValidation::validateAndNormalize($this->db, $request['email'], false, $user['Id']);
+                    $this->db->prepare('UPDATE "Users" SET "EmailAddress" = :email, "NormalizedEmailAddress" = :normalizedEmail WHERE "Id" = :id')
+                        ->execute(['email' => $email, 'normalizedEmail' => $normalizedEmail, 'id' => $user['Id']]);
+                    $user['EmailAddress'] = $email;
+                } catch (ApiValidationException) {
+                    // ignore — not the point of this request
+                }
             }
         }
 
@@ -89,13 +108,13 @@ final class MemberService
         $this->db->prepare('INSERT INTO "ProjectMembers" ("Id", "ProjectId", "UserId", "Color") VALUES (:id, :pid, :uid, :color)')
             ->execute(['id' => $memberId, 'pid' => $projectId, 'uid' => $user['Id'], 'color' => $color]);
 
-        return ['id' => $memberId, 'userId' => $user['Id'], 'displayName' => $user['DisplayName'], 'color' => $color, 'role' => null, 'reportsToId' => null];
+        return ['id' => $memberId, 'userId' => $user['Id'], 'displayName' => $user['DisplayName'], 'email' => $user['EmailAddress'] ?? null, 'color' => $color, 'role' => null, 'reportsToId' => null];
     }
 
     public function update(string $projectId, string $memberId, array $request): ?array
     {
         $stmt = $this->db->prepare(<<<SQL
-            SELECT m.*, u."DisplayName" AS "UserDisplayName" FROM "ProjectMembers" m
+            SELECT m.*, u."DisplayName" AS "UserDisplayName", u."EmailAddress" AS "UserEmailAddress" FROM "ProjectMembers" m
             JOIN "Users" u ON u."Id" = m."UserId"
             WHERE m."Id" = :id AND m."ProjectId" = :pid
         SQL);
@@ -133,7 +152,7 @@ final class MemberService
         $this->db->prepare('UPDATE "ProjectMembers" SET "Role" = :role, "ReportsToId" = :reportsToId WHERE "Id" = :id')
             ->execute(['role' => $role, 'reportsToId' => $reportsToId, 'id' => $memberId]);
 
-        return ['id' => $memberId, 'userId' => $member['UserId'], 'displayName' => $displayName, 'color' => $member['Color'], 'role' => $role, 'reportsToId' => $reportsToId];
+        return ['id' => $memberId, 'userId' => $member['UserId'], 'displayName' => $displayName, 'email' => $member['UserEmailAddress'], 'color' => $member['Color'], 'role' => $role, 'reportsToId' => $reportsToId];
     }
 
     public function delete(string $projectId, string $memberId): bool

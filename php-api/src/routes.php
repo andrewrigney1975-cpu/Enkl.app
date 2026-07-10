@@ -56,6 +56,7 @@ function registerRoutes(App $app): void
     $app->group('/api/organisations/me', function ($group) {
         $group->get('', [OrganisationsController::class, 'getMyOrganisation']);
         $group->put('/users/{userId}/admin', [OrganisationsController::class, 'setUserAdmin']);
+        $group->put('/users/{userId}/email', [OrganisationsController::class, 'setUserEmail']);
         $group->post('/users', [OrganisationsController::class, 'createUser']);
     })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
 

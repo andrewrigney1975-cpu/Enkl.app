@@ -52,12 +52,19 @@ public class MemberService
             {
                 usernameToUse = await ResolveUniqueUsernameAsync(normalized);
             }
+
+            // This is a real User account being created, same as OrganisationService.CreateUserAsync —
+            // an email is required here too, not just on the explicit OrgAdmin form.
+            var (email, normalizedEmail) = await EmailValidation.ValidateAndNormalizeAsync(_db, request.Email, requireEmail: true, excludeUserId: null);
+
             user = new User
             {
                 Id = Guid.NewGuid(),
                 OrganisationId = project.OrganisationId,
                 Username = usernameToUse,
                 NormalizedUsername = usernameToUse,
+                EmailAddress = email,
+                NormalizedEmailAddress = normalizedEmail,
                 PasswordHash = PasswordHasher.Hash("enklUserPassword"),
                 DisplayName = trimmedName,
                 MustChangePassword = true,
@@ -66,9 +73,28 @@ public class MemberService
             };
             _db.Users.Add(user);
         }
-        else if (await _db.ProjectMembers.AnyAsync(m => m.ProjectId == projectId && m.UserId == user.Id))
+        else
         {
-            throw new ApiValidationException($"\"{user.DisplayName}\" is already a member of this project.");
+            if (await _db.ProjectMembers.AnyAsync(m => m.ProjectId == projectId && m.UserId == user.Id))
+            {
+                throw new ApiValidationException($"\"{user.DisplayName}\" is already a member of this project.");
+            }
+
+            // Self-heal a matched user's missing email if one was supplied — same backfill idea as
+            // MigrationService's matched-existing-user case. Never blocks adding the member: an
+            // invalid/duplicate email here is silently dropped rather than failing the whole request,
+            // since the caller's actual intent was "add this person to the project", not "fix their
+            // account". An OrgAdmin can still backfill it properly via Manage Users.
+            if (user.EmailAddress is null && !string.IsNullOrWhiteSpace(request.Email))
+            {
+                try
+                {
+                    var (email, normalizedEmail) = await EmailValidation.ValidateAndNormalizeAsync(_db, request.Email, requireEmail: false, excludeUserId: user.Id);
+                    user.EmailAddress = email;
+                    user.NormalizedEmailAddress = normalizedEmail;
+                }
+                catch (ApiValidationException) { /* ignore — not the point of this request */ }
+            }
         }
 
         var memberCount = await _db.ProjectMembers.CountAsync(m => m.ProjectId == projectId);
@@ -82,7 +108,7 @@ public class MemberService
         _db.ProjectMembers.Add(member);
         await _db.SaveChangesAsync();
 
-        return new MemberDto(member.Id, member.UserId, user.DisplayName, member.Color, member.Role, member.ReportsToId);
+        return new MemberDto(member.Id, member.UserId, user.DisplayName, user.EmailAddress, member.Color, member.Role, member.ReportsToId);
     }
 
     public async Task<MemberDto?> UpdateAsync(Guid projectId, Guid memberId, UpdateMemberRequest request)
@@ -114,7 +140,7 @@ public class MemberService
         }
 
         await _db.SaveChangesAsync();
-        return new MemberDto(member.Id, member.UserId, member.User.DisplayName, member.Color, member.Role, member.ReportsToId);
+        return new MemberDto(member.Id, member.UserId, member.User.DisplayName, member.User.EmailAddress, member.Color, member.Role, member.ReportsToId);
     }
 
     public async Task<bool> DeleteAsync(Guid projectId, Guid memberId)

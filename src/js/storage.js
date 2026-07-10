@@ -81,6 +81,8 @@ export function migrateDB(){
       else if(m.role !== null && typeof m.role !== 'string'){ m.role = null; changed = true; }
       if(m.reportsToId === undefined){ m.reportsToId = null; changed = true; }
       else if(m.reportsToId !== null && typeof m.reportsToId !== 'string'){ m.reportsToId = null; changed = true; }
+      if(m.email === undefined){ m.email = null; changed = true; }
+      else if(m.email !== null && typeof m.email !== 'string'){ m.email = null; changed = true; }
     });
     if(!p.headerButtonVisibility || typeof p.headerButtonVisibility !== 'object' ||
        typeof p.headerButtonVisibility.documents !== 'boolean' ||

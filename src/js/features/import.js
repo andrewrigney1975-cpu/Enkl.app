@@ -361,7 +361,8 @@ export function buildProjectFromExportDoc(doc){
       if(!name) return;
       var color = (typeof m.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(m.color)) ? m.color : memberColorForIndex(project.members.length);
       var role = (typeof m.role === 'string' && m.role.trim()) ? registerRole(project, m.role) : null;
-      var newMember = {id: uid('member'), name: name, color: color, role: role, reportsToId: null};
+      var email = (typeof m.email === 'string' && m.email.trim()) ? m.email.trim().slice(0,320) : null;
+      var newMember = {id: uid('member'), name: name, email: email, color: color, role: role, reportsToId: null};
       project.members.push(newMember);
       if(typeof m.id === 'string') memberOldIdToNewId[m.id] = newMember.id;
       if(!memberNameToNewId.hasOwnProperty(name)) memberNameToNewId[name] = newMember.id;

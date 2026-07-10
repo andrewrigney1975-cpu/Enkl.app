@@ -23,6 +23,12 @@ export function openTeamModal(){
   if(!project){ toast('No project selected.'); return; }
   renderMemberList();
   document.getElementById('newMemberNameInput').value = '';
+  var emailInput = document.getElementById('newMemberEmailInput');
+  emailInput.value = '';
+  // Only a server-authoritative project's "add" silently creates a real User account behind the
+  // scenes (see MemberService.CreateAsync) — that's the only case an email is required or even
+  // shown; a local-only project's members are plain objects with no account concept.
+  emailInput.classList.toggle('hidden', !isServerAuthoritative(project));
   document.getElementById('teamOverlay').classList.remove('hidden');
   document.getElementById('newMemberNameInput').focus();
 }
@@ -167,10 +173,18 @@ export async function addMemberFromModal(){
   if(!name){ toast('Please enter a name.'); return; }
 
   if(isServerAuthoritative(project)){
+    var emailInput = document.getElementById('newMemberEmailInput');
+    var email = emailInput.value.trim();
+    // A server-authoritative "add" silently creates a real User account (see
+    // MemberService.CreateAsync) unless the name matches one already in this Organisation, so an
+    // email is required here the same way it is on the explicit "Manage Users" form — this client
+    // can't tell ahead of time whether it'll match or create, so it always asks.
+    if(!email){ toast('Please enter an email address.'); return; }
     try {
-      await memberApi.create(project.serverProjectId, {name: name});
+      await memberApi.create(project.serverProjectId, {name: name, email: email});
       await refreshProjectFromServer(project.id);
       input.value = '';
+      emailInput.value = '';
       renderMemberList();
       renderAssigneeFilterChips();
       input.focus();

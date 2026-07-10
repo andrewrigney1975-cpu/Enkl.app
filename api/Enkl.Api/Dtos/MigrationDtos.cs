@@ -10,7 +10,7 @@ namespace Enkl.Api.Dtos;
 // because export.js itself only carries keys there. Private-task encryption fields are still deferred.
 
 public record ImportProjectDto(string Name, string Key);
-public record ImportMemberDto(string Id, string Name, string Color, string? Role, string? ReportsToId);
+public record ImportMemberDto(string Id, string Name, string Color, string? Role, string? ReportsToId, string? Email = null);
 public record ImportColumnDto(string Id, string Name, bool Done, string? Color, int Order);
 public record ImportReleaseDto(string Id, string Name, string Status, string? OwnerId, string? StartDate, string? EndDate, string? DateCreated, string? DateLastModified);
 public record ImportTaskTypeDto(string Id, string Name, string? IconName);

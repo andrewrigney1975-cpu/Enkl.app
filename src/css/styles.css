@@ -1407,6 +1407,38 @@
     color: var(--kf-text-faint);
   }
 
+  .kf-orguser-email {
+    font-size: 12px;
+    color: var(--kf-text-secondary);
+    white-space: nowrap;
+  }
+
+  .kf-orguser-email-missing {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .kf-orguser-email-warning {
+    color: var(--kf-danger);
+    font-weight: 600;
+  }
+
+  .kf-orguser-email-backfill-input {
+    width: 160px;
+    border: 2px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 8px 10px;
+    color: var(--kf-text);
+    background: var(--kf-input-bg);
+  }
+
+  .kf-orguser-email-backfill-input:focus {
+    outline: none;
+    border-color: var(--kf-blue);
+    background: var(--kf-input-bg-focus);
+  }
+
   .kf-orguser-admin-toggle {
     display: flex;
     align-items: center;
@@ -2697,6 +2729,8 @@
   }
 
   .kf-field input[type=text],
+  .kf-field input[type=email],
+  .kf-field input[type=password],
   .kf-field input[type=date],
   .kf-field input[type=number],
   .kf-field input[type=url],
@@ -2711,6 +2745,8 @@
   }
 
   .kf-field input[type=text]:focus,
+  .kf-field input[type=email]:focus,
+  .kf-field input[type=password]:focus,
   .kf-field input[type=date]:focus,
   .kf-field input[type=number]:focus,
   .kf-field input[type=url]:focus,

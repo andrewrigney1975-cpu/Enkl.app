@@ -59,7 +59,7 @@ public class ProjectService
 
         return new ProjectDetailDto(
             project.Id, project.Name, project.Key, project.OrganisationId,
-            project.Members.Select(m => new MemberDto(m.Id, m.UserId, m.User.DisplayName, m.Color, m.Role, m.ReportsToId)).ToList(),
+            project.Members.Select(m => new MemberDto(m.Id, m.UserId, m.User.DisplayName, m.User.EmailAddress, m.Color, m.Role, m.ReportsToId)).ToList(),
             project.Columns.OrderBy(c => c.Order).Select(c => new ColumnDto(c.Id, c.Name, c.Done, c.Color, c.Order)).ToList(),
             project.Tasks.Select(ToTaskDto).ToList(),
             project.Releases.Select(r => new ReleaseDto(r.Id, r.Name, r.Status, r.OwnerId, r.StartDate, r.EndDate)).ToList(),

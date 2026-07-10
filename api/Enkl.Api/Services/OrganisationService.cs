@@ -26,7 +26,7 @@ public class OrganisationService
 
         return new OrganisationDetailDto(
             org.Id, org.Name,
-            org.Users.Select(u => new OrgUserDto(u.Id, u.Username, u.DisplayName, u.IsOrgAdmin, u.CreatedAt)).ToList());
+            org.Users.Select(u => new OrgUserDto(u.Id, u.Username, u.EmailAddress, u.DisplayName, u.IsOrgAdmin, u.CreatedAt)).ToList());
     }
 
     /// <summary>Returns false if the target user doesn't exist or belongs to a different Organisation
@@ -48,7 +48,9 @@ public class OrganisationService
     /// paths use), and the new user is required to change it on first login, same as everywhere else
     /// a password gets set on someone's behalf. Usernames are unique across the whole system, not
     /// just this Organisation — matches how login (AuthController) resolves a username with no org
-    /// scoping at all.
+    /// scoping at all. Email is required here (unlike the implicit-creation paths, which can fall
+    /// back to leaving it blank and flagging it for later) since an OrgAdmin explicitly filling out
+    /// this form has no excuse not to supply one — it's the planned SAML2 identifier.
     /// </summary>
     public async Task<OrgUserDto> CreateUserAsync(Guid organisationId, CreateUserRequest request)
     {
@@ -68,12 +70,16 @@ public class OrganisationService
             throw new ApiValidationException($"Username \"{normalized}\" is already taken.");
         }
 
+        var (email, normalizedEmail) = await EmailValidation.ValidateAndNormalizeAsync(_db, request.EmailAddress, requireEmail: true, excludeUserId: null);
+
         var user = new User
         {
             Id = Guid.NewGuid(),
             OrganisationId = organisationId,
             Username = normalized,
             NormalizedUsername = normalized,
+            EmailAddress = email,
+            NormalizedEmailAddress = normalizedEmail,
             PasswordHash = PasswordHasher.Hash(request.Password),
             DisplayName = displayName,
             MustChangePassword = true,
@@ -83,6 +89,23 @@ public class OrganisationService
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        return new OrgUserDto(user.Id, user.Username, user.DisplayName, user.IsOrgAdmin, user.CreatedAt);
+        return new OrgUserDto(user.Id, user.Username, user.EmailAddress, user.DisplayName, user.IsOrgAdmin, user.CreatedAt);
+    }
+
+    /// <summary>
+    /// The backfill path for a User created before this field existed (or migrated without one, see
+    /// MigrationService's warnings) — same validation as CreateUserAsync, scoped to the caller's own
+    /// Organisation the same way SetUserAdminAsync is.
+    /// </summary>
+    public async Task<bool> SetUserEmailAsync(Guid callerOrganisationId, Guid targetUserId, string emailAddress)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId);
+        if (user is null || user.OrganisationId != callerOrganisationId) return false;
+
+        var (email, normalizedEmail) = await EmailValidation.ValidateAndNormalizeAsync(_db, emailAddress, requireEmail: true, excludeUserId: user.Id);
+        user.EmailAddress = email;
+        user.NormalizedEmailAddress = normalizedEmail;
+        await _db.SaveChangesAsync();
+        return true;
     }
 }

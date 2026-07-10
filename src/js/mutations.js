@@ -50,7 +50,12 @@ export function deleteProject(projectId){
 export function addMember(project, name){
   var trimmed = (name || '').trim().slice(0, 60);
   if(!trimmed) return null;
-  var member = {id: uid('member'), name: trimmed, color: memberColorForIndex(project.members.length), role: null, reportsToId: null};
+  // A local-only member is never backed by a real account (see modals/team.js's comment
+  // contrasting this with the server-authoritative "add", which creates a User), so email is
+  // always null here — nothing to enter, nothing to validate. It's only ever populated by a
+  // refresh from the server (see features/migration.js's buildLocalProjectFromServerDetail) once
+  // this project is migrated and an Org Admin has set one on the underlying account.
+  var member = {id: uid('member'), name: trimmed, email: null, color: memberColorForIndex(project.members.length), role: null, reportsToId: null};
   project.members.push(member);
   saveDB();
   return member;

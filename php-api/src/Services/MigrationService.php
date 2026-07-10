@@ -139,24 +139,37 @@ final class MigrationService
         $memberByOldId = [];
         $firstAdminAssigned = false;
 
-        $findInOrgStmt = $this->db->prepare('SELECT "Id" FROM "Users" WHERE "NormalizedUsername" = :n AND "OrganisationId" = :org');
+        $findInOrgStmt = $this->db->prepare('SELECT "Id", "EmailAddress" FROM "Users" WHERE "NormalizedUsername" = :n AND "OrganisationId" = :org');
         $findAnywhereStmt = $this->db->prepare('SELECT 1 FROM "Users" WHERE "NormalizedUsername" = :n');
         $insertUserStmt = $this->db->prepare(<<<SQL
-            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt")
-            VALUES (:id, :orgId, :username, :normalized, :hash, :displayName, true, :isAdmin, now())
+            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt")
+            VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, :hash, :displayName, true, :isAdmin, now())
         SQL);
         $insertMemberStmt = $this->db->prepare('INSERT INTO "ProjectMembers" ("Id", "ProjectId", "UserId", "Color", "Role") VALUES (:id, :pid, :uid, :color, :role)');
+        $backfillEmailStmt = $this->db->prepare('UPDATE "Users" SET "EmailAddress" = :email, "NormalizedEmailAddress" = :normalizedEmail WHERE "Id" = :id');
 
         foreach ($members as $m) {
             $normalized = UsernameNormalizer::normalize($m['name']);
 
             if (!isset($userIdByNormalizedKey[$normalized])) {
                 $findInOrgStmt->execute(['n' => $normalized, 'org' => $organisationId]);
-                $existingInOrg = $findInOrgStmt->fetchColumn();
+                $existingInOrg = $findInOrgStmt->fetch();
 
                 if ($existingInOrg !== false) {
-                    $userId = $existingInOrg;
+                    $userId = $existingInOrg['Id'];
                     $usersMatched++;
+
+                    // Self-heal a missing email on a matched account the same way MemberService's
+                    // matched-existing-user branch does — never blocks the migration: an invalid or
+                    // already-taken email is silently dropped rather than failing the import.
+                    if ($existingInOrg['EmailAddress'] === null && !empty($m['email'])) {
+                        try {
+                            [$backfillEmail, $backfillNormalized] = EmailValidation::validateAndNormalize($this->db, $m['email'], false, $userId);
+                            $backfillEmailStmt->execute(['email' => $backfillEmail, 'normalizedEmail' => $backfillNormalized, 'id' => $userId]);
+                        } catch (ApiValidationException) {
+                            // ignore — not the point of this import
+                        }
+                    }
                 } else {
                     $usernameToUse = $normalized;
                     $findAnywhereStmt->execute(['n' => $normalized]);
@@ -165,12 +178,28 @@ final class MigrationService
                         $warnings[] = "User \"{$m['name']}\" already exists in another organisation; created as \"{$usernameToUse}\" instead.";
                     }
 
+                    // Unlike OrganisationService::createUser/MemberService::create, a missing or
+                    // unusable email here never blocks the migration itself — instead it's surfaced as
+                    // a warning so the Org Admin can backfill it afterward via Manage Users.
+                    $email = null;
+                    $normalizedEmail = null;
+                    if (empty($m['email'])) {
+                        $warnings[] = "User \"{$m['name']}\" was migrated without an email address. An organisation admin must add one in Manage Users before SAML sign-in can be enabled for them.";
+                    } else {
+                        try {
+                            [$email, $normalizedEmail] = EmailValidation::validateAndNormalize($this->db, $m['email'], false, null);
+                        } catch (ApiValidationException $ex) {
+                            $warnings[] = "User \"{$m['name']}\": email \"{$m['email']}\" could not be used ({$ex->getMessage()}); an organisation admin must add a valid one in Manage Users.";
+                        }
+                    }
+
                     $isFirstAdminOfNewOrg = $organisationCreated && !$firstAdminAssigned;
                     $userId = Uuid::v4();
                     // (int), not the raw PHP bool — PDO's array-form execute() would bind false as ''
                     // otherwise, which Postgres's boolean parser rejects.
                     $insertUserStmt->execute([
                         'id' => $userId, 'orgId' => $organisationId, 'username' => $usernameToUse, 'normalized' => $usernameToUse,
+                        'email' => $email, 'normalizedEmail' => $normalizedEmail,
                         'hash' => PasswordHasher::hash('enklUserPassword'), 'displayName' => $m['name'], 'isAdmin' => (int) $isFirstAdminOfNewOrg,
                     ]);
                     $usersCreated++;

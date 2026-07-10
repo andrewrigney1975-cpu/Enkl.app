@@ -160,11 +160,14 @@ export function changePasswordApi(currentPassword, newPassword){
 export function getMyOrganisationApi(){
   return apiFetch('/organisations/me', {method: 'GET'});
 }
-export function createOrgUserApi(username, displayName, password){
-  return apiFetch('/organisations/me/users', {method: 'POST', body: JSON.stringify({username: username, displayName: displayName, password: password})});
+export function createOrgUserApi(username, displayName, password, emailAddress){
+  return apiFetch('/organisations/me/users', {method: 'POST', body: JSON.stringify({username: username, displayName: displayName, password: password, emailAddress: emailAddress})});
 }
 export function setOrgUserAdminApi(userId, isOrgAdmin){
   return apiFetch('/organisations/me/users/' + userId + '/admin', {method: 'PUT', body: JSON.stringify({isOrgAdmin: isOrgAdmin})});
+}
+export function setOrgUserEmailApi(userId, emailAddress){
+  return apiFetch('/organisations/me/users/' + userId + '/email', {method: 'PUT', body: JSON.stringify({emailAddress: emailAddress})});
 }
 
 /* Project Templates are Organisation-owned, not per-project, so these don't fit makeEntityApi's

@@ -416,7 +416,7 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
   });
 
   var members = detail.members.map(function(m){
-    return {id: m.id, name: m.displayName, color: m.color, role: m.role || null, reportsToId: m.reportsToId || null};
+    return {id: m.id, name: m.displayName, email: m.email || null, color: m.color, role: m.role || null, reportsToId: m.reportsToId || null};
   });
   var releases = (detail.releases || []).map(function(r){
     return {id: r.id, name: r.name, status: r.status, ownerId: r.ownerId || null, startDate: serverDateOnlyToIso(r.startDate), endDate: serverDateOnlyToIso(r.endDate), dateCreated: now, dateLastModified: now};
