@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<Organisation> Organisations => Set<Organisation>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Project> Projects => Set<Project>();
+    public DbSet<ProjectTemplate> ProjectTemplates => Set<ProjectTemplate>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
     public DbSet<Column> Columns => Set<Column>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();

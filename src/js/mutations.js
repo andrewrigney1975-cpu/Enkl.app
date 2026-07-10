@@ -1,5 +1,5 @@
 "use strict";
-import { state, saveDB, uid, makeColumn, defaultTaskTypes, normalizeHeaderButtonVisibility, createDefaultProject, isChangeAuditingEnabled, isSubTasksEnabled } from './storage.js';
+import { state, saveDB, uid, makeColumn, defaultTaskTypes, normalizeHeaderButtonVisibility, createDefaultProject, createProjectFromTemplate, isChangeAuditingEnabled, isSubTasksEnabled } from './storage.js';
 import { getTasksArray, getTaskTypeById, getColumn, getMemberById, getReleaseById, getDocumentById, getRiskById, getDecisionById, getPrincipleById, getObjectiveById, getTeamCommitteeById, isValidTaskTypeIconName, TASK_TYPE_ICON_LIBRARY } from './utils.js';
 import { evaluateTransition, getWorkflowConditionField, WORKFLOW_CONDITION_OPERATORS, WORKFLOW_DEFAULT_CONDITION, computeReflowedLayout } from './features/workflow-engine.js';
 import { clampTaskScore, clampProgress, clampEffortHours, localDateValueToUTCISO, defaultStartDateValue, defaultEndDateValue, memberColorForIndex } from './date-utils.js';
@@ -11,8 +11,9 @@ function escapeHTML(s){ var d = document.createElement('div'); d.textContent = s
 var _toast = function(msg){ console.error(msg); };
 export function setMutationsToast(fn){ _toast = fn; }
 
-export function addProject(name, key, startDate, endDate){
-  var p = createDefaultProject(name, key);
+export function addProject(name, key, startDate, endDate, templateId){
+  var template = templateId ? state.db.templates.filter(function(t){ return t.id === templateId; })[0] : null;
+  var p = template ? createProjectFromTemplate(name, key, template) : createDefaultProject(name, key);
   p.startDate = startDate || null;
   p.endDate = endDate || null;
   state.db.projects[p.id] = p;
@@ -206,6 +207,35 @@ export function removeTaskType(project, typeId){
   });
   saveDB();
   return unassignedCount;
+}
+
+/* ---- Project Templates (local/offline fallback — signed-in users' templates live server-side, see
+   features/migration.js createTemplateOnServer/fetchTemplatesFromServer) ---- */
+export function addTemplate(name, snapshot){
+  var trimmed = (name || '').trim().slice(0, 200);
+  if(!trimmed) return null;
+  var now = new Date().toISOString();
+  var template = {
+    id: uid('tmpl'), name: trimmed,
+    columns: snapshot.columns, taskTypes: snapshot.taskTypes, workflow: snapshot.workflow, settings: snapshot.settings,
+    dateCreated: now, dateLastModified: now
+  };
+  state.db.templates.push(template);
+  saveDB();
+  return template;
+}
+export function renameTemplate(templateId, name){
+  var template = state.db.templates.filter(function(t){ return t.id === templateId; })[0];
+  if(!template) return;
+  var trimmed = (name || '').trim().slice(0, 200);
+  if(!trimmed) return;
+  template.name = trimmed;
+  template.dateLastModified = new Date().toISOString();
+  saveDB();
+}
+export function deleteTemplate(templateId){
+  state.db.templates = state.db.templates.filter(function(t){ return t.id !== templateId; });
+  saveDB();
 }
 
 /* =========================================================

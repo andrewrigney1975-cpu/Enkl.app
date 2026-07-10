@@ -32,6 +32,7 @@ builder.Services.AddScoped<ObjectiveService>();
 builder.Services.AddScoped<TeamCommitteeService>();
 builder.Services.AddScoped<DecisionService>();
 builder.Services.AddScoped<MemberService>();
+builder.Services.AddScoped<TemplateService>();
 builder.Services.AddSingleton<SseBroadcaster>();
 
 builder.Services

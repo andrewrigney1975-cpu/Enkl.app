@@ -167,6 +167,27 @@ export function setOrgUserAdminApi(userId, isOrgAdmin){
   return apiFetch('/organisations/me/users/' + userId + '/admin', {method: 'PUT', body: JSON.stringify({isOrgAdmin: isOrgAdmin})});
 }
 
+/* Project Templates are Organisation-owned, not per-project, so these don't fit makeEntityApi's
+   /projects/{projectId}/{resource} shape below — bespoke functions, same as the organisations/me
+   block above. Create/read need only a session (any signed-in org member); rename/delete are
+   OrgAdmin-only server-side (see routes.php / TemplatesController.cs) — a non-admin calling them just
+   gets a 403, surfaced via the usual ApiError. */
+export function getTemplatesApi(){
+  return apiFetch('/organisations/me/templates', {method: 'GET'});
+}
+export function getTemplateDetailApi(id){
+  return apiFetch('/organisations/me/templates/' + id, {method: 'GET'});
+}
+export function createTemplateApi(body){
+  return apiFetch('/organisations/me/templates', {method: 'POST', body: JSON.stringify(body)});
+}
+export function renameTemplateApi(id, name){
+  return apiFetch('/organisations/me/templates/' + id, {method: 'PUT', body: JSON.stringify({name: name})});
+}
+export function deleteTemplateApi(id){
+  return apiFetch('/organisations/me/templates/' + id, {method: 'DELETE'});
+}
+
 export function getProjectsApi(){
   return apiFetch('/projects', {method: 'GET'});
 }

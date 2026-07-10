@@ -101,6 +101,7 @@
             <a href="#" class="kf-header-more-link" data-nav-target="importProjectBtn">Import Project</a>
             <a href="#" class="kf-header-more-link" data-nav-target="exportBtn">Export Project</a>
             <a href="#" class="kf-header-more-link" data-nav-target="migrateToServerBtn">Migrate to Server</a>
+            <a href="#" class="kf-header-more-link" id="saveAsTemplateLink">Save as Template...</a>
           </div>
         </div>
       </div>
@@ -114,6 +115,7 @@
             <a href="#" class="kf-header-more-link kf-vis-hidden" data-nav-target="serverLogoutBtn">Logout</a>
             <a href="#" class="kf-header-more-link" data-nav-target="changePasswordBtn">Change Password</a>
             <a href="#" class="kf-header-more-link kf-vis-hidden" id="manageUsersLink">Manage Users</a>
+            <a href="#" class="kf-header-more-link kf-vis-hidden" id="manageTemplatesLink">Manage Templates</a>
           </div>
         </div>
         <button class="kf-header-btn" id="refreshBtn" title="Refresh" aria-label="Refresh"><span class="kf-icon" data-icon="refresh" data-size="16"></span><span class="kf-appsettings-label">Refresh</span></button>
@@ -518,6 +520,43 @@
   </div>
 </div>
 
+<!-- Save as Template Modal -->
+<div class="kf-overlay hidden" id="saveAsTemplateOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>Save as Template</h2>
+      <button class="kf-btn kf-btn-ghost" id="saveAsTemplateModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div class="kf-field">
+        <label for="saveAsTemplateNameInput">Template name</label>
+        <input type="text" id="saveAsTemplateNameInput" maxlength="200" placeholder="e.g. Standard Software Project">
+        <div class="kf-hint">Captures this project's columns, task types, workflow, and app settings — not its tasks, members, or other content.</div>
+      </div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-secondary" id="saveAsTemplateCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="saveAsTemplateSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage Templates Modal -->
+<div class="kf-overlay hidden" id="templatesOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>Manage Templates</h2>
+      <button class="kf-btn kf-btn-ghost" id="templatesModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div id="templatesList" class="kf-member-list"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-secondary" id="templatesDoneBtn">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Project Modal -->
 <div class="kf-overlay hidden" id="projectOverlay">
   <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
@@ -526,6 +565,12 @@
       <button class="kf-btn kf-btn-ghost" id="projectModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
     </div>
     <div class="kf-modal-body">
+      <div class="kf-field hidden" id="projectTemplateField">
+        <label for="projectTemplateSelect">Start from</label>
+        <select id="projectTemplateSelect">
+          <option value="">Blank project</option>
+        </select>
+      </div>
       <div class="kf-field">
         <label for="projectNameInput">Project name</label>
         <input type="text" id="projectNameInput" maxlength="60" placeholder="e.g. Mobile App Revamp">

@@ -1,8 +1,10 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Enkl.Api.Auth;
 using Enkl.Api.Data;
 using Enkl.Api.Domain.Entities;
 using Enkl.Api.Dtos;
+using Enkl.Api.Validation;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enkl.Api.Services;
@@ -11,6 +13,7 @@ public class ProjectService
 {
     private readonly AppDbContext _db;
     private readonly JwtTokenService _jwt;
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     // Must match MemberService.MemberPalette[0] — a brand new project's sole member (its creator)
     // gets the same first-slot color a migrated project's first member would.
@@ -87,6 +90,15 @@ public class ProjectService
         var user = await _db.Users.Include(u => u.Organisation).FirstOrDefaultAsync(u => u.Id == callerUserId);
         if (user is null) return null;
 
+        // Only a template belonging to the caller's own Organisation may be applied — same org-scoping
+        // as every other Organisation-owned lookup (see TemplateService).
+        ProjectTemplate? template = null;
+        if (request.TemplateId is Guid templateId)
+        {
+            template = await _db.ProjectTemplates.FirstOrDefaultAsync(t => t.Id == templateId && t.OrganisationId == user.OrganisationId);
+            if (template is null) throw new ApiValidationException("Template not found.");
+        }
+
         var name = string.IsNullOrWhiteSpace(request.Name) ? "Untitled Project" : request.Name.Trim();
         var requestedKey = DeriveProjectKey(request.Key, name);
         var uniqueKey = await ResolveUniqueProjectKeyAsync(requestedKey);
@@ -110,14 +122,40 @@ public class ProjectService
         _db.Projects.Add(project);
         _db.ProjectMembers.Add(new ProjectMember { Id = Guid.NewGuid(), ProjectId = project.Id, UserId = user.Id, Color = FirstMemberColor });
 
-        var columnDefs = new (string Name, bool Done)[] { ("To Do", false), ("In Progress", false), ("Done", true) };
-        for (var i = 0; i < columnDefs.Length; i++)
+        if (template is not null)
         {
-            _db.Columns.Add(new Column { Id = Guid.NewGuid(), ProjectId = project.Id, Name = columnDefs[i].Name, Done = columnDefs[i].Done, Order = i });
+            var templateColumns = JsonSerializer.Deserialize<List<TemplateColumnDto>>(template.ColumnsJson, JsonOptions) ?? new();
+            var templateTaskTypes = JsonSerializer.Deserialize<List<TemplateTaskTypeDto>>(template.TaskTypesJson, JsonOptions) ?? new();
+
+            // Column ids are global PKs, never reused by a new project — every column gets a fresh id
+            // here, and this map is what lets the template's Workflow (keyed by the SOURCE project's
+            // column ids) be correctly rewritten to point at THESE new ids below, instead of silently
+            // orphaning itself the way MigrationService's verbatim WorkflowJson copy does today.
+            var idMap = new Dictionary<Guid, Guid>();
+            foreach (var col in templateColumns.OrderBy(c => c.Order))
+            {
+                var newId = Guid.NewGuid();
+                idMap[col.Id] = newId;
+                _db.Columns.Add(new Column { Id = newId, ProjectId = project.Id, Name = col.Name, Done = col.Done, Color = col.Color, Order = col.Order });
+            }
+            foreach (var tt in templateTaskTypes)
+            {
+                _db.TaskTypes.Add(new TaskType { Id = Guid.NewGuid(), ProjectId = project.Id, Name = tt.Name, IconName = tt.IconName });
+            }
+            project.HeaderButtonVisibilityJson = template.SettingsJson;
+            project.WorkflowJson = RemapWorkflowColumnIds(template.WorkflowJson, idMap);
         }
-        foreach (var typeName in new[] { "Feature", "Bug" })
+        else
         {
-            _db.TaskTypes.Add(new TaskType { Id = Guid.NewGuid(), ProjectId = project.Id, Name = typeName });
+            var columnDefs = new (string Name, bool Done)[] { ("To Do", false), ("In Progress", false), ("Done", true) };
+            for (var i = 0; i < columnDefs.Length; i++)
+            {
+                _db.Columns.Add(new Column { Id = Guid.NewGuid(), ProjectId = project.Id, Name = columnDefs[i].Name, Done = columnDefs[i].Done, Order = i });
+            }
+            foreach (var typeName in new[] { "Feature", "Bug" })
+            {
+                _db.TaskTypes.Add(new TaskType { Id = Guid.NewGuid(), ProjectId = project.Id, Name = typeName });
+            }
         }
 
         await _db.SaveChangesAsync();
@@ -220,6 +258,57 @@ public class ProjectService
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Rewrites a snapshotted Workflow's column-id references (workflow.nodes' object keys and every
+    /// edge's fromColumnId/toColumnId — see features/workflow-engine.js's shape comment) through
+    /// idMap, dropping anything that fails to map. Used when applying a Project Template: the
+    /// template's Workflow was captured against the SOURCE project's column ids, which the newly
+    /// created project's columns don't share (see the id-map comment in CreateAsync above).
+    /// </summary>
+    private static string? RemapWorkflowColumnIds(string? workflowJson, Dictionary<Guid, Guid> idMap)
+    {
+        if (string.IsNullOrWhiteSpace(workflowJson)) return null;
+
+        JsonNode? root;
+        try { root = JsonNode.Parse(workflowJson); }
+        catch (JsonException) { return null; }
+        if (root is not JsonObject rootObj) return null;
+
+        var newNodes = new JsonObject();
+        if (rootObj["nodes"] is JsonObject nodesObj)
+        {
+            foreach (var kvp in nodesObj)
+            {
+                if (kvp.Value is not null && Guid.TryParse(kvp.Key, out var oldId) && idMap.TryGetValue(oldId, out var newId))
+                {
+                    newNodes[newId.ToString()] = kvp.Value.DeepClone();
+                }
+            }
+        }
+
+        var newEdges = new JsonArray();
+        if (rootObj["edges"] is JsonArray edgesArr)
+        {
+            foreach (var edgeNode in edgesArr)
+            {
+                if (edgeNode is not JsonObject edgeObj) continue;
+                var fromStr = edgeObj["fromColumnId"]?.GetValue<string>();
+                var toStr = edgeObj["toColumnId"]?.GetValue<string>();
+                if (fromStr is null || toStr is null) continue;
+                if (!Guid.TryParse(fromStr, out var oldFrom) || !idMap.TryGetValue(oldFrom, out var newFrom)) continue;
+                if (!Guid.TryParse(toStr, out var oldTo) || !idMap.TryGetValue(oldTo, out var newTo)) continue;
+
+                var newEdge = edgeObj.DeepClone().AsObject();
+                newEdge["fromColumnId"] = newFrom.ToString();
+                newEdge["toColumnId"] = newTo.ToString();
+                newEdges.Add(newEdge);
+            }
+        }
+
+        var result = new JsonObject { ["nodes"] = newNodes, ["edges"] = newEdges };
+        return result.ToJsonString(JsonOptions);
     }
 
     public static TaskDto ToTaskDto(TaskItem t) => new(

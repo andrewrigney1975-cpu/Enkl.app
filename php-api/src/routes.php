@@ -22,6 +22,7 @@ use Enkl\Api\Controllers\RisksController;
 use Enkl\Api\Controllers\TasksController;
 use Enkl\Api\Controllers\TaskTypesController;
 use Enkl\Api\Controllers\TeamsCommitteesController;
+use Enkl\Api\Controllers\TemplatesController;
 use Slim\App;
 
 /**
@@ -55,6 +56,19 @@ function registerRoutes(App $app): void
         $group->get('', [OrganisationsController::class, 'getMyOrganisation']);
         $group->put('/users/{userId}/admin', [OrganisationsController::class, 'setUserAdmin']);
         $group->post('/users', [OrganisationsController::class, 'createUser']);
+    })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
+
+    // ---- Project Templates (Organisation-owned) — list/detail/create need only auth (any signed-in
+    // member may save/use a template, same trust level as creating a column or task type today);
+    // rename/delete need OrgAdmin, same bar as Organisations' user-management routes above ----
+    $app->group('/api/organisations/me/templates', function ($group) {
+        $group->get('', [TemplatesController::class, 'list']);
+        $group->get('/{id}', [TemplatesController::class, 'detail']);
+        $group->post('', [TemplatesController::class, 'create']);
+    })->add(RequireAuthMiddleware::class);
+    $app->group('/api/organisations/me/templates', function ($group) {
+        $group->put('/{id}', [TemplatesController::class, 'rename']);
+        $group->delete('/{id}', [TemplatesController::class, 'delete']);
     })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
 
     // ---- Projects (list/detail/create need only auth; everything under {projectId} needs membership) ----

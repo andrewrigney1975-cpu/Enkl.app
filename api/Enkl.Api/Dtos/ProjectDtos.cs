@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace Enkl.Api.Dtos;
 
 public record ProjectSummaryDto(Guid Id, string Name, string Key);
-public record CreateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate);
+public record CreateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate, Guid? TemplateId = null);
 public record UpdateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate);
 
 /// <summary>

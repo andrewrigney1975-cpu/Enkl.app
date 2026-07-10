@@ -195,6 +195,12 @@ export function renderToolbar(){
   var manageUsersLink = document.getElementById('manageUsersLink');
   if(manageUsersLink) manageUsersLink.classList.toggle('kf-vis-hidden', !isOrgAdmin());
 
+  // Unlike Manage Users, Manage Templates has real value signed-out too (local-only templates, no
+  // Organisation concept to gate on) — only hidden in the one case where opening it would just show
+  // an error toast: signed in as a non-admin (its rename/delete actions are OrgAdmin-only server-side).
+  var manageTemplatesLink = document.getElementById('manageTemplatesLink');
+  if(manageTemplatesLink) manageTemplatesLink.classList.toggle('kf-vis-hidden', isServerLoggedIn() && !isOrgAdmin());
+
   // The whole Account menu (Login/Logout/Change Password/Manage Users) is meaningless with no API
   // to talk to — hide the trigger itself rather than leaving an empty/broken-looking dropdown.
   var accountMenuWrap = document.getElementById('accountMenuWrap');

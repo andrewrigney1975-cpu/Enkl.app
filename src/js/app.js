@@ -40,6 +40,7 @@ import { openColumnModal, closeColumnModal, saveColumnFromModal, deleteColumnFro
 import { openProjectModal, closeProjectModal, saveProjectFromModal } from './modals/project.js';
 import { openTeamModal, closeTeamModal, addMemberFromModal } from './modals/team.js';
 import { openOrgUsersModal, closeOrgUsersModal, createOrgUserFromModal } from './modals/organisation.js';
+import { openSaveAsTemplateModal, closeSaveAsTemplateModal, saveAsTemplateFromModal, openTemplatesModal, closeTemplatesModal } from './modals/templates.js';
 import { openTaskTypesModal, closeTaskTypesModal, addTaskTypeFromModal } from './modals/task-types.js';
 import { openReleasesOverlay, closeReleasesOverlay, isReleasesOverlayOpen, showReleasesFormView, showReleasesListView, saveReleaseFromModal, deleteReleaseFromModal } from './modals/releases.js';
 import { openDocumentsOverlay, closeDocumentsOverlay, isDocumentsOverlayOpen, showDocumentsFormView, showDocumentsListView, renderDocumentsList, saveDocumentFromModal, deleteDocumentFromModal, updateDocUrlOpenButtonVisibilityFor, openUrlInputInNewTab } from './modals/documents.js';
@@ -953,6 +954,30 @@ function wireEvents(){
   document.getElementById('orgUsersDoneBtn').addEventListener('click', closeOrgUsersModal);
   document.getElementById('orgUsersOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'orgUsersOverlay') closeOrgUsersModal();
+  });
+
+  document.getElementById('saveAsTemplateLink').addEventListener('click', function(e){
+    e.preventDefault();
+    openSaveAsTemplateModal();
+  });
+  document.getElementById('saveAsTemplateModalClose').addEventListener('click', closeSaveAsTemplateModal);
+  document.getElementById('saveAsTemplateCancelBtn').addEventListener('click', closeSaveAsTemplateModal);
+  document.getElementById('saveAsTemplateSaveBtn').addEventListener('click', saveAsTemplateFromModal);
+  document.getElementById('saveAsTemplateOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'saveAsTemplateOverlay') closeSaveAsTemplateModal();
+  });
+  document.getElementById('saveAsTemplateNameInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); saveAsTemplateFromModal(); }
+  });
+
+  document.getElementById('manageTemplatesLink').addEventListener('click', function(e){
+    e.preventDefault();
+    openTemplatesModal();
+  });
+  document.getElementById('templatesModalClose').addEventListener('click', closeTemplatesModal);
+  document.getElementById('templatesDoneBtn').addEventListener('click', closeTemplatesModal);
+  document.getElementById('templatesOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'templatesOverlay') closeTemplatesModal();
   });
   document.getElementById('createOrgUserBtn').addEventListener('click', createOrgUserFromModal);
   document.getElementById('newOrgUserPasswordInput').addEventListener('keydown', function(e){

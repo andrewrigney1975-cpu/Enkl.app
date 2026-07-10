@@ -1,7 +1,7 @@
 "use strict";
 import { state, saveDB, createDefaultProject } from '../storage.js';
 import { buildExportDoc } from './export.js';
-import { migrateProjectApi, loginApi, changePasswordApi, getProjectsApi, getProjectDetailApi, createProjectApi, updateProjectApi, deleteProjectApi, taskApi, updateColumnApi, deleteColumnApi, setToken, isLoggedIn } from '../api.js';
+import { migrateProjectApi, loginApi, changePasswordApi, getProjectsApi, getProjectDetailApi, createProjectApi, updateProjectApi, deleteProjectApi, taskApi, updateColumnApi, deleteColumnApi, setToken, isLoggedIn, getTemplatesApi, createTemplateApi } from '../api.js';
 import { isoToServerDateOnly, serverDateOnlyToIso } from '../date-utils.js';
 
 var _toast = function(msg){ console.error(msg); };
@@ -270,10 +270,11 @@ export async function refreshProjectFromServer(localProjectId){
    CreateProjectResponseDto's own comment for why the response carries a fresh JWT: this browser's
    current token predates the project's existence, so it isn't in the token's project-membership
    claims yet, and every subsequent server-authoritative call for this project needs it to be. */
-export async function createProjectOnServer(name, key, startISO, endISO){
+export async function createProjectOnServer(name, key, startISO, endISO, templateId){
   var response = await createProjectApi({
     name: name, key: key,
-    startDate: isoToServerDateOnly(startISO), endDate: isoToServerDateOnly(endISO)
+    startDate: isoToServerDateOnly(startISO), endDate: isoToServerDateOnly(endISO),
+    templateId: templateId || null
   });
   setToken(response.token);
   var localProject = buildLocalProjectFromServerDetail(response.project, undefined);
@@ -321,6 +322,18 @@ export async function pullWorkflowFromServer(project){
   project.workflow = detail.workflow || project.workflow || null;
   saveDB();
   return project.workflow;
+}
+
+/* Used by modals/templates.js's "Save as Template" and Manage Templates / New Project picker flows.
+   Templates are Organisation-owned, not per-project, so — unlike every other server sync helper in
+   this file — these don't take a `project` at all; `snapshot` is whatever buildTemplateSnapshotFromProject
+   (storage.js) already built (columns/taskTypes/workflow/settings), passed straight through as the
+   request body since its shape already matches CreateTemplateRequest. */
+export async function createTemplateOnServer(name, snapshot){
+  return createTemplateApi(Object.assign({name: name}, snapshot));
+}
+export async function fetchTemplatesFromServer(){
+  return getTemplatesApi();
 }
 
 function maxTaskCounterFrom(tasks){

@@ -6,6 +6,7 @@ namespace Enkl\Api\Services;
 
 use Enkl\Api\Auth\JwtService;
 use Enkl\Api\Support\Uuid;
+use Enkl\Api\Validation\ApiValidationException;
 use PDO;
 
 /**
@@ -88,6 +89,18 @@ final class ProjectService
             return null;
         }
 
+        // Only a template belonging to the caller's own Organisation may be applied — same org-scoping
+        // as every other Organisation-owned lookup (see TemplateService).
+        $template = null;
+        if (!empty($request['templateId'])) {
+            $tplStmt = $this->db->prepare('SELECT * FROM "ProjectTemplates" WHERE "Id" = :id AND "OrganisationId" = :orgId');
+            $tplStmt->execute(['id' => $request['templateId'], 'orgId' => $user['OrganisationId']]);
+            $template = $tplStmt->fetch();
+            if ($template === false) {
+                throw new ApiValidationException('Template not found.');
+            }
+        }
+
         $name = trim((string) ($request['name'] ?? ''));
         if ($name === '') {
             $name = 'Untitled Project';
@@ -99,9 +112,10 @@ final class ProjectService
             : null;
 
         $projectId = Uuid::v4();
+        $settingsJson = $template !== null ? $template['SettingsJson'] : '{}';
         $stmt = $this->db->prepare(<<<SQL
             INSERT INTO "Projects" ("Id", "OrganisationId", "Name", "Key", "StartDate", "EndDate", "DateCreated", "DateLastModified", "TaskCounter", "HeaderButtonVisibilityJson")
-            VALUES (:id, :orgId, :name, :key, :start, :end, now(), now(), 1, '{}')
+            VALUES (:id, :orgId, :name, :key, :start, :end, now(), now(), 1, :settings)
         SQL);
         $stmt->execute([
             'id' => $projectId,
@@ -110,6 +124,7 @@ final class ProjectService
             'key' => $uniqueKey,
             'start' => $request['startDate'] ?? null,
             'end' => $request['endDate'] ?? null,
+            'settings' => $settingsJson,
         ]);
 
         $stmt = $this->db->prepare(
@@ -117,18 +132,55 @@ final class ProjectService
         );
         $stmt->execute(['id' => Uuid::v4(), 'pid' => $projectId, 'uid' => $callerUserId, 'color' => self::FIRST_MEMBER_COLOR]);
 
-        $columnDefs = [['To Do', false], ['In Progress', false], ['Done', true]];
-        $colStmt = $this->db->prepare(
-            'INSERT INTO "Columns" ("Id", "ProjectId", "Name", "Done", "Order") VALUES (:id, :pid, :name, :done, :order)'
-        );
-        foreach ($columnDefs as $i => [$colName, $done]) {
-            // (int) here, not the raw PHP bool — see ColumnService::create's comment on why.
-            $colStmt->execute(['id' => Uuid::v4(), 'pid' => $projectId, 'name' => $colName, 'done' => (int) $done, 'order' => $i]);
-        }
+        if ($template !== null) {
+            $templateColumns = json_decode($template['ColumnsJson'], true) ?? [];
+            usort($templateColumns, static fn(array $a, array $b): int => $a['order'] <=> $b['order']);
 
-        $typeStmt = $this->db->prepare('INSERT INTO "TaskTypes" ("Id", "ProjectId", "Name") VALUES (:id, :pid, :name)');
-        foreach (['Feature', 'Bug'] as $typeName) {
-            $typeStmt->execute(['id' => Uuid::v4(), 'pid' => $projectId, 'name' => $typeName]);
+            // Column ids are global PKs, never reused by a new project — every column gets a fresh id
+            // here, and this map is what lets the template's Workflow (keyed by the SOURCE project's
+            // column ids) be correctly rewritten to point at THESE new ids below, instead of silently
+            // orphaning itself the way a verbatim WorkflowJson copy would (see remapWorkflowColumnIds).
+            $idMap = [];
+            $colStmt = $this->db->prepare(
+                'INSERT INTO "Columns" ("Id", "ProjectId", "Name", "Done", "Color", "Order") VALUES (:id, :pid, :name, :done, :color, :order)'
+            );
+            foreach ($templateColumns as $col) {
+                $newId = Uuid::v4();
+                $idMap[$col['id']] = $newId;
+                // (int) here, not the raw PHP bool — see ColumnService::create's comment on why.
+                $colStmt->execute([
+                    'id' => $newId, 'pid' => $projectId, 'name' => $col['name'],
+                    'done' => (int) $col['done'], 'color' => $col['color'] ?? null, 'order' => $col['order'],
+                ]);
+            }
+
+            $templateTaskTypes = json_decode($template['TaskTypesJson'], true) ?? [];
+            $typeStmt = $this->db->prepare('INSERT INTO "TaskTypes" ("Id", "ProjectId", "Name", "IconName") VALUES (:id, :pid, :name, :icon)');
+            foreach ($templateTaskTypes as $tt) {
+                $typeStmt->execute(['id' => Uuid::v4(), 'pid' => $projectId, 'name' => $tt['name'], 'icon' => $tt['iconName'] ?? null]);
+            }
+
+            if ($template['WorkflowJson'] !== null) {
+                $remapped = $this->remapWorkflowColumnIds($template['WorkflowJson'], $idMap);
+                if ($remapped !== null) {
+                    $wfStmt = $this->db->prepare('UPDATE "Projects" SET "WorkflowJson" = :json WHERE "Id" = :id');
+                    $wfStmt->execute(['json' => $remapped, 'id' => $projectId]);
+                }
+            }
+        } else {
+            $columnDefs = [['To Do', false], ['In Progress', false], ['Done', true]];
+            $colStmt = $this->db->prepare(
+                'INSERT INTO "Columns" ("Id", "ProjectId", "Name", "Done", "Order") VALUES (:id, :pid, :name, :done, :order)'
+            );
+            foreach ($columnDefs as $i => [$colName, $done]) {
+                // (int) here, not the raw PHP bool — see ColumnService::create's comment on why.
+                $colStmt->execute(['id' => Uuid::v4(), 'pid' => $projectId, 'name' => $colName, 'done' => (int) $done, 'order' => $i]);
+            }
+
+            $typeStmt = $this->db->prepare('INSERT INTO "TaskTypes" ("Id", "ProjectId", "Name") VALUES (:id, :pid, :name)');
+            foreach (['Feature', 'Bug'] as $typeName) {
+                $typeStmt->execute(['id' => Uuid::v4(), 'pid' => $projectId, 'name' => $typeName]);
+            }
         }
 
         $stmt = $this->db->prepare('SELECT "ProjectId", "Role" FROM "ProjectMembers" WHERE "UserId" = :uid');
@@ -214,6 +266,47 @@ final class ProjectService
         );
         $stmt->execute(['json' => json_encode($workflow), 'id' => $projectId]);
         return ['workflow' => $workflow];
+    }
+
+    /**
+     * Rewrites a snapshotted Workflow's column-id references (workflow.nodes' object keys and every
+     * edge's fromColumnId/toColumnId — see features/workflow-engine.js's shape comment) through
+     * $idMap, dropping anything that fails to map. Used when applying a Project Template: the
+     * template's Workflow was captured against the SOURCE project's column ids, which the newly
+     * created project's columns don't share (see the id-map comment in create() above).
+     * @param array<string, string> $idMap oldColumnId => newColumnId
+     */
+    private function remapWorkflowColumnIds(?string $workflowJson, array $idMap): ?string
+    {
+        if ($workflowJson === null || $workflowJson === '') {
+            return null;
+        }
+        $decoded = json_decode($workflowJson, true);
+        if (!is_array($decoded)) {
+            return null;
+        }
+
+        $newNodes = [];
+        foreach ($decoded['nodes'] ?? [] as $oldId => $node) {
+            if (isset($idMap[$oldId])) {
+                $newNodes[$idMap[$oldId]] = $node;
+            }
+        }
+
+        $newEdges = [];
+        foreach ($decoded['edges'] ?? [] as $edge) {
+            if (!is_array($edge) || !isset($edge['fromColumnId'], $edge['toColumnId'])) {
+                continue;
+            }
+            if (!isset($idMap[$edge['fromColumnId']], $idMap[$edge['toColumnId']])) {
+                continue;
+            }
+            $edge['fromColumnId'] = $idMap[$edge['fromColumnId']];
+            $edge['toColumnId'] = $idMap[$edge['toColumnId']];
+            $newEdges[] = $edge;
+        }
+
+        return json_encode(['nodes' => (object) $newNodes, 'edges' => $newEdges]);
     }
 
     private function deriveProjectKey(?string $requestedKey, string $name): string

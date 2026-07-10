@@ -55,6 +55,7 @@ export function loadDB(){
 export function migrateDB(){
   var changed = false;
   var epoch = new Date(0).toISOString();
+  if(!Array.isArray(state.db.templates)){ state.db.templates = []; changed = true; }
   Object.keys(state.db.projects).forEach(function(pid){
     var p = state.db.projects[pid];
     if(!Array.isArray(p.members)){ p.members = []; changed = true; }
@@ -491,8 +492,70 @@ export function createSeedDB(){
   return {
     projects: makeMap(p),
     projectOrder: [p.id],
-    currentProjectId: p.id
+    currentProjectId: p.id,
+    templates: []
   };
+}
+
+/* Snapshot of the pieces a Project Template covers — Columns (name/done/color/order), TaskTypes
+   (name/iconName), Workflow, and App Settings — deliberately excluding tasks, members, releases, and
+   every governance entity. Shared by both the local "Save as Template" path (mutations.js addTemplate)
+   and the server path (features/migration.js createTemplateOnServer), whose request body this shape
+   matches exactly (see CreateTemplateRequest, api/Enkl.Api/Dtos/TemplateDtos.cs). `order` is the
+   column's array index rather than a stored field, since a local project's own column position is
+   implicit in project.columns' array order (unlike the server's explicit Column.Order column) — this
+   still round-trips correctly since createProjectFromTemplate below sorts by it either way. Workflow
+   is deep-cloned so a later edit to the live project's workflow (many small mutations per drag, see
+   views/workflow-editor.js) can never reach back into an already-saved template. */
+export function buildTemplateSnapshotFromProject(project){
+  return {
+    columns: project.columns.map(function(c, i){ return {id: c.id, name: c.name, done: !!c.done, color: c.color || null, order: i}; }),
+    taskTypes: project.taskTypes.map(function(tt){ return {name: tt.name, iconName: tt.iconName || null}; }),
+    workflow: project.workflow ? JSON.parse(JSON.stringify(project.workflow)) : null,
+    settings: normalizeHeaderButtonVisibility(project.headerButtonVisibility)
+  };
+}
+
+/* Builds a brand new project seeded from a template's columns/taskTypes/workflow/settings instead of
+   createDefaultProject's hardcoded 3-column/2-type blank slate. Column ids are always freshly minted
+   here (a new project can never reuse another project's column ids), so the template's Workflow —
+   captured against the SOURCE project's column ids — is rewritten through the resulting old->new id
+   map before being attached, dropping anything that fails to map (mirrors migrateDB's own defensive
+   pruning of stale workflow column references above). Mirrors ProjectService.CreateAsync's template
+   branch (api/Enkl.Api/Services/ProjectService.cs) so a template behaves the same locally as it does
+   once migrated to the server. */
+export function createProjectFromTemplate(name, key, template){
+  var project = createDefaultProject(name, key);
+
+  var idMap = {};
+  var sortedColumns = (template.columns || []).slice().sort(function(a, b){ return a.order - b.order; });
+  project.columns = sortedColumns.map(function(c){
+    var newId = uid('col');
+    idMap[c.id] = newId;
+    var validColor = typeof c.color === 'string' && /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : null;
+    return {id: newId, name: c.name, done: !!c.done, color: validColor, order: []};
+  });
+
+  project.taskTypes = (template.taskTypes || []).map(function(tt){
+    return {id: uid('type'), name: tt.name, iconName: (tt.iconName && isValidTaskTypeIconName(tt.iconName)) ? tt.iconName : null};
+  });
+
+  project.headerButtonVisibility = normalizeHeaderButtonVisibility(template.settings);
+
+  if(template.workflow && template.workflow.nodes){
+    var newNodes = {};
+    Object.keys(template.workflow.nodes).forEach(function(oldId){
+      if(idMap[oldId]) newNodes[idMap[oldId]] = template.workflow.nodes[oldId];
+    });
+    var newEdges = (template.workflow.edges || []).filter(function(e){
+      return e && idMap[e.fromColumnId] && idMap[e.toColumnId];
+    }).map(function(e){
+      return Object.assign({}, e, {fromColumnId: idMap[e.fromColumnId], toColumnId: idMap[e.toColumnId]});
+    });
+    project.workflow = {nodes: newNodes, edges: newEdges};
+  }
+
+  return project;
 }
 
 export function makeMap(project){

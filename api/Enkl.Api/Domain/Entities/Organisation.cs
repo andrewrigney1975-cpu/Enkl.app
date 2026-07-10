@@ -9,4 +9,5 @@ public class Organisation
 
     public List<User> Users { get; set; } = new();
     public List<Project> Projects { get; set; } = new();
+    public List<ProjectTemplate> ProjectTemplates { get; set; } = new();
 }
