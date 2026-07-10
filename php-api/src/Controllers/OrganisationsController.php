@@ -42,4 +42,9 @@ final class OrganisationsController extends BaseController
         $ok = $this->service()->setUserEmail($this->callerOrgId($request), $args['userId'], $body['emailAddress'] ?? null);
         return $ok ? $this->noContent($response) : $this->notFound($response);
     }
+
+    public function getOrgTeams(Request $request, Response $response): Response
+    {
+        return $this->json($response, $this->service()->getOrgTeams($this->callerOrgId($request)));
+    }
 }

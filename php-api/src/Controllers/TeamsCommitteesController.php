@@ -33,4 +33,10 @@ final class TeamsCommitteesController extends BaseController
     {
         return $this->service()->delete($args['projectId'], $args['id']) ? $this->noContent($response) : $this->notFound($response);
     }
+
+    public function applyOrgTeam(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->service()->applyOrgTeam($args['projectId'], $args['orgTeamId']);
+        return $result === null ? $this->notFound($response) : $this->json($response, $result);
+    }
 }

@@ -14,6 +14,13 @@ final class TeamCommitteeService
 {
     private const VALID_TYPES = ['team', 'committee'];
 
+    // Mirrors MEMBER_PALETTE in MemberService.php/src/js/config.js — reused here because applyOrgTeam
+    // can create brand-new ProjectMembers for OrgTeam members who aren't on the project yet.
+    private const MEMBER_PALETTE = [
+        '#0052CC', '#00875A', '#FF8B00', '#974DE2', '#DE350B',
+        '#006644', '#5243AA', '#B04632', '#1B5E20', '#8777D9',
+    ];
+
     public function __construct(private readonly PDO $db)
     {
     }
@@ -101,6 +108,87 @@ final class TeamCommitteeService
         $this->db->prepare('UPDATE "TeamsCommittees" SET "ParentId" = NULL WHERE "ParentId" = :id')->execute(['id' => $id]);
         $this->db->prepare('DELETE FROM "TeamsCommittees" WHERE "Id" = :id')->execute(['id' => $id]);
         return true;
+    }
+
+    /**
+     * The manual, non-SCIM half of the "SCIM groups translate to teams" design: projects an
+     * Organisation-scoped OrgTeam's current membership into this project's TeamCommittee, creating
+     * ProjectMember rows for anyone not already on the project. Deliberately an apply/snapshot, not a
+     * live sync — safe to re-run repeatedly, since it only ever adds people who are missing and never
+     * removes someone added manually or whose OrgTeam membership was later revoked. Re-finds the same
+     * TeamCommittee across runs via SourceOrgTeamId, not name matching (see that column's own
+     * migration comment for why a rename wouldn't fool this). Ported from TeamCommitteeService.cs's
+     * ApplyOrgTeamAsync.
+     */
+    public function applyOrgTeam(string $projectId, string $orgTeamId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT "Id", "Key", "OrganisationId" FROM "Projects" WHERE "Id" = :id');
+        $stmt->execute(['id' => $projectId]);
+        $project = $stmt->fetch();
+        if ($project === false) {
+            return null;
+        }
+
+        $stmt = $this->db->prepare('SELECT "Id", "Name" FROM "OrgTeams" WHERE "Id" = :id AND "OrganisationId" = :orgId');
+        $stmt->execute(['id' => $orgTeamId, 'orgId' => $project['OrganisationId']]);
+        $orgTeam = $stmt->fetch();
+        if ($orgTeam === false) {
+            return null;
+        }
+
+        $stmt = $this->db->prepare('SELECT "UserId" FROM "OrgTeamMember" WHERE "OrgTeamId" = :id');
+        $stmt->execute(['id' => $orgTeamId]);
+        $memberUserIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $warnings = [];
+        if (count($memberUserIds) === 0) {
+            $warnings[] = "\"{$orgTeam['Name']}\" has no members yet — nothing to apply.";
+        }
+
+        $stmt = $this->db->prepare('SELECT "Id" FROM "TeamsCommittees" WHERE "ProjectId" = :pid AND "SourceOrgTeamId" = :orgTeamId');
+        $stmt->execute(['pid' => $projectId, 'orgTeamId' => $orgTeamId]);
+        $existingTc = $stmt->fetch();
+
+        if ($existingTc === false) {
+            $tcId = Uuid::v4();
+            $key = $this->nextKey($projectId, $project['Key'], 'team');
+            $this->db->prepare(<<<SQL
+                INSERT INTO "TeamsCommittees" ("Id", "ProjectId", "Key", "Name", "Type", "SourceOrgTeamId", "DateCreated", "DateLastModified")
+                VALUES (:id, :pid, :key, :name, 'team', :orgTeamId, now(), now())
+            SQL)->execute(['id' => $tcId, 'pid' => $projectId, 'key' => $key, 'name' => $orgTeam['Name'], 'orgTeamId' => $orgTeamId]);
+        } else {
+            $tcId = $existingTc['Id'];
+            $this->db->prepare('UPDATE "TeamsCommittees" SET "DateLastModified" = now() WHERE "Id" = :id')->execute(['id' => $tcId]);
+        }
+
+        $memberCountStmt = $this->db->prepare('SELECT COUNT(*) FROM "ProjectMembers" WHERE "ProjectId" = :pid');
+        $memberCountStmt->execute(['pid' => $projectId]);
+        $memberCount = (int) $memberCountStmt->fetchColumn();
+
+        foreach ($memberUserIds as $userId) {
+            $stmt = $this->db->prepare('SELECT "Id" FROM "ProjectMembers" WHERE "ProjectId" = :pid AND "UserId" = :userId');
+            $stmt->execute(['pid' => $projectId, 'userId' => $userId]);
+            $projectMember = $stmt->fetch();
+
+            if ($projectMember === false) {
+                $projectMemberId = Uuid::v4();
+                $color = self::MEMBER_PALETTE[$memberCount % count(self::MEMBER_PALETTE)];
+                $this->db->prepare('INSERT INTO "ProjectMembers" ("Id", "ProjectId", "UserId", "Color") VALUES (:id, :pid, :userId, :color)')
+                    ->execute(['id' => $projectMemberId, 'pid' => $projectId, 'userId' => $userId, 'color' => $color]);
+                $memberCount++;
+            } else {
+                $projectMemberId = $projectMember['Id'];
+            }
+
+            $stmt = $this->db->prepare('SELECT 1 FROM "TeamCommitteeMember" WHERE "TeamCommitteeId" = :tid AND "ProjectMemberId" = :mid');
+            $stmt->execute(['tid' => $tcId, 'mid' => $projectMemberId]);
+            if ($stmt->fetch() === false) {
+                $this->db->prepare('INSERT INTO "TeamCommitteeMember" ("TeamCommitteeId", "ProjectMemberId") VALUES (:tid, :mid)')
+                    ->execute(['tid' => $tcId, 'mid' => $projectMemberId]);
+            }
+        }
+
+        return ['teamCommittee' => $this->toDto($tcId), 'warnings' => $warnings];
     }
 
     private function wouldCreateParentCycle(string $projectId, string $id, string $newParentId): bool

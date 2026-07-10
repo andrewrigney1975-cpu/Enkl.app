@@ -142,4 +142,31 @@ final class OrganisationService
         $stmt->execute(['email' => $email, 'normalizedEmail' => $normalizedEmail, 'id' => $targetUserId]);
         return true;
     }
+
+    /** Read-only listing for the SSO & Provisioning modal's Org Teams section — SCIM (ScimGroupService)
+     * is the only writer of OrgTeams/OrgTeamMember, mirroring GetOrgTeamsAsync in OrganisationService.cs. */
+    public function getOrgTeams(string $organisationId): array
+    {
+        $stmt = $this->db->prepare('SELECT "Id", "Name" FROM "OrgTeams" WHERE "OrganisationId" = :id ORDER BY "Name"');
+        $stmt->execute(['id' => $organisationId]);
+        $teams = $stmt->fetchAll();
+
+        $memberStmt = $this->db->prepare(<<<SQL
+            SELECT m."UserId", u."DisplayName" FROM "OrgTeamMember" m
+            JOIN "Users" u ON u."Id" = m."UserId"
+            WHERE m."OrgTeamId" = :id
+        SQL);
+
+        return array_map(function (array $t) use ($memberStmt): array {
+            $memberStmt->execute(['id' => $t['Id']]);
+            return [
+                'id' => $t['Id'],
+                'name' => $t['Name'],
+                'members' => array_map(
+                    static fn(array $m): array => ['userId' => $m['UserId'], 'displayName' => $m['DisplayName']],
+                    $memberStmt->fetchAll()
+                ),
+            ];
+        }, $teams);
+    }
 }

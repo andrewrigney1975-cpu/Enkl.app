@@ -6,6 +6,7 @@ use Enkl\Api\Auth\JwtAuthMiddleware;
 use Enkl\Api\Auth\OrgAdminMiddleware;
 use Enkl\Api\Auth\ProjectMemberMiddleware;
 use Enkl\Api\Auth\RequireAuthMiddleware;
+use Enkl\Api\Auth\ScimAuthMiddleware;
 use Enkl\Api\Controllers\AuthController;
 use Enkl\Api\Controllers\ColumnsController;
 use Enkl\Api\Controllers\DecisionsController;
@@ -14,11 +15,15 @@ use Enkl\Api\Controllers\EventsController;
 use Enkl\Api\Controllers\MembersController;
 use Enkl\Api\Controllers\MigrationController;
 use Enkl\Api\Controllers\ObjectivesController;
+use Enkl\Api\Controllers\OrganisationSsoConfigController;
 use Enkl\Api\Controllers\OrganisationsController;
 use Enkl\Api\Controllers\PrinciplesController;
 use Enkl\Api\Controllers\ProjectsController;
 use Enkl\Api\Controllers\ReleasesController;
 use Enkl\Api\Controllers\RisksController;
+use Enkl\Api\Controllers\SamlController;
+use Enkl\Api\Controllers\ScimGroupsController;
+use Enkl\Api\Controllers\ScimUsersController;
 use Enkl\Api\Controllers\TasksController;
 use Enkl\Api\Controllers\TaskTypesController;
 use Enkl\Api\Controllers\TeamsCommitteesController;
@@ -46,11 +51,43 @@ function registerRoutes(App $app): void
 
     // ---- Auth ----
     $app->post('/api/auth/login', [AuthController::class, 'login']);
+    // sso-lookup/sso-exchange are anonymous like login itself — see AuthController.php's own notes
+    // on each (minimal-disclosure org discovery; single-use SAML exchange-code redemption).
+    $app->get('/api/auth/sso-lookup', [AuthController::class, 'ssoLookup']);
+    $app->post('/api/auth/sso-exchange', [AuthController::class, 'ssoExchange']);
     $app->post('/api/auth/change-password', [AuthController::class, 'changePassword'])
         ->add(RequireAuthMiddleware::class);
 
     // ---- Migration (deliberately anonymous — bootstrapping, see MigrationController.cs's own note) ----
     $app->post('/api/migration/projects', [MigrationController::class, 'migrate']);
+
+    // ---- SAML SSO (deliberately anonymous — nothing here can be gated behind a JWT, since the
+    // whole point is to ISSUE one; see SamlController.php's own note) ----
+    $app->group('/api/saml/{orgId}', function ($group) {
+        $group->get('/metadata', [SamlController::class, 'metadata']);
+        $group->get('/login', [SamlController::class, 'login']);
+        $group->post('/acs', [SamlController::class, 'acs']);
+    });
+
+    // ---- SCIM 2.0 provisioning — gated by ScimAuthMiddleware's per-org static bearer token
+    // INSTEAD OF RequireAuthMiddleware/OrgAdminMiddleware (there's no user JWT in a SCIM request at
+    // all); see ScimAuthMiddleware.php's own note. ----
+    $app->group('/api/scim/v2/{orgId}/Users', function ($group) {
+        $group->get('', [ScimUsersController::class, 'list']);
+        $group->get('/{id}', [ScimUsersController::class, 'get']);
+        $group->post('', [ScimUsersController::class, 'create']);
+        $group->put('/{id}', [ScimUsersController::class, 'replace']);
+        $group->patch('/{id}', [ScimUsersController::class, 'patch']);
+        $group->delete('/{id}', [ScimUsersController::class, 'delete']);
+    })->add(ScimAuthMiddleware::class);
+    $app->group('/api/scim/v2/{orgId}/Groups', function ($group) {
+        $group->get('', [ScimGroupsController::class, 'list']);
+        $group->get('/{id}', [ScimGroupsController::class, 'get']);
+        $group->post('', [ScimGroupsController::class, 'create']);
+        $group->put('/{id}', [ScimGroupsController::class, 'replace']);
+        $group->patch('/{id}', [ScimGroupsController::class, 'patch']);
+        $group->delete('/{id}', [ScimGroupsController::class, 'delete']);
+    })->add(ScimAuthMiddleware::class);
 
     // ---- Organisations (OrgAdmin only) ----
     $app->group('/api/organisations/me', function ($group) {
@@ -58,6 +95,10 @@ function registerRoutes(App $app): void
         $group->put('/users/{userId}/admin', [OrganisationsController::class, 'setUserAdmin']);
         $group->put('/users/{userId}/email', [OrganisationsController::class, 'setUserEmail']);
         $group->post('/users', [OrganisationsController::class, 'createUser']);
+        $group->get('/org-teams', [OrganisationsController::class, 'getOrgTeams']);
+        $group->get('/sso-config', [OrganisationSsoConfigController::class, 'get']);
+        $group->put('/sso-config', [OrganisationSsoConfigController::class, 'update']);
+        $group->post('/sso-config/scim-token', [OrganisationSsoConfigController::class, 'generateScimToken']);
     })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
 
     // ---- Project Templates (Organisation-owned) — list/detail/create need only auth (any signed-in
@@ -106,6 +147,7 @@ function registerRoutes(App $app): void
         registerEntityRoutes($group, '/risks', RisksController::class, 'id');
         registerEntityRoutes($group, '/objectives', ObjectivesController::class, 'id');
         registerEntityRoutes($group, '/teams-committees', TeamsCommitteesController::class, 'id');
+        $group->post('/teams-committees/from-org-team/{orgTeamId}', [TeamsCommitteesController::class, 'applyOrgTeam']);
         registerEntityRoutes($group, '/decisions', DecisionsController::class, 'id');
     })->add(ProjectMemberMiddleware::class)->add(RequireAuthMiddleware::class);
 
