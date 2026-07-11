@@ -74,6 +74,8 @@ export function migrateDB(){
     if(typeof p.objCounter !== 'number'){ p.objCounter = 1; changed = true; }
     if(!Array.isArray(p.teamsCommittees)){ p.teamsCommittees = []; changed = true; }
     if(typeof p.tcCounter !== 'number'){ p.tcCounter = 1; changed = true; }
+    if(!Array.isArray(p.retrospectives)){ p.retrospectives = []; changed = true; }
+    if(typeof p.retroCounter !== 'number'){ p.retroCounter = 1; changed = true; }
     if(!Array.isArray(p.approvers)){ p.approvers = []; changed = true; }
     if(!Array.isArray(p.roles)){ p.roles = []; changed = true; }
     p.members.forEach(function(m){
@@ -205,6 +207,9 @@ export function migrateDB(){
     p.principles.forEach(function(prin){
       if(prin.documentUrl === undefined){ prin.documentUrl = null; changed = true; }
       if(prin.description === undefined){ prin.description = ''; changed = true; }
+      /* Server-only concept (Organisation Library sharing) — a local-only principle is simply never
+         shared, same "opt-in, missing = off" treatment as every App Setting flag above. */
+      if(typeof prin.isOrganisationWide !== 'boolean'){ prin.isOrganisationWide = false; changed = true; }
       if(!prin.dateCreated){ prin.dateCreated = epoch; changed = true; }
       if(!prin.dateLastModified){ prin.dateLastModified = prin.dateCreated || epoch; changed = true; }
     });
@@ -291,6 +296,45 @@ export function migrateDB(){
       if(dec.approver === undefined){ dec.approver = null; changed = true; }
       if(!dec.dateCreated){ dec.dateCreated = epoch; changed = true; }
       if(!dec.dateLastModified){ dec.dateLastModified = dec.dateCreated || epoch; changed = true; }
+    });
+
+    p.retrospectives.forEach(function(retro){
+      if(retro.releaseId === undefined){ retro.releaseId = null; changed = true; }
+      else if(retro.releaseId && !validReleaseIds[retro.releaseId]){ retro.releaseId = null; changed = true; }
+      if(retro.team === undefined){ retro.team = null; changed = true; }
+      if(retro.background === undefined){ retro.background = null; changed = true; }
+      if(retro.retroDate === undefined){ retro.retroDate = null; changed = true; }
+      if(retro.lastTimerDurationSeconds === undefined){ retro.lastTimerDurationSeconds = null; changed = true; }
+      else if(retro.lastTimerDurationSeconds !== null && (typeof retro.lastTimerDurationSeconds !== 'number' || !isFinite(retro.lastTimerDurationSeconds) || retro.lastTimerDurationSeconds < 0)){
+        retro.lastTimerDurationSeconds = null; changed = true;
+      }
+      if(!Array.isArray(retro.participantIds)){ retro.participantIds = []; changed = true; }
+      else {
+        var filteredParticipantIds = retro.participantIds.filter(function(id){ return validMemberIds[id]; });
+        if(filteredParticipantIds.length !== retro.participantIds.length){ retro.participantIds = filteredParticipantIds; changed = true; }
+      }
+      if(!Array.isArray(retro.items)){ retro.items = []; changed = true; }
+      else {
+        retro.items.forEach(function(it){
+          if(it.column !== 'start' && it.column !== 'stop' && it.column !== 'keep'){ it.column = 'start'; changed = true; }
+          if(typeof it.text !== 'string'){ it.text = ''; changed = true; }
+          if(typeof it.sortOrder !== 'number' || !isFinite(it.sortOrder)){ it.sortOrder = 0; changed = true; }
+          if(it.promotedPrincipleId === undefined){ it.promotedPrincipleId = null; changed = true; }
+          else if(it.promotedPrincipleId && !validPrincipleIds[it.promotedPrincipleId]){ it.promotedPrincipleId = null; changed = true; }
+        });
+      }
+      if(!Array.isArray(retro.actionItems)){ retro.actionItems = []; changed = true; }
+      else {
+        retro.actionItems.forEach(function(ai){
+          if(typeof ai.text !== 'string'){ ai.text = ''; changed = true; }
+          if(ai.assigneeId === undefined){ ai.assigneeId = null; changed = true; }
+          else if(ai.assigneeId && !validMemberIds[ai.assigneeId]){ ai.assigneeId = null; changed = true; }
+          if(typeof ai.completed !== 'boolean'){ ai.completed = false; changed = true; }
+          if(typeof ai.sortOrder !== 'number' || !isFinite(ai.sortOrder)){ ai.sortOrder = 0; changed = true; }
+        });
+      }
+      if(!retro.dateCreated){ retro.dateCreated = epoch; changed = true; }
+      if(!retro.dateLastModified){ retro.dateLastModified = retro.dateCreated || epoch; changed = true; }
     });
 
     /* project.workflow is only ever created lazily (see
@@ -380,13 +424,23 @@ export function normalizeHeaderButtonVisibility(value){
        value must never silently start recording history the user
        never asked for. */
     changeAuditing: v.changeAuditing === true,
-    subTasks: v.subTasks !== false
+    subTasks: v.subTasks !== false,
+    /* Opt-in, like workflow/changeAuditing: the whole Retrospective feature (board, action items,
+       Promote to Principle, Organisation Library) stays invisible until a project deliberately turns
+       it on, so a corrupted or missing value must never silently start showing a feature the user
+       never asked for. */
+    retrospective: v.retrospective === true
   };
 }
 
 export function isTimeTrackingEnabled(project){
   if(!project) return false;
   return normalizeHeaderButtonVisibility(project.headerButtonVisibility).timeTracking === true;
+}
+
+export function isRetrospectiveEnabled(project){
+  if(!project) return false;
+  return normalizeHeaderButtonVisibility(project.headerButtonVisibility).retrospective === true;
 }
 
 export function isChangeAuditingEnabled(project){
@@ -423,6 +477,8 @@ export function createDefaultProject(name, key){
     objCounter: 1,
     teamsCommittees: [],
     tcCounter: 1,
+    retrospectives: [],
+    retroCounter: 1,
     approvers: [],
     roles: [],
     headerButtonVisibility: {documents: true, risks: true, decisions: true},

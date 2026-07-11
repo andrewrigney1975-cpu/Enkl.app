@@ -4455,3 +4455,313 @@
     font-size: 12px;
     color: var(--kf-text-faint);
   }
+
+  /* Tab strip (Principles: My Principles / Organisation Library) */
+  .kf-tab-strip {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--kf-border);
+    margin-bottom: 14px;
+  }
+
+  .kf-tab-strip-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--kf-text-faint);
+    cursor: pointer;
+  }
+
+  .kf-tab-strip-btn:hover {
+    color: var(--kf-text);
+  }
+
+  .kf-tab-strip-btn.active {
+    color: var(--kf-blue);
+    border-bottom-color: var(--kf-blue);
+  }
+
+  /* This codebase hides elements via a per-id/per-class ".hidden" rule rather than one shared
+     utility class (see every other `#x.hidden { display: none; }` in this file) — these were
+     missing for the new Organisation Library tab, so toggling .hidden in JS had no visual effect. */
+  #principlesTabStrip.hidden {
+    display: none;
+  }
+
+  #principlesMinePanel.hidden {
+    display: none;
+  }
+
+  #principlesLibraryPanel.hidden {
+    display: none;
+  }
+
+  #principleShareFieldWrap.hidden {
+    display: none;
+  }
+
+  .kf-principle-suggestion-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .kf-principle-suggestion-snippets {
+    margin-top: 6px;
+  }
+
+  .kf-principle-suggestion-snippet {
+    font-size: 12px;
+    color: var(--kf-text-faint);
+    font-style: italic;
+    padding: 2px 0;
+  }
+
+  /* Retrospectives */
+  .kf-retro-note {
+    font-size: 12px;
+    color: var(--kf-text-faint);
+    padding: 8px 0;
+  }
+
+  .kf-retro-howto {
+    margin-bottom: 14px;
+  }
+
+  .kf-retro-howto-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--kf-text);
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .kf-retro-howto-toggle:hover {
+    background: var(--kf-hover-tint);
+  }
+
+  .kf-retro-howto-toggle[aria-expanded="true"] .kf-icon:last-child {
+    transform: rotate(180deg);
+  }
+
+  .kf-retro-howto-panel {
+    border: 1px solid var(--kf-border);
+    border-top: none;
+    border-bottom-left-radius: var(--kf-radius);
+    border-bottom-right-radius: var(--kf-radius);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--kf-text-secondary);
+    background: var(--kf-column-bg);
+  }
+
+  .kf-retro-howto-list {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .kf-retro-timer {
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .kf-retro-timer-display {
+    font-size: 40px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--kf-text);
+  }
+
+  .kf-retro-timer-display.kf-retro-timer-done {
+    color: var(--kf-blocked-fg, #c9372c);
+  }
+
+  .kf-retro-timer-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .kf-retro-timer-presets {
+    display: flex;
+    gap: 6px;
+  }
+
+  .kf-retro-timer-custom {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .kf-retro-timer-custom input {
+    width: 90px;
+  }
+
+  .kf-retro-timer-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .kf-retro-board {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .kf-retro-column {
+    flex: 1 1 0;
+    min-width: 0;
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    background: var(--kf-column-bg);
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .kf-retro-column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kf-text);
+    padding: 2px 4px;
+  }
+
+  .kf-retro-column-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 20px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .kf-retro-item-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
+    background: var(--kf-surface);
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 8px 10px;
+  }
+
+  .kf-retro-item-text {
+    font-size: 13px;
+    color: var(--kf-text);
+    overflow-wrap: anywhere;
+  }
+
+  .kf-retro-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .kf-retro-promoted-tag {
+    display: flex;
+    align-items: center;
+    color: var(--kf-good-fg, #216e4e);
+  }
+
+  .kf-retro-add-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  .kf-retro-add-row input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kf-retro-action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .kf-retro-action-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .kf-retro-action-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Specificity must beat the generic ".kf-field select { width: 100%; }" rule (this row lives
+     inside the "Action items" .kf-field wrapper) — a bare .kf-retro-action-assignee class selector
+     loses to that ancestor-scoped rule and renders full-width, starving the flex:1 text input next
+     to it down to a sliver. */
+  .kf-field .kf-retro-action-assignee {
+    width: 160px;
+    flex-shrink: 0;
+  }
+
+  /* Same missing-hidden-rule issue as the Organisation Library tab above — every one of these gets
+     toggled via classList in modals/retrospectives.js. */
+  #retrospectivesListView.hidden {
+    display: none;
+  }
+
+  #retrospectivesFormView.hidden {
+    display: none;
+  }
+
+  #retrospectivesPromoteView.hidden {
+    display: none;
+  }
+
+  #deleteRetrospectiveBtn.hidden {
+    display: none;
+  }
+
+  #retroReleaseFieldWrap.hidden {
+    display: none;
+  }
+
+  .kf-retro-howto-panel.hidden {
+    display: none;
+  }
+
+  .kf-retro-note.hidden {
+    display: none;
+  }
+
+  #retroActionItemsAddRow.hidden {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    .kf-retro-board {
+      flex-direction: column;
+    }
+  }

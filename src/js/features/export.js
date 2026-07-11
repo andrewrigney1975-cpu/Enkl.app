@@ -1,7 +1,7 @@
 "use strict";
 import { APP_VERSION } from '../config.js';
 import { state, saveDB, normalizeHeaderButtonVisibility } from '../storage.js';
-import { getTasksArray, getMemberById, getReleaseById, getTaskTypeById, buildChildrenMap, columnNameById } from '../utils.js';
+import { getTasksArray, getMemberById, getReleaseById, getTaskTypeById, getPrincipleById, buildChildrenMap, columnNameById } from '../utils.js';
 import { clampTaskScore, clampProgress, clampEffortHours } from '../date-utils.js';
 
 var _toast = function(msg){ console.error(msg); };
@@ -159,6 +159,7 @@ export function buildExportDoc(project, exportedAt){
         title: prin.title,
         description: prin.description || '',
         documentUrl: prin.documentUrl || null,
+        isOrganisationWide: !!prin.isOrganisationWide,
         dateCreated: prin.dateCreated || null,
         dateLastModified: prin.dateLastModified || null
       };
@@ -207,6 +208,43 @@ export function buildExportDoc(project, exportedAt){
         objectiveIds: dec.objectiveIds || [],
         dateCreated: dec.dateCreated || null,
         dateLastModified: dec.dateLastModified || null
+      };
+    }),
+    retrospectives: (project.retrospectives || []).map(function(r){
+      var release = getReleaseById(project, r.releaseId);
+      return {
+        id: r.id,
+        key: r.key,
+        releaseId: release ? release.id : null,
+        releaseName: release ? release.name : null,
+        team: r.team || null,
+        background: r.background || null,
+        retroDate: r.retroDate || null,
+        lastTimerDurationSeconds: (typeof r.lastTimerDurationSeconds === 'number') ? r.lastTimerDurationSeconds : null,
+        participantIds: (r.participantIds || []).slice(),
+        participantNames: (r.participantIds || []).map(function(pid){
+          var m = getMemberById(project, pid);
+          return m ? m.name : null;
+        }).filter(Boolean),
+        items: (r.items || []).map(function(it){
+          var principle = getPrincipleById(project, it.promotedPrincipleId);
+          return {
+            id: it.id, column: it.column, text: it.text, sortOrder: it.sortOrder,
+            promotedPrincipleId: principle ? principle.id : null,
+            promotedPrincipleKey: principle ? principle.key : null
+          };
+        }),
+        actionItems: (r.actionItems || []).map(function(ai){
+          var assignee = getMemberById(project, ai.assigneeId);
+          return {
+            id: ai.id, text: ai.text,
+            assigneeId: assignee ? assignee.id : null,
+            assigneeName: assignee ? assignee.name : null,
+            completed: !!ai.completed, sortOrder: ai.sortOrder
+          };
+        }),
+        dateCreated: r.dateCreated || null,
+        dateLastModified: r.dateLastModified || null
       };
     }),
     approvers: (project.approvers || []).slice(),

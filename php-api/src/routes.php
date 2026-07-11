@@ -15,11 +15,13 @@ use Enkl\Api\Controllers\EventsController;
 use Enkl\Api\Controllers\MembersController;
 use Enkl\Api\Controllers\MigrationController;
 use Enkl\Api\Controllers\ObjectivesController;
+use Enkl\Api\Controllers\OrganisationPrinciplesController;
 use Enkl\Api\Controllers\OrganisationSsoConfigController;
 use Enkl\Api\Controllers\OrganisationsController;
 use Enkl\Api\Controllers\PrinciplesController;
 use Enkl\Api\Controllers\ProjectsController;
 use Enkl\Api\Controllers\ReleasesController;
+use Enkl\Api\Controllers\RetrospectivesController;
 use Enkl\Api\Controllers\RisksController;
 use Enkl\Api\Controllers\SamlController;
 use Enkl\Api\Controllers\ScimGroupsController;
@@ -114,6 +116,15 @@ function registerRoutes(App $app): void
         $group->delete('/{id}', [TemplatesController::class, 'delete']);
     })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
 
+    // ---- Organisation Principle library (browse/copy the shared library) — any signed-in org
+    // member, same trust level as the templates list/read above; sharing itself is gated
+    // per-project via PUT /api/projects/{projectId}/principles/{id}/share (ProjectMember policy). ----
+    $app->group('/api/organisations/me/principles', function ($group) {
+        $group->get('', [OrganisationPrinciplesController::class, 'listWide']);
+        $group->get('/suggestions', [OrganisationPrinciplesController::class, 'suggestions']);
+        $group->post('/{principleId}/copy', [OrganisationPrinciplesController::class, 'copy']);
+    })->add(RequireAuthMiddleware::class);
+
     // ---- To-Do Lists (per-User, not per-Project/per-Organisation — same "just needs to be signed in
     // as yourself" gating as /api/auth/change-password above, no ProjectMemberMiddleware/OrgAdminMiddleware) ----
     $app->group('/api/todo-lists', function ($group) {
@@ -143,12 +154,21 @@ function registerRoutes(App $app): void
         registerEntityRoutes($group, '/releases', ReleasesController::class, 'id');
         registerEntityRoutes($group, '/task-types', TaskTypesController::class, 'id');
         registerEntityRoutes($group, '/principles', PrinciplesController::class, 'id');
+        $group->put('/principles/{id}/share', [PrinciplesController::class, 'share']);
         registerEntityRoutes($group, '/documents', DocumentsController::class, 'id');
         registerEntityRoutes($group, '/risks', RisksController::class, 'id');
         registerEntityRoutes($group, '/objectives', ObjectivesController::class, 'id');
         registerEntityRoutes($group, '/teams-committees', TeamsCommitteesController::class, 'id');
         $group->post('/teams-committees/from-org-team/{orgTeamId}', [TeamsCommitteesController::class, 'applyOrgTeam']);
         registerEntityRoutes($group, '/decisions', DecisionsController::class, 'id');
+        registerEntityRoutes($group, '/retrospectives', RetrospectivesController::class, 'id');
+        $group->post('/retrospectives/{id}/items', [RetrospectivesController::class, 'createItem']);
+        $group->put('/retrospectives/{id}/items/{itemId}', [RetrospectivesController::class, 'updateItem']);
+        $group->delete('/retrospectives/{id}/items/{itemId}', [RetrospectivesController::class, 'deleteItem']);
+        $group->post('/retrospectives/{id}/items/{itemId}/promote', [RetrospectivesController::class, 'promoteItem']);
+        $group->post('/retrospectives/{id}/action-items', [RetrospectivesController::class, 'createActionItem']);
+        $group->put('/retrospectives/{id}/action-items/{itemId}', [RetrospectivesController::class, 'updateActionItem']);
+        $group->delete('/retrospectives/{id}/action-items/{itemId}', [RetrospectivesController::class, 'deleteActionItem']);
     })->add(ProjectMemberMiddleware::class)->add(RequireAuthMiddleware::class);
 
     // ---- Realtime (SSE) — one stream per user, covers every project they're a member of; see

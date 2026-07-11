@@ -6,12 +6,13 @@ namespace Enkl\Api\Services;
 
 /**
  * Ported from Services/ProjectSettingsSerializer.cs. Defaults mirror normalizeHeaderButtonVisibility
- * (src/js/storage.js) exactly: every field is opt-out (defaults true) except workflow and
- * changeAuditing, which are opt-in (default false). Keys are camelCase to match both the frontend's
- * own field names and the "changeAuditing" key TaskService::isChangeAuditingEnabled reads from this
- * same column.
+ * (src/js/storage.js) exactly: every field is opt-out (defaults true) except workflow,
+ * changeAuditing and retrospective, which are opt-in (default false) — a missing/corrupted value
+ * must never silently start enforcing/recording/showing something the user never asked for. Keys
+ * are camelCase to match both the frontend's own field names and the "changeAuditing" key
+ * TaskService::isChangeAuditingEnabled reads from this same column.
  *
- * @phpstan-type ProjectSettings array{documents:bool,risks:bool,decisions:bool,health:bool,principles:bool,objectives:bool,teamsCommittees:bool,workflow:bool,timeTracking:bool,changeAuditing:bool,subTasks:bool}
+ * @phpstan-type ProjectSettings array{documents:bool,risks:bool,decisions:bool,health:bool,principles:bool,objectives:bool,teamsCommittees:bool,workflow:bool,timeTracking:bool,changeAuditing:bool,subTasks:bool,retrospective:bool}
  */
 final class ProjectSettingsSerializer
 {
@@ -27,6 +28,9 @@ final class ProjectSettingsSerializer
         'timeTracking' => true,
         'changeAuditing' => false,
         'subTasks' => true,
+        // Opt-in, like workflow: brand-new functionality nobody has configured yet, so a
+        // missing/corrupted value must never silently turn it on.
+        'retrospective' => false,
     ];
 
     public static function serialize(array $settings): string

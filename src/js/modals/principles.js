@@ -8,7 +8,7 @@ import { getPrincipleById } from '../utils.js';
 import { addPrinciple, updatePrinciple, deletePrinciple } from '../mutations.js';
 import { updateDocUrlOpenButtonVisibilityFor, openUrlInputInNewTab } from './documents.js';
 import { confirmDialog } from './confirm.js';
-import { principleApi } from '../api.js';
+import { principleApi, organisationPrincipleApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 
 export function openPrinciplesOverlay(){
@@ -16,6 +16,7 @@ export function openPrinciplesOverlay(){
   if(!project){ toast('No project selected.'); return; }
   ui.principlesSearchTerm = '';
   document.getElementById('principlesSearchInput').value = '';
+  ui.principlesActiveTab = 'mine';
   showPrinciplesListView();
   document.getElementById('principlesOverlay').classList.remove('hidden');
 }
@@ -33,10 +34,14 @@ export function showPrinciplesListView(){
   document.getElementById('principlesFormView').classList.add('hidden');
   document.getElementById('principlesListFooter').classList.remove('hidden');
   document.getElementById('principlesFormFooter').classList.add('hidden');
-  renderPrinciplesList();
+  renderPrinciplesTabStrip();
 }
 
-export function showPrinciplesFormView(principleId){
+/* principleId: edit an existing principle (null = new). prefillTitle: only used for a brand-new
+   principle (ignored if principleId is set) — lets the Organisation Library's "Create Principle from
+   this" suggestion button and the future promote-from-retrospective flow seed the Title field without
+   a bespoke second form. */
+export function showPrinciplesFormView(principleId, prefillTitle){
   var project = getCurrentProject();
   if(!project) return;
   ui.editingPrincipleId = principleId || null;
@@ -49,10 +54,18 @@ export function showPrinciplesFormView(principleId){
   document.getElementById('principlesFormFooter').classList.remove('hidden');
   document.getElementById('deletePrincipleBtn').classList.toggle('hidden', !principle);
 
-  document.getElementById('principleTitleInput').value = principle ? principle.title : '';
+  document.getElementById('principleTitleInput').value = principle ? principle.title : (prefillTitle || '');
   document.getElementById('principleDescriptionInput').value = principle ? principle.description : '';
   document.getElementById('principleDocUrlInput').value = principle && principle.documentUrl ? principle.documentUrl : '';
   updateDocUrlOpenButtonVisibilityFor('principleDocUrlInput', 'principleDocUrlOpenBtn');
+
+  /* "Share to organisation" only makes sense for a principle that already exists (the server route is
+     PUT .../principles/{id}/share) on a server-authoritative project — hidden entirely otherwise, same
+     "omit rather than disable" treatment as the Retrospective board's Promote button. */
+  var shareWrap = document.getElementById('principleShareFieldWrap');
+  var canShare = !!principle && isServerAuthoritative(project);
+  shareWrap.classList.toggle('hidden', !canShare);
+  document.getElementById('principleShareCheckbox').checked = !!(principle && principle.isOrganisationWide);
 
   var metaEl = document.getElementById('principleMetaDates');
   if(principle){
@@ -64,6 +77,168 @@ export function showPrinciplesFormView(principleId){
     metaEl.style.display = 'none';
   }
   document.getElementById('principleTitleInput').focus();
+}
+
+export async function updatePrincipleShareFromModal(isOrganisationWide){
+  var project = getCurrentProject();
+  if(!project || !ui.editingPrincipleId || !isServerAuthoritative(project)) return;
+  try {
+    await principleApi.share(project.serverProjectId, ui.editingPrincipleId, {isOrganisationWide: isOrganisationWide});
+    await refreshProjectFromServer(project.id);
+    toast(isOrganisationWide ? 'Shared to the Organisation Library.' : 'Removed from the Organisation Library.');
+  } catch(e){
+    toast('Could not update sharing on the server: ' + (e.message || 'unknown error'));
+    document.getElementById('principleShareCheckbox').checked = !isOrganisationWide;
+  }
+}
+
+/* =========================================================
+   ORGANISATION LIBRARY
+   A second tab in the same list view — principles any project in the
+   organisation has shared (organisationPrincipleApi.listWide) plus
+   auto-suggested recurring themes distilled from retrospectives across
+   the org (organisationPrincipleApi.suggestions). Both the tab itself
+   and everything in it only make sense once a project is server-
+   authoritative (an org concept doesn't exist for a local-only board),
+   so the tab button is omitted entirely otherwise — same treatment as
+   every other server-only affordance in this app.
+   ========================================================= */
+var _dismissedSuggestionPhrases = new Set();
+
+export function renderPrinciplesTabStrip(){
+  var project = getCurrentProject();
+  var canSeeLibrary = isServerAuthoritative(project);
+  var tabStrip = document.getElementById('principlesTabStrip');
+  tabStrip.classList.toggle('hidden', !canSeeLibrary);
+  if(!canSeeLibrary) ui.principlesActiveTab = 'mine';
+
+  document.getElementById('principlesTabMineBtn').classList.toggle('active', ui.principlesActiveTab === 'mine');
+  document.getElementById('principlesTabLibraryBtn').classList.toggle('active', ui.principlesActiveTab === 'library');
+  document.getElementById('principlesMinePanel').classList.toggle('hidden', ui.principlesActiveTab !== 'mine');
+  document.getElementById('principlesLibraryPanel').classList.toggle('hidden', ui.principlesActiveTab !== 'library');
+
+  if(ui.principlesActiveTab === 'library') renderPrinciplesLibraryList();
+  else renderPrinciplesList();
+}
+
+export function switchPrinciplesTab(tab){
+  ui.principlesActiveTab = (tab === 'library') ? 'library' : 'mine';
+  renderPrinciplesTabStrip();
+}
+
+export async function renderPrinciplesLibraryList(){
+  var project = getCurrentProject();
+  var suggestionsEl = document.getElementById('principlesSuggestionsList');
+  var libraryEl = document.getElementById('principlesLibraryList');
+  if(!project || !isServerAuthoritative(project)) return;
+
+  suggestionsEl.innerHTML = '<div class="kf-releases-empty">Loading suggestions…</div>';
+  libraryEl.innerHTML = '<div class="kf-releases-empty">Loading organisation library…</div>';
+
+  try {
+    var suggestions = await organisationPrincipleApi.suggestions();
+    renderPrincipleSuggestions(suggestions || []);
+  } catch(e){
+    suggestionsEl.innerHTML = '<div class="kf-releases-empty">Could not load suggestions.</div>';
+  }
+
+  try {
+    var wide = await organisationPrincipleApi.listWide();
+    renderOrganisationLibraryRows(wide || []);
+  } catch(e){
+    libraryEl.innerHTML = '<div class="kf-releases-empty">Could not load the organisation library.</div>';
+  }
+}
+
+function renderPrincipleSuggestions(suggestions){
+  var suggestionsEl = document.getElementById('principlesSuggestionsList');
+  var visible = suggestions.filter(function(s){ return !_dismissedSuggestionPhrases.has(s.phrase); });
+  suggestionsEl.innerHTML = '';
+  if(visible.length === 0){
+    suggestionsEl.innerHTML = '<div class="kf-releases-empty">No recurring themes suggested yet — these build up as more retrospectives are run across the organisation.</div>';
+    return;
+  }
+  visible.forEach(function(s){
+    var row = document.createElement('div');
+    row.className = 'kf-release-row';
+
+    var snippetsHTML = (s.sampleSnippets || []).slice(0, 3).map(function(sn){
+      return '<div class="kf-principle-suggestion-snippet">"' + escapeHTML(sn.text) + '" — ' + escapeHTML(sn.projectName) + '</div>';
+    }).join('');
+
+    row.innerHTML =
+      '<div class="kf-release-row-top">' +
+        '<span class="kf-release-name">' + escapeHTML(s.phrase) + '</span>' +
+      '</div>' +
+      '<div class="kf-release-row-meta">' +
+        '<span>' + s.occurrenceCount + ' mention(s)</span>' +
+        '<span>' + s.retrospectiveCount + ' retrospective(s)</span>' +
+      '</div>' +
+      (snippetsHTML ? '<div class="kf-principle-suggestion-snippets">' + snippetsHTML + '</div>' : '');
+
+    var actions = document.createElement('div');
+    actions.className = 'kf-principle-suggestion-actions';
+    var createBtn = document.createElement('button');
+    createBtn.type = 'button';
+    createBtn.className = 'kf-btn kf-btn-secondary';
+    createBtn.textContent = 'Create Principle from this';
+    createBtn.addEventListener('click', function(){ showPrinciplesFormView(null, s.phrase); });
+    var dismissBtn = document.createElement('button');
+    dismissBtn.type = 'button';
+    dismissBtn.className = 'kf-btn kf-btn-ghost';
+    dismissBtn.textContent = 'Dismiss';
+    dismissBtn.title = 'Dismiss (this session only)';
+    dismissBtn.addEventListener('click', function(){
+      _dismissedSuggestionPhrases.add(s.phrase);
+      renderPrincipleSuggestions(suggestions);
+    });
+    actions.appendChild(createBtn);
+    actions.appendChild(dismissBtn);
+    row.appendChild(actions);
+
+    suggestionsEl.appendChild(row);
+  });
+}
+
+function renderOrganisationLibraryRows(wide){
+  var project = getCurrentProject();
+  var libraryEl = document.getElementById('principlesLibraryList');
+  libraryEl.innerHTML = '';
+  if(wide.length === 0){
+    libraryEl.innerHTML = '<div class="kf-releases-empty">No principles have been shared to the organisation yet.</div>';
+    return;
+  }
+  wide.forEach(function(p){
+    var row = document.createElement('div');
+    row.className = 'kf-release-row';
+    row.innerHTML =
+      '<div class="kf-release-row-top">' +
+        '<span class="kf-dep-key">' + escapeHTML(p.key) + '</span>' +
+        '<span class="kf-release-name">' + escapeHTML(p.title) + '</span>' +
+      '</div>' +
+      '<div class="kf-release-row-meta"><span>From ' + escapeHTML(p.projectName) + '</span></div>';
+
+    var copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'kf-btn kf-btn-secondary';
+    copyBtn.textContent = 'Copy into this project';
+    copyBtn.addEventListener('click', function(){ copyOrganisationPrincipleIntoProject(p.id); });
+    row.appendChild(copyBtn);
+
+    libraryEl.appendChild(row);
+  });
+}
+
+async function copyOrganisationPrincipleIntoProject(principleId){
+  var project = getCurrentProject();
+  if(!project || !isServerAuthoritative(project)) return;
+  try {
+    await organisationPrincipleApi.copy(principleId, {targetProjectId: project.serverProjectId});
+    await refreshProjectFromServer(project.id);
+    toast('Copied into ' + project.name + '.');
+  } catch(e){
+    toast('Could not copy that principle: ' + (e.message || 'unknown error'));
+  }
 }
 
 export function renderPrinciplesList(){

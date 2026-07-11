@@ -7,8 +7,9 @@ namespace Enkl.Api.Services;
 /// Shared camelCase (de)serialization for Project.HeaderButtonVisibilityJson. Defaults mirror
 /// normalizeHeaderButtonVisibility (src/js/storage.js) exactly: every field is opt-out (defaults to
 /// true, so a missing/corrupted value never silently hides something the user never chose to hide)
-/// except Workflow and ChangeAuditing, which are opt-in (default false, so a missing/corrupted value
-/// never silently starts enforcing/recording something the user never asked for).
+/// except Workflow, ChangeAuditing and Retrospective, which are opt-in (default false, so a
+/// missing/corrupted value never silently starts enforcing/recording/showing something the user
+/// never asked for).
 /// </summary>
 public static class ProjectSettingsSerializer
 {
@@ -49,7 +50,10 @@ public static class ProjectSettingsSerializer
             Workflow: Get("workflow", false),
             TimeTracking: Get("timeTracking", true),
             ChangeAuditing: Get("changeAuditing", false),
-            SubTasks: Get("subTasks", true));
+            SubTasks: Get("subTasks", true),
+            // Opt-in, like Workflow: brand-new functionality nobody has configured yet, so a
+            // missing/corrupted value must never silently turn it on.
+            Retrospective: Get("retrospective", false));
 
         doc?.Dispose();
         return result;

@@ -33,4 +33,10 @@ final class PrinciplesController extends BaseController
     {
         return $this->service()->delete($args['projectId'], $args['id']) ? $this->noContent($response) : $this->notFound($response);
     }
+
+    public function share(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->service()->share($args['projectId'], $args['id'], $this->body($request));
+        return $result === null ? $this->notFound($response) : $this->json($response, $result);
+    }
 }

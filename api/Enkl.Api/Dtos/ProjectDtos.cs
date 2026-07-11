@@ -34,7 +34,7 @@ public record TaskDto(
 
 public record ReleaseDto(Guid Id, string Name, string Status, Guid? OwnerId, DateOnly? StartDate, DateOnly? EndDate);
 public record TaskTypeDto(Guid Id, string Name, string? IconName);
-public record PrincipleDto(Guid Id, string Key, string Title, string? Description, string? DocumentUrl);
+public record PrincipleDto(Guid Id, string Key, string Title, string? Description, string? DocumentUrl, bool IsOrganisationWide);
 public record DocumentDto(Guid Id, string Key, string Title, string? Url, string? Description, Guid? OwnerId, Guid? TaskId, List<Guid> RelatedDocumentIds);
 public record RiskDto(
     Guid Id, string Key, string Title, string? Description, int Likelihood, int Impact, string? Mitigations,
@@ -53,6 +53,7 @@ public record ProjectDetailDto(
     List<ReleaseDto> Releases, List<TaskTypeDto> TaskTypes, List<PrincipleDto> Principles,
     List<DocumentDto> Documents, List<RiskDto> Risks, List<ObjectiveDto> Objectives,
     List<TeamCommitteeDto> TeamsCommittees, List<DecisionDto> Decisions,
+    List<RetrospectiveDto> Retrospectives,
     ProjectSettingsDto HeaderButtonVisibility, JsonElement? Workflow);
 
 /// <summary>
@@ -65,7 +66,8 @@ public record ProjectDetailDto(
 /// </summary>
 public record ProjectSettingsDto(
     bool Documents, bool Risks, bool Decisions, bool Health, bool Principles, bool Objectives,
-    bool TeamsCommittees, bool Workflow, bool TimeTracking, bool ChangeAuditing, bool SubTasks);
+    bool TeamsCommittees, bool Workflow, bool TimeTracking, bool ChangeAuditing, bool SubTasks,
+    bool Retrospective);
 
 public record CreateColumnRequest(string Name, bool Done, string? Color);
 public record UpdateColumnRequest(string Name, bool Done, string? Color, int Order);

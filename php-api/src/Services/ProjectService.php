@@ -64,6 +64,7 @@ final class ProjectService
             'objectives' => $this->fetchObjectives($projectId),
             'teamsCommittees' => $this->fetchTeamsCommittees($projectId),
             'decisions' => $this->fetchDecisions($projectId),
+            'retrospectives' => $this->fetchRetrospectives($projectId),
             'headerButtonVisibility' => ProjectSettingsSerializer::parse($project['HeaderButtonVisibilityJson']),
             'workflow' => $project['WorkflowJson'] !== null ? json_decode($project['WorkflowJson']) : null,
         ];
@@ -389,7 +390,41 @@ final class ProjectService
         $stmt->execute(['pid' => $projectId]);
         return array_map(static fn(array $p): array => [
             'id' => $p['Id'], 'key' => $p['Key'], 'title' => $p['Title'], 'description' => $p['Description'], 'documentUrl' => $p['DocumentUrl'],
+            'isOrganisationWide' => (bool) $p['IsOrganisationWide'],
         ], $stmt->fetchAll());
+    }
+
+    private function fetchRetrospectives(string $projectId): array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM "Retrospectives" WHERE "ProjectId" = :pid');
+        $stmt->execute(['pid' => $projectId]);
+        $retros = $stmt->fetchAll();
+
+        $participantsStmt = $this->db->prepare('SELECT "ProjectMemberId" FROM "RetrospectiveParticipants" WHERE "RetrospectiveId" = :rid');
+        $itemsStmt = $this->db->prepare('SELECT * FROM "RetrospectiveItems" WHERE "RetrospectiveId" = :rid ORDER BY "SortOrder"');
+        $actionItemsStmt = $this->db->prepare('SELECT * FROM "RetrospectiveActionItems" WHERE "RetrospectiveId" = :rid ORDER BY "SortOrder"');
+
+        return array_map(function (array $r) use ($participantsStmt, $itemsStmt, $actionItemsStmt): array {
+            $participantsStmt->execute(['rid' => $r['Id']]);
+            $itemsStmt->execute(['rid' => $r['Id']]);
+            $actionItemsStmt->execute(['rid' => $r['Id']]);
+
+            return [
+                'id' => $r['Id'], 'key' => $r['Key'], 'releaseId' => $r['ReleaseId'], 'team' => $r['Team'],
+                'background' => $r['Background'], 'retroDate' => $r['RetroDate'],
+                'lastTimerDurationSeconds' => $r['LastTimerDurationSeconds'] !== null ? (int) $r['LastTimerDurationSeconds'] : null,
+                'participantIds' => $participantsStmt->fetchAll(PDO::FETCH_COLUMN),
+                'items' => array_map(static fn(array $i): array => [
+                    'id' => $i['Id'], 'column' => $i['Column'], 'text' => $i['Text'],
+                    'sortOrder' => (int) $i['SortOrder'], 'promotedPrincipleId' => $i['PromotedPrincipleId'],
+                ], $itemsStmt->fetchAll()),
+                'actionItems' => array_map(static fn(array $a): array => [
+                    'id' => $a['Id'], 'text' => $a['Text'], 'assigneeId' => $a['AssigneeId'],
+                    'completed' => (bool) $a['Completed'], 'sortOrder' => (int) $a['SortOrder'],
+                ], $actionItemsStmt->fetchAll()),
+                'dateCreated' => $r['DateCreated'], 'dateLastModified' => $r['DateLastModified'],
+            ];
+        }, $retros);
     }
 
     private function fetchDocuments(string $projectId): array

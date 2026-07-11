@@ -45,12 +45,13 @@ import { openSaveAsTemplateModal, closeSaveAsTemplateModal, saveAsTemplateFromMo
 import { openTodoOverlay, closeTodoOverlay, isTodoOverlayOpen, addTodoListFromModal } from './modals/todo.js';
 import { openTaskTypesModal, closeTaskTypesModal, addTaskTypeFromModal } from './modals/task-types.js';
 import { openReleasesOverlay, closeReleasesOverlay, isReleasesOverlayOpen, showReleasesFormView, showReleasesListView, saveReleaseFromModal, deleteReleaseFromModal } from './modals/releases.js';
+import { openRetrospectivesOverlay, closeRetrospectivesOverlay, isRetrospectivesOverlayOpen, showRetrospectivesFormView, showRetrospectivesListView, saveRetrospectiveFromModal, deleteRetrospectiveFromModal, toggleRetroHowItWorks, cancelRetroPromoteFromModal, saveRetroPromoteFromModal, addRetroActionItemFromInputs } from './modals/retrospectives.js';
 import { openDocumentsOverlay, closeDocumentsOverlay, isDocumentsOverlayOpen, showDocumentsFormView, showDocumentsListView, renderDocumentsList, saveDocumentFromModal, deleteDocumentFromModal, updateDocUrlOpenButtonVisibilityFor, openUrlInputInNewTab } from './modals/documents.js';
 import { scheduleDocumentSuggestions } from './features/document-suggestions.js';
 import { openRisksOverlay, closeRisksOverlay, isRisksOverlayOpen, showRisksFormView, showRisksListView, renderRisksList, saveRiskFromModal, deleteRiskFromModal, updateRiskScorePreview } from './modals/risks.js';
 import { openHealthOverlay, closeHealthOverlay, isHealthOverlayOpen, cancelHealthGaugeAnimation } from './modals/health.js';
 import { openDecisionsOverlay, closeDecisionsOverlay, isDecisionsOverlayOpen, showDecisionsFormView, showDecisionsListView, renderDecisionsList, saveDecisionFromModal, deleteDecisionFromModal } from './modals/decisions.js';
-import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen, showPrinciplesFormView, showPrinciplesListView, renderPrinciplesList, savePrincipleFromModal, deletePrincipleFromModal } from './modals/principles.js';
+import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen, showPrinciplesFormView, showPrinciplesListView, renderPrinciplesList, savePrincipleFromModal, deletePrincipleFromModal, switchPrinciplesTab, updatePrincipleShareFromModal } from './modals/principles.js';
 import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen, showObjectivesFormView, showObjectivesListView, renderObjectivesList, saveObjectiveFromModal, deleteObjectiveFromModal } from './modals/objectives.js';
 import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitteesOverlayOpen, showTeamCommitteeFormView, showTeamsCommitteesListView, renderTeamsCommitteesList, saveTeamCommitteeFromModal, deleteTeamCommitteeFromModal } from './modals/teams-committees.js';
 import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick } from './modals/project-search.js';
@@ -107,6 +108,7 @@ function wireEvents(){
   document.getElementById('navArchivedBtn').addEventListener('click', openArchivedTasksOverlay);
   document.getElementById('navTaskTypesBtn').addEventListener('click', openTaskTypesModal);
   document.getElementById('navReleasesBtn').addEventListener('click', openReleasesOverlay);
+  document.getElementById('navRetrospectiveBtn').addEventListener('click', openRetrospectivesOverlay);
 
   document.getElementById('projectSelect').addEventListener('change', function(e){
     state.db.currentProjectId = e.target.value;
@@ -186,6 +188,23 @@ function wireEvents(){
   document.getElementById('releaseFormCancelBtn').addEventListener('click', showReleasesListView);
   document.getElementById('releaseFormSaveBtn').addEventListener('click', saveReleaseFromModal);
   document.getElementById('deleteReleaseBtn').addEventListener('click', deleteReleaseFromModal);
+
+  document.getElementById('retrospectivesModalClose').addEventListener('click', closeRetrospectivesOverlay);
+  document.getElementById('retrospectivesDoneBtn').addEventListener('click', closeRetrospectivesOverlay);
+  document.getElementById('retrospectivesOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'retrospectivesOverlay') closeRetrospectivesOverlay();
+  });
+  document.getElementById('addRetrospectiveBtn').addEventListener('click', function(){ showRetrospectivesFormView(null); });
+  document.getElementById('retrospectiveFormCancelBtn').addEventListener('click', showRetrospectivesListView);
+  document.getElementById('retrospectiveFormSaveBtn').addEventListener('click', saveRetrospectiveFromModal);
+  document.getElementById('deleteRetrospectiveBtn').addEventListener('click', deleteRetrospectiveFromModal);
+  document.getElementById('retroHowItWorksToggleBtn').addEventListener('click', toggleRetroHowItWorks);
+  document.getElementById('retroAddActionItemBtn').addEventListener('click', addRetroActionItemFromInputs);
+  document.getElementById('retroNewActionItemText').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); addRetroActionItemFromInputs(); }
+  });
+  document.getElementById('retroPromoteCancelBtn').addEventListener('click', cancelRetroPromoteFromModal);
+  document.getElementById('retroPromoteSaveBtn').addEventListener('click', saveRetroPromoteFromModal);
 
   document.getElementById('documentsBtn').addEventListener('click', openDocumentsOverlay);
   document.getElementById('documentsModalClose').addEventListener('click', closeDocumentsOverlay);
@@ -303,6 +322,11 @@ function wireEvents(){
     updateDocUrlOpenButtonVisibilityFor('principleDocUrlInput', 'principleDocUrlOpenBtn');
   });
   document.getElementById('principleDocUrlOpenBtn').addEventListener('click', function(){ openUrlInputInNewTab('principleDocUrlInput'); });
+  document.getElementById('principlesTabMineBtn').addEventListener('click', function(){ switchPrinciplesTab('mine'); });
+  document.getElementById('principlesTabLibraryBtn').addEventListener('click', function(){ switchPrinciplesTab('library'); });
+  document.getElementById('principleShareCheckbox').addEventListener('change', function(e){
+    updatePrincipleShareFromModal(e.target.checked);
+  });
 
   document.getElementById('objectivesBtn').addEventListener('click', openObjectivesOverlay);
   document.getElementById('objectivesModalClose').addEventListener('click', closeObjectivesOverlay);
@@ -1094,6 +1118,9 @@ function wireEvents(){
   });
   document.getElementById('settingsShowSubTasksBtn').addEventListener('change', function(e){
     updateHeaderButtonVisibilitySetting('subTasks', e.target.checked);
+  });
+  document.getElementById('settingsShowRetrospectiveBtn').addEventListener('change', function(e){
+    updateHeaderButtonVisibilitySetting('retrospective', e.target.checked);
   });
 
   document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileDrawer);

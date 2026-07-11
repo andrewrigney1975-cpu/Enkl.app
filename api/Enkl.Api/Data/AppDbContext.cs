@@ -28,6 +28,10 @@ public class AppDbContext : DbContext
     public DbSet<Decision> Decisions => Set<Decision>();
     public DbSet<OrganisationSsoConfig> OrganisationSsoConfigs => Set<OrganisationSsoConfig>();
     public DbSet<OrgTeam> OrgTeams => Set<OrgTeam>();
+    public DbSet<Retrospective> Retrospectives => Set<Retrospective>();
+    public DbSet<RetrospectiveParticipant> RetrospectiveParticipants => Set<RetrospectiveParticipant>();
+    public DbSet<RetrospectiveItem> RetrospectiveItems => Set<RetrospectiveItem>();
+    public DbSet<RetrospectiveActionItem> RetrospectiveActionItems => Set<RetrospectiveActionItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

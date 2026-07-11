@@ -26,6 +26,7 @@ builder.Services.AddScoped<OrganisationService>();
 builder.Services.AddScoped<ReleaseService>();
 builder.Services.AddScoped<TaskTypeService>();
 builder.Services.AddScoped<PrincipleService>();
+builder.Services.AddScoped<RetrospectiveService>();
 builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<RiskService>();
 builder.Services.AddScoped<ObjectiveService>();

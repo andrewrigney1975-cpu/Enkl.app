@@ -43,7 +43,7 @@ export var HEADER_MOVABLE_NAV_ITEMS = [
 ];
 export function applyHeaderButtonVisibility(){
   var project = getCurrentProject();
-  var visibility = project ? normalizeHeaderButtonVisibility(project.headerButtonVisibility) : {documents:true, risks:true, decisions:true, health:true, principles:true, objectives:true, teamsCommittees:true, workflow:false};
+  var visibility = project ? normalizeHeaderButtonVisibility(project.headerButtonVisibility) : {documents:true, risks:true, decisions:true, health:true, principles:true, objectives:true, teamsCommittees:true, workflow:false, retrospective:false};
   document.getElementById('healthBtn').classList.toggle('hidden', !visibility.health);
 
   var enabledItems = HEADER_MOVABLE_NAV_ITEMS.filter(function(item){ return visibility[item.key]; });
@@ -73,6 +73,9 @@ export function applyHeaderButtonVisibility(){
   document.getElementById('navOrgChartBtn').classList.toggle('kf-vis-hidden', !visibility.teamsCommittees);
   document.getElementById('workflowBtn').classList.toggle('kf-vis-hidden', !visibility.workflow);
   document.getElementById('navWorkflowBtn').classList.toggle('kf-vis-hidden', !visibility.workflow);
+  /* Retrospectives has no in-header quick button (nav-only, unlike Workflow/Org Chart above), so this
+     is the only visibility toggle it needs. */
+  document.getElementById('navRetrospectiveBtn').classList.toggle('kf-vis-hidden', !visibility.retrospective);
 
   var govMapEnabled = isGovernanceMapEnabled(visibility);
   document.getElementById('governanceMapBtn').classList.toggle('kf-vis-hidden', !govMapEnabled);
@@ -96,6 +99,7 @@ export function openAppSettingsOverlay(){
   document.getElementById('settingsShowTimeTrackingBtn').checked = visibility.timeTracking;
   document.getElementById('settingsShowChangeAuditingBtn').checked = visibility.changeAuditing;
   document.getElementById('settingsShowSubTasksBtn').checked = visibility.subTasks;
+  document.getElementById('settingsShowRetrospectiveBtn').checked = visibility.retrospective;
   document.getElementById('appSettingsOverlay').classList.remove('hidden');
 }
 export function closeAppSettingsOverlay(){

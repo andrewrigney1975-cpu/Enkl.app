@@ -33,4 +33,5 @@ public class Project
     public List<Objective> Objectives { get; set; } = new();
     public List<TeamCommittee> TeamsCommittees { get; set; } = new();
     public List<Decision> Decisions { get; set; } = new();
+    public List<Retrospective> Retrospectives { get; set; } = new();
 }

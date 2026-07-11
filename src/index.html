@@ -150,6 +150,7 @@
         <button type="button" class="kf-side-nav-item" id="navTaskTypesBtn" title="Task Types"><span class="kf-icon" data-icon="tag" data-size="18"></span><span class="kf-side-nav-text">Task Types</span></button>
         <button type="button" class="kf-side-nav-item" id="navReleasesBtn" title="Releases"><span class="kf-icon" data-icon="rocket" data-size="18"></span><span class="kf-side-nav-text">Releases</span></button>
         <button type="button" class="kf-side-nav-item" id="navWorkflowBtn" title="Workflow"><span class="kf-icon" data-icon="workflow" data-size="18"></span><span class="kf-side-nav-text">Workflow</span></button>
+        <button type="button" class="kf-side-nav-item" id="navRetrospectiveBtn" title="Retrospectives"><span class="kf-icon" data-icon="retrospective" data-size="18"></span><span class="kf-side-nav-text">Retrospectives</span></button>
       </div>
     </nav>
 
@@ -1135,6 +1136,120 @@
   </div>
 </div>
 
+<!-- Retrospectives Modal -->
+<div class="kf-overlay hidden" id="retrospectivesOverlay">
+  <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="retrospectivesModalTitle">Retrospectives</h2>
+      <button class="kf-btn kf-btn-ghost" id="retrospectivesModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div id="retrospectivesListView">
+        <button class="kf-btn kf-btn-secondary" id="addRetrospectiveBtn" style="width:100%;justify-content:center;margin-bottom:14px;">
+          <span class="kf-icon" data-icon="plus" data-size="14"></span>New Retrospective
+        </button>
+        <div id="retrospectivesList" class="kf-releases-list"></div>
+      </div>
+
+      <div id="retrospectivesFormView" class="hidden">
+        <div class="kf-field-row">
+          <div class="kf-field">
+            <label for="retroTeamInput">Team</label>
+            <input type="text" id="retroTeamInput" maxlength="120" placeholder="e.g. Platform Team">
+          </div>
+          <div class="kf-field">
+            <label for="retroDateInput">Retro date</label>
+            <input type="date" id="retroDateInput">
+          </div>
+        </div>
+        <div class="kf-field" id="retroReleaseFieldWrap">
+          <label for="retroReleaseSelect">Release</label>
+          <select id="retroReleaseSelect"></select>
+        </div>
+        <div class="kf-field">
+          <label for="retroBackgroundInput">Background</label>
+          <textarea id="retroBackgroundInput" maxlength="2000" placeholder="Why are you getting together? A recent release, a team change, etc..." style="min-height:60px;"></textarea>
+        </div>
+        <div class="kf-field">
+          <label>Participants</label>
+          <div id="retroParticipantsPicker" class="kf-risk-doc-picker"></div>
+        </div>
+
+        <div class="kf-retro-howto">
+          <button type="button" class="kf-retro-howto-toggle" id="retroHowItWorksToggleBtn" aria-expanded="false">
+            <span class="kf-icon" data-icon="help" data-size="14"></span>
+            <span>How this works</span>
+            <span class="kf-icon" data-icon="chevronDown" data-size="14"></span>
+          </button>
+          <div id="retroHowItWorksPanel" class="kf-retro-howto-panel hidden"></div>
+        </div>
+
+        <div class="kf-field">
+          <label>Timer</label>
+          <div class="kf-retro-timer">
+            <div class="kf-retro-timer-display" id="retroTimerDisplay">05:00</div>
+            <div class="kf-retro-timer-controls">
+              <div class="kf-retro-timer-presets" id="retroTimerPresetWrap"></div>
+              <div class="kf-retro-timer-custom">
+                <input type="number" id="retroTimerCustomInput" min="1" max="180" step="1" placeholder="Custom mins">
+                <button type="button" class="kf-btn kf-btn-ghost" id="retroTimerSetCustomBtn">Set</button>
+              </div>
+              <div class="kf-retro-timer-actions">
+                <button type="button" class="kf-btn kf-btn-primary" id="retroTimerStartBtn">Start</button>
+                <button type="button" class="kf-btn kf-btn-secondary" id="retroTimerResetBtn">Reset</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="kf-field">
+          <label>Board</label>
+          <div class="kf-retro-note hidden" id="retroBoardUnsavedNote">Save this retrospective first, then reopen it to add board items.</div>
+          <div class="kf-retro-note hidden" id="retroLocalOnlyNote">Sign in with a server-connected project to promote items to Principles.</div>
+          <div class="kf-retro-board" id="retroBoardColumns"></div>
+        </div>
+
+        <div class="kf-field">
+          <label>Action items</label>
+          <div class="kf-retro-note hidden" id="retroActionItemsUnsavedNote">Save this retrospective first, then reopen it to add action items.</div>
+          <div id="retroActionItemsList" class="kf-retro-action-list"></div>
+          <div class="kf-retro-action-row kf-retro-action-add-row" id="retroActionItemsAddRow">
+            <input type="text" id="retroNewActionItemText" maxlength="500" placeholder="New action item...">
+            <select id="retroNewActionItemAssignee"></select>
+            <button type="button" class="kf-btn kf-btn-secondary" id="retroAddActionItemBtn"><span class="kf-icon" data-icon="plus" data-size="14"></span></button>
+          </div>
+        </div>
+
+        <div class="kf-field" id="retroMetaDates" style="color:var(--kf-text-faint);font-size:12px;"></div>
+      </div>
+
+      <div id="retrospectivesPromoteView" class="hidden">
+        <p style="margin:0 0 12px;color:var(--kf-text-faint);font-size:13px;">Distill this board item into a guiding Principle for the project.</p>
+        <div class="kf-field">
+          <label for="retroPromoteTitleInput">Title</label>
+          <input type="text" id="retroPromoteTitleInput" maxlength="120">
+        </div>
+        <div class="kf-field">
+          <label for="retroPromoteDescriptionInput">Description</label>
+          <textarea id="retroPromoteDescriptionInput" maxlength="2000"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="kf-modal-footer" id="retrospectivesListFooter">
+      <button class="kf-btn kf-btn-secondary" id="retrospectivesDoneBtn">Done</button>
+    </div>
+    <div class="kf-modal-footer hidden" id="retrospectivesFormFooter">
+      <button class="kf-btn kf-btn-danger kf-footer-left" id="deleteRetrospectiveBtn">Delete</button>
+      <button class="kf-btn kf-btn-secondary" id="retrospectiveFormCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="retrospectiveFormSaveBtn">Save Retrospective</button>
+    </div>
+    <div class="kf-modal-footer hidden" id="retrospectivesPromoteFooter">
+      <button class="kf-btn kf-btn-secondary" id="retroPromoteCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="retroPromoteSaveBtn">Create Principle</button>
+    </div>
+  </div>
+</div>
+
 <!-- Documents Modal -->
 <div class="kf-overlay hidden" id="documentsOverlay">
   <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">
@@ -1527,6 +1642,11 @@
           <span class="kf-icon" data-icon="orgChart" data-size="14"></span>
           <span>Sub-Tasks</span>
         </label>
+        <label class="kf-risk-doc-picker-row">
+          <input type="checkbox" id="settingsShowRetrospectiveBtn">
+          <span class="kf-icon" data-icon="retrospective" data-size="14"></span>
+          <span>Retrospectives</span>
+        </label>
       </div>
     </div>
     <div class="kf-modal-footer">
@@ -1624,14 +1744,26 @@
     </div>
     <div class="kf-modal-body">
       <div id="principlesListView">
-        <button class="kf-btn kf-btn-secondary" id="addPrincipleBtn" style="width:100%;justify-content:center;margin-bottom:14px;">
-          <span class="kf-icon" data-icon="plus" data-size="14"></span>New Principle
-        </button>
-        <div class="kf-search" style="margin-bottom:10px;">
-          <span class="kf-icon" data-icon="search" data-size="14"></span>
-          <input type="text" id="principlesSearchInput" placeholder="Search principles...">
+        <div class="kf-tab-strip hidden" id="principlesTabStrip">
+          <button type="button" class="kf-tab-strip-btn active" id="principlesTabMineBtn">My Principles</button>
+          <button type="button" class="kf-tab-strip-btn" id="principlesTabLibraryBtn">Organisation Library</button>
         </div>
-        <div id="principlesList" class="kf-releases-list"></div>
+        <div id="principlesMinePanel">
+          <button class="kf-btn kf-btn-secondary" id="addPrincipleBtn" style="width:100%;justify-content:center;margin-bottom:14px;">
+            <span class="kf-icon" data-icon="plus" data-size="14"></span>New Principle
+          </button>
+          <div class="kf-search" style="margin-bottom:10px;">
+            <span class="kf-icon" data-icon="search" data-size="14"></span>
+            <input type="text" id="principlesSearchInput" placeholder="Search principles...">
+          </div>
+          <div id="principlesList" class="kf-releases-list"></div>
+        </div>
+        <div id="principlesLibraryPanel" class="hidden">
+          <div class="kf-health-section-title" style="margin-bottom:8px;">Suggested Principles</div>
+          <div id="principlesSuggestionsList" class="kf-releases-list" style="margin-bottom:16px;"></div>
+          <div class="kf-health-section-title" style="margin-bottom:8px;">Shared across your organisation</div>
+          <div id="principlesLibraryList" class="kf-releases-list"></div>
+        </div>
       </div>
       <div id="principlesFormView" class="hidden">
         <div class="kf-field">
@@ -1650,6 +1782,13 @@
               <span class="kf-icon" data-icon="externalLink" data-size="16"></span>
             </button>
           </div>
+        </div>
+        <div class="kf-field hidden" id="principleShareFieldWrap">
+          <label class="kf-risk-doc-picker-row">
+            <input type="checkbox" id="principleShareCheckbox">
+            <span class="kf-icon" data-icon="cloud" data-size="14"></span>
+            <span>Share to organisation (visible in every project's Organisation Library)</span>
+          </label>
         </div>
         <div class="kf-field" id="principleMetaDates" style="color:var(--kf-text-faint);font-size:12px;"></div>
       </div>

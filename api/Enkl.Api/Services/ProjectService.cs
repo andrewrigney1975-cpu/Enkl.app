@@ -53,6 +53,9 @@ public class ProjectService
             .Include(p => p.Decisions).ThenInclude(d => d.Risks)
             .Include(p => p.Decisions).ThenInclude(d => d.Principles)
             .Include(p => p.Decisions).ThenInclude(d => d.Objectives)
+            .Include(p => p.Retrospectives).ThenInclude(r => r.Participants)
+            .Include(p => p.Retrospectives).ThenInclude(r => r.Items)
+            .Include(p => p.Retrospectives).ThenInclude(r => r.ActionItems)
             .FirstOrDefaultAsync(p => p.Id == projectId);
 
         if (project is null) return null;
@@ -64,7 +67,7 @@ public class ProjectService
             project.Tasks.Select(ToTaskDto).ToList(),
             project.Releases.Select(r => new ReleaseDto(r.Id, r.Name, r.Status, r.OwnerId, r.StartDate, r.EndDate)).ToList(),
             project.TaskTypes.Select(t => new TaskTypeDto(t.Id, t.Name, t.IconName)).ToList(),
-            project.Principles.Select(p => new PrincipleDto(p.Id, p.Key, p.Title, p.Description, p.DocumentUrl)).ToList(),
+            project.Principles.Select(p => new PrincipleDto(p.Id, p.Key, p.Title, p.Description, p.DocumentUrl, p.IsOrganisationWide)).ToList(),
             project.Documents.Select(d => new DocumentDto(d.Id, d.Key, d.Title, d.Url, d.Description, d.OwnerId, d.TaskId, d.RelatedDocuments.Select(rd => rd.RelatedDocumentId).ToList())).ToList(),
             project.Risks.Select(r => new RiskDto(
                 r.Id, r.Key, r.Title, r.Description, r.Likelihood, r.Impact, r.Mitigations, r.OwnerId, r.TaskId, r.Status, r.DateToClose, r.DateClosed,
@@ -74,6 +77,7 @@ public class ProjectService
             project.Decisions.Select(d => new DecisionDto(
                 d.Id, d.Key, d.Title, d.Description, d.Type, d.Status, d.Outcome, d.OwnerId, d.Approver, d.TaskId,
                 d.Documents.Select(x => x.DocumentId).ToList(), d.Risks.Select(x => x.RiskId).ToList(), d.Principles.Select(x => x.PrincipleId).ToList(), d.Objectives.Select(x => x.ObjectiveId).ToList())).ToList(),
+            project.Retrospectives.Select(ToRetrospectiveDto).ToList(),
             ProjectSettingsSerializer.Parse(project.HeaderButtonVisibilityJson),
             ParseWorkflow(project.WorkflowJson));
     }
@@ -317,4 +321,11 @@ public class ProjectService
         t.BusinessValue, t.TaskCost, t.Progress, t.EstimatedEffort, t.ActualEffort, t.Archived,
         t.Dependencies.Select(d => d.DependsOnTaskId).ToList(),
         t.AuditLog.Select(a => new TaskAuditLogEntryDto(a.Id, a.Timestamp, a.Field, a.OldValue, a.NewValue, a.ChangedBy)).ToList());
+
+    public static RetrospectiveDto ToRetrospectiveDto(Retrospective r) => new(
+        r.Id, r.Key, r.ReleaseId, r.Team, r.Background, r.RetroDate, r.LastTimerDurationSeconds,
+        r.Participants.Select(p => p.ProjectMemberId).ToList(),
+        r.Items.OrderBy(i => i.SortOrder).Select(i => new RetrospectiveItemDto(i.Id, i.Column, i.Text, i.SortOrder, i.PromotedPrincipleId)).ToList(),
+        r.ActionItems.OrderBy(a => a.SortOrder).Select(a => new RetrospectiveActionItemDto(a.Id, a.Text, a.AssigneeId, a.Completed, a.SortOrder)).ToList(),
+        r.DateCreated, r.DateLastModified);
 }

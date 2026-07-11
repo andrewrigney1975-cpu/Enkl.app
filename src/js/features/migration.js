@@ -441,7 +441,7 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
     return {id: t.id, name: t.name, iconName: t.iconName || null};
   });
   var principles = (detail.principles || []).map(function(p){
-    return {id: p.id, key: p.key, title: p.title, description: p.description || '', documentUrl: p.documentUrl || null, dateCreated: now, dateLastModified: now};
+    return {id: p.id, key: p.key, title: p.title, description: p.description || '', documentUrl: p.documentUrl || null, isOrganisationWide: !!p.isOrganisationWide, dateCreated: now, dateLastModified: now};
   });
   var documents = (detail.documents || []).map(function(d){
     return {id: d.id, key: d.key, title: d.title, url: d.url || null, description: d.description || '', ownerId: d.ownerId || null, taskId: d.taskId || null, relatedDocumentIds: d.relatedDocumentIds || [], dateCreated: now, dateLastModified: now};
@@ -457,6 +457,22 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
   });
   var decisions = (detail.decisions || []).map(function(dec){
     return {id: dec.id, key: dec.key, title: dec.title, description: dec.description || '', type: dec.type, status: dec.status, outcome: dec.outcome || '', ownerId: dec.ownerId || null, approver: dec.approver || null, taskId: dec.taskId || null, documentIds: dec.documentIds || [], riskIds: dec.riskIds || [], principleIds: dec.principleIds || [], objectiveIds: dec.objectiveIds || [], dateCreated: now, dateLastModified: now};
+  });
+  var retrospectives = (detail.retrospectives || []).map(function(rt){
+    return {
+      id: rt.id, key: rt.key, releaseId: rt.releaseId || null,
+      team: rt.team || null, background: rt.background || null,
+      retroDate: serverDateOnlyToIso(rt.retroDate),
+      lastTimerDurationSeconds: (typeof rt.lastTimerDurationSeconds === 'number') ? rt.lastTimerDurationSeconds : null,
+      participantIds: rt.participantIds || [],
+      items: (rt.items || []).map(function(it){
+        return {id: it.id, column: it.column, text: it.text, sortOrder: it.sortOrder, promotedPrincipleId: it.promotedPrincipleId || null};
+      }),
+      actionItems: (rt.actionItems || []).map(function(ai){
+        return {id: ai.id, text: ai.text, assigneeId: ai.assigneeId || null, completed: !!ai.completed, sortOrder: ai.sortOrder};
+      }),
+      dateCreated: rt.dateCreated || now, dateLastModified: rt.dateLastModified || now
+    };
   });
 
   return {
@@ -482,6 +498,11 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
     objCounter: preserved.objCounter || 1,
     teamsCommittees: teamsCommittees,
     tcCounter: preserved.tcCounter || 1,
+    retrospectives: retrospectives,
+    /* Not modeled server-side — the server generates each Retrospective's key itself
+       (RetrospectiveService.NextKeyAsync), so retroCounter only matters again if this project ever
+       reverts to local-only, same reasoning as every other *Counter field here. */
+    retroCounter: preserved.retroCounter || 1,
     approvers: preserved.approvers || [],
     roles: preserved.roles || [],
     /* Server-authoritative once a project is migrated (see isServerAuthoritative below) — the

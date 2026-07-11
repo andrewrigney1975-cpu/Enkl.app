@@ -270,6 +270,21 @@ export function getObjectiveById(project, objectiveId){
   return (project.objectives || []).filter(function(o){ return o.id === objectiveId; })[0] || null;
 }
 
+export function getRetrospectiveById(project, retrospectiveId){
+  if(!project || !retrospectiveId) return null;
+  return (project.retrospectives || []).filter(function(r){ return r.id === retrospectiveId; })[0] || null;
+}
+
+export function getRetrospectiveItemById(retrospective, itemId){
+  if(!retrospective || !itemId) return null;
+  return (retrospective.items || []).filter(function(it){ return it.id === itemId; })[0] || null;
+}
+
+export function getRetrospectiveActionItemById(retrospective, itemId){
+  if(!retrospective || !itemId) return null;
+  return (retrospective.actionItems || []).filter(function(ai){ return ai.id === itemId; })[0] || null;
+}
+
 export function assigneeDisplayName(project, assigneeId){
   var m = getMemberById(project, assigneeId);
   return m ? m.name : 'Unassigned';

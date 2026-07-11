@@ -302,6 +302,8 @@ export function buildProjectFromExportDoc(doc){
     objCounter: 1,
     teamsCommittees: [],
     tcCounter: 1,
+    retrospectives: [],
+    retroCounter: 1,
     approvers: [],
     roles: Array.isArray(doc.roles) ? doc.roles.filter(function(r){ return typeof r === 'string' && r.trim(); }).map(function(r){ return r.trim().slice(0,60); }) : [],
     headerButtonVisibility: normalizeHeaderButtonVisibility(doc.headerButtonVisibility),
@@ -619,6 +621,10 @@ export function buildProjectFromExportDoc(doc){
         title: title,
         description: (typeof prin.description === 'string') ? prin.description.trim().slice(0,2000) : '',
         documentUrl: normalizeDocumentationUrl(prin.documentUrl),
+        /* Re-imported as false regardless of the source value — sharing is re-established explicitly
+           per-project once server-authoritative again, same reasoning as every other server-only flag
+           reset on import (see e.g. workflow's own comment above). */
+        isOrganisationWide: false,
         dateCreated: typeof prin.dateCreated === 'string' ? prin.dateCreated : importedAt,
         dateLastModified: typeof prin.dateLastModified === 'string' ? prin.dateLastModified : importedAt
       };
@@ -718,6 +724,91 @@ export function buildProjectFromExportDoc(doc){
       };
       project.risks.push(newRisk);
       if(typeof r.id === 'string') riskOldIdToNewId[r.id] = newRisk.id;
+    });
+  }
+
+  var unresolvedRetroReleases = 0, unresolvedRetroParticipants = 0, unresolvedRetroAssignees = 0, unresolvedRetroPromotions = 0;
+  if(Array.isArray(doc.retrospectives)){
+    doc.retrospectives.forEach(function(r){
+      if(!r || typeof r !== 'object') return;
+      var releaseId = null;
+      if(typeof r.releaseId === 'string' && releaseOldIdToNewId.hasOwnProperty(r.releaseId)){
+        releaseId = releaseOldIdToNewId[r.releaseId];
+      } else if(typeof r.releaseName === 'string' && releaseNameToNewId.hasOwnProperty(r.releaseName)){
+        releaseId = releaseNameToNewId[r.releaseName];
+      } else if(r.releaseId || r.releaseName){
+        unresolvedRetroReleases++;
+      }
+
+      var participantIds = [];
+      if(Array.isArray(r.participantIds)){
+        r.participantIds.forEach(function(pid){
+          if(typeof pid === 'string' && memberOldIdToNewId.hasOwnProperty(pid)) participantIds.push(memberOldIdToNewId[pid]);
+        });
+      }
+      if(Array.isArray(r.participantNames)){
+        r.participantNames.forEach(function(name){
+          if(typeof name !== 'string') return;
+          if(memberNameToNewId.hasOwnProperty(name)){
+            var resolvedId = memberNameToNewId[name];
+            if(participantIds.indexOf(resolvedId) === -1) participantIds.push(resolvedId);
+          } else {
+            unresolvedRetroParticipants++;
+          }
+        });
+      }
+
+      var items = Array.isArray(r.items) ? r.items.map(function(it, idx){
+        if(!it || typeof it !== 'object') return null;
+        var promotedPrincipleId = null;
+        if(typeof it.promotedPrincipleId === 'string' && prinOldIdToNewId.hasOwnProperty(it.promotedPrincipleId)){
+          promotedPrincipleId = prinOldIdToNewId[it.promotedPrincipleId];
+        } else if(it.promotedPrincipleId || it.promotedPrincipleKey){
+          unresolvedRetroPromotions++;
+        }
+        return {
+          id: uid('retroitem'),
+          column: (it.column === 'stop' || it.column === 'keep') ? it.column : 'start',
+          text: (typeof it.text === 'string') ? it.text.trim().slice(0, 1000) : '',
+          sortOrder: (typeof it.sortOrder === 'number' && isFinite(it.sortOrder)) ? it.sortOrder : idx,
+          promotedPrincipleId: promotedPrincipleId
+        };
+      }).filter(Boolean) : [];
+
+      var actionItems = Array.isArray(r.actionItems) ? r.actionItems.map(function(ai, idx){
+        if(!ai || typeof ai !== 'object') return null;
+        var assigneeId = null;
+        if(typeof ai.assigneeId === 'string' && memberOldIdToNewId.hasOwnProperty(ai.assigneeId)){
+          assigneeId = memberOldIdToNewId[ai.assigneeId];
+        } else if(typeof ai.assigneeName === 'string' && memberNameToNewId.hasOwnProperty(ai.assigneeName)){
+          assigneeId = memberNameToNewId[ai.assigneeName];
+        } else if(ai.assigneeId || ai.assigneeName){
+          unresolvedRetroAssignees++;
+        }
+        return {
+          id: uid('retroaction'),
+          text: (typeof ai.text === 'string') ? ai.text.trim().slice(0, 500) : '',
+          assigneeId: assigneeId,
+          completed: ai.completed === true,
+          sortOrder: (typeof ai.sortOrder === 'number' && isFinite(ai.sortOrder)) ? ai.sortOrder : idx
+        };
+      }).filter(Boolean) : [];
+
+      var retroN = project.retroCounter++;
+      project.retrospectives.push({
+        id: uid('retro'),
+        key: project.key + '-RETRO-' + String(retroN).padStart(3, '0'),
+        releaseId: releaseId,
+        team: (typeof r.team === 'string' && r.team.trim()) ? r.team.trim().slice(0, 120) : null,
+        background: (typeof r.background === 'string' && r.background.trim()) ? r.background.trim().slice(0, 2000) : null,
+        retroDate: isValidISODateString(r.retroDate) ? r.retroDate : null,
+        lastTimerDurationSeconds: (typeof r.lastTimerDurationSeconds === 'number' && isFinite(r.lastTimerDurationSeconds) && r.lastTimerDurationSeconds >= 0) ? r.lastTimerDurationSeconds : null,
+        participantIds: participantIds,
+        items: items,
+        actionItems: actionItems,
+        dateCreated: typeof r.dateCreated === 'string' ? r.dateCreated : importedAt,
+        dateLastModified: typeof r.dateLastModified === 'string' ? r.dateLastModified : importedAt
+      });
     });
   }
 
@@ -825,6 +916,10 @@ export function buildProjectFromExportDoc(doc){
     unresolvedDecisionRisks: unresolvedDecisionRisks,
     unresolvedDecisionPrinciples: unresolvedDecisionPrinciples,
     unresolvedDecisionObjectives: unresolvedDecisionObjectives,
+    unresolvedRetroReleases: unresolvedRetroReleases,
+    unresolvedRetroParticipants: unresolvedRetroParticipants,
+    unresolvedRetroAssignees: unresolvedRetroAssignees,
+    unresolvedRetroPromotions: unresolvedRetroPromotions,
     cyclesRemoved: cyclesRemoved,
     unresolvedParents: unresolvedParents,
     parentCyclesRemoved: parentCyclesRemoved
@@ -899,6 +994,11 @@ export function overwriteProjectFromResult(existingId, result){
     var prefix = tc.type === 'committee' ? 'COMM' : 'TEAM';
     tc.key = fresh.key + '-' + prefix + '-' + suffix;
   });
+  (fresh.retrospectives || []).forEach(function(r, idx){
+    var match = /-(\d+)$/.exec(r.key || '');
+    var suffix = match ? match[1] : String(idx + 1).padStart(3, '0');
+    r.key = fresh.key + '-RETRO-' + suffix;
+  });
   state.db.projects[existingId] = fresh;
   state.db.currentProjectId = existingId;
   saveDB();
@@ -968,7 +1068,8 @@ export function finaliseImport(result, wasOverwrite){
     (result.unresolvedRiskPrinciples || 0) + (result.unresolvedRiskObjectives || 0) + (result.unresolvedObjectivePrinciples || 0) +
     (result.unresolvedDecisionPrinciples || 0) + (result.unresolvedDecisionObjectives || 0) +
     (result.unresolvedTcParents || 0) + (result.unresolvedTcMembers || 0) + (result.unresolvedMemberReportsTo || 0) +
-    (result.unresolvedWorkflowNodes || 0) + (result.unresolvedWorkflowEdges || 0);
+    (result.unresolvedWorkflowNodes || 0) + (result.unresolvedWorkflowEdges || 0) +
+    (result.unresolvedRetroReleases || 0) + (result.unresolvedRetroParticipants || 0) + (result.unresolvedRetroAssignees || 0) + (result.unresolvedRetroPromotions || 0);
   if(unresolvedDocLinks > 0) msg += ' Skipped ' + unresolvedDocLinks + ' document/risk/decision/principle/objective/team/workflow reference(s) that could not be matched.';
   _toast(msg);
 }

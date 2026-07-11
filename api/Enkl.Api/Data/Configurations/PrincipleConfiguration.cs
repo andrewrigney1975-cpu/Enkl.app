@@ -18,5 +18,8 @@ public class PrincipleConfiguration : IEntityTypeConfiguration<Principle>
             .OnDelete(DeleteBehavior.Cascade);
 
         b.HasIndex(p => new { p.ProjectId, p.Key }).IsUnique();
+        // Backs the "Organisation Library" and suggestions queries (WHERE OrganisationId = x AND
+        // IsOrganisationWide = true).
+        b.HasIndex(p => new { p.OrganisationId, p.IsOrganisationWide });
     }
 }

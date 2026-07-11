@@ -36,4 +36,11 @@ public class PrinciplesController : ControllerBase
     {
         return await _principles.DeleteAsync(projectId, principleId) ? NoContent() : NotFound();
     }
+
+    [HttpPut("{principleId:guid}/share")]
+    public async Task<IActionResult> Share(Guid projectId, Guid principleId, SharePrincipleRequest request)
+    {
+        var result = await _principles.ShareAsync(projectId, principleId, request);
+        return result is null ? NotFound() : Ok(result);
+    }
 }

@@ -315,3 +315,64 @@ export var objectiveApi = makeEntityApi('objectives');
 export var teamCommitteeApi = makeEntityApi('teams-committees');
 export var decisionApi = makeEntityApi('decisions');
 export var memberApi = makeEntityApi('members');
+
+/* Project-scoped (not organisation-scoped, despite living next to the "Organisation Library" feature)
+   — PUT /api/projects/{projectId}/principles/{id}/share, see PrinciplesController.Share. Bolted onto
+   principleApi (rather than organisationPrincipleApi below) since every other method here already
+   takes the same (projectId, principleId, body) shape makeEntityApi's own update() does. */
+principleApi.share = function(projectId, principleId, body){
+  return apiFetch('/projects/' + projectId + '/principles/' + principleId + '/share', {method: 'PUT', body: JSON.stringify(body)});
+};
+
+/* Retrospectives need more than makeEntityApi's create/update/remove trio (nested items, nested
+   action items, and the item-promotion endpoint), so it's hand-written here rather than generated —
+   same underlying apiFetch helper makeEntityApi itself is built on, just with the extra nested routes
+   spelled out. See api/Enkl.Api/Controllers/RetrospectivesController.cs for the definitive route list. */
+export var retrospectiveApi = {
+  create: function(projectId, body){
+    return apiFetch('/projects/' + projectId + '/retrospectives', {method: 'POST', body: JSON.stringify(body)});
+  },
+  update: function(projectId, id, body){
+    return apiFetch('/projects/' + projectId + '/retrospectives/' + id, {method: 'PUT', body: JSON.stringify(body)});
+  },
+  remove: function(projectId, id){
+    return apiFetch('/projects/' + projectId + '/retrospectives/' + id, {method: 'DELETE'});
+  },
+  createItem: function(projectId, id, body){
+    return apiFetch('/projects/' + projectId + '/retrospectives/' + id + '/items', {method: 'POST', body: JSON.stringify(body)});
+  },
+  updateItem: function(projectId, id, itemId, body){
+    return apiFetch('/projects/' + projectId + '/retrospectives/' + id + '/items/' + itemId, {method: 'PUT', body: JSON.stringify(body)});
+  },
+  removeItem: function(projectId, id, itemId){
+    return apiFetch('/projects/' + projectId + '/retrospectives/' + id + '/items/' + itemId, {method: 'DELETE'});
+  },
+  promoteItem: function(projectId, id, itemId, body){
+    return apiFetch('/projects/' + projectId + '/retrospectives/' + id + '/items/' + itemId + '/promote', {method: 'POST', body: JSON.stringify(body)});
+  },
+  createActionItem: function(projectId, id, body){
+    return apiFetch('/projects/' + projectId + '/retrospectives/' + id + '/action-items', {method: 'POST', body: JSON.stringify(body)});
+  },
+  updateActionItem: function(projectId, id, itemId, body){
+    return apiFetch('/projects/' + projectId + '/retrospectives/' + id + '/action-items/' + itemId, {method: 'PUT', body: JSON.stringify(body)});
+  },
+  removeActionItem: function(projectId, id, itemId){
+    return apiFetch('/projects/' + projectId + '/retrospectives/' + id + '/action-items/' + itemId, {method: 'DELETE'});
+  }
+};
+
+/* Organisation-owned, not per-project (like getTemplatesApi/getTodoListsApi above) — route base is
+   /api/organisations/me/principles, see OrganisationPrinciplesController.cs. Sharing a principle INTO
+   this library is project-scoped (principleApi.share above); everything here is about consuming the
+   already-shared library from any project in the org. */
+export var organisationPrincipleApi = {
+  listWide: function(){
+    return apiFetch('/organisations/me/principles', {method: 'GET'});
+  },
+  suggestions: function(){
+    return apiFetch('/organisations/me/principles/suggestions', {method: 'GET'});
+  },
+  copy: function(principleId, body){
+    return apiFetch('/organisations/me/principles/' + principleId + '/copy', {method: 'POST', body: JSON.stringify(body)});
+  }
+};

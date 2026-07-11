@@ -99,3 +99,11 @@ public class TaskDependency
     public Guid DependsOnTaskId { get; set; }
     public TaskItem DependsOnTask { get; set; } = null!;
 }
+
+public class RetrospectiveParticipant
+{
+    public Guid RetrospectiveId { get; set; }
+    public Retrospective Retrospective { get; set; } = null!;
+    public Guid ProjectMemberId { get; set; }
+    public ProjectMember ProjectMember { get; set; } = null!;
+}
