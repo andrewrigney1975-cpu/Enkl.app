@@ -1,0 +1,16 @@
+# Standalone from the main app's docker-compose.yml — no shared network. The main stack's `db`
+# service already publishes Postgres on 127.0.0.1:5432 (see ../docker-compose.yml), and Docker
+# Desktop's host.docker.internal resolves back to that published port from inside this container.
+services:
+  portal:
+    build:
+      context: .
+    environment:
+      DATABASE_URL: "postgres://enkl:${DB_PASSWORD:-enkl_dev_password}@host.docker.internal:5432/enkl"
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must be set in vendor-portal/.env}
+      PORT: "4000"
+    ports:
+      - "127.0.0.1:4000:4000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

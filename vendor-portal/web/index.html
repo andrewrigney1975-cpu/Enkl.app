@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enkl Portal</title>
+<script>
+  (function(){
+    try{
+      var saved = localStorage.getItem('enkl_portal_theme');
+      if(saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    }catch(e){ /* localStorage unavailable — fall back to light */ }
+  })();
+</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='0' y='0' width='24' height='24' fill='%230c66e4'/%3E%3Crect x='5' y='6' width='4' height='12' rx='1' fill='white'/%3E%3Crect x='10.5' y='6' width='4' height='7' rx='1' fill='white' opacity='.85'/%3E%3Crect x='16' y='6' width='4' height='10' rx='1' fill='white' opacity='.7'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="app">
+  <header class="kf-header">
+    <div class="kf-logo">
+      <span class="kf-icon" data-icon="grid" data-size="18"></span>
+      <span>Enkl Portal</span>
+    </div>
+    <div class="kf-header-spacer"></div>
+    <span id="sessionUserLabel" style="font-size:13px;color:rgba(255,255,255,.75);"></span>
+    <button class="kf-header-btn kf-theme-toggle" id="themeToggleBtn" title="Switch theme" aria-label="Switch theme"></button>
+    <button class="kf-header-btn hidden" id="logoutBtn" title="Log out"><span class="kf-icon" data-icon="logout" data-size="14"></span>Log out</button>
+  </header>
+
+  <div class="kf-app-body">
+    <nav class="kf-side-nav hidden" id="sideNav">
+      <button type="button" class="kf-side-nav-item" id="navDashboardBtn"><span class="kf-icon" data-icon="grid" data-size="16"></span><span>Dashboard</span></button>
+      <button type="button" class="kf-side-nav-item" id="navOrganisationsBtn"><span class="kf-icon" data-icon="orgChart" data-size="16"></span><span>Organisations</span></button>
+      <button type="button" class="kf-side-nav-item" id="navLicensesBtn"><span class="kf-icon" data-icon="tag" data-size="16"></span><span>Licenses</span></button>
+      <button type="button" class="kf-side-nav-item" id="navContractsBtn"><span class="kf-icon" data-icon="ty_document" data-size="16"></span><span>Contracts</span></button>
+    </nav>
+
+    <div class="kf-main-content">
+      <div class="kf-login-wrap hidden" id="loginWrap">
+        <div class="kf-login-card">
+          <h1>Enkl Portal</h1>
+          <div class="kf-field">
+            <label for="loginUsernameInput">Username</label>
+            <input type="text" id="loginUsernameInput" autocomplete="username">
+          </div>
+          <div class="kf-field">
+            <label for="loginPasswordInput">Password</label>
+            <input type="password" id="loginPasswordInput" autocomplete="current-password">
+          </div>
+          <div class="kf-field-error hidden" id="loginError"></div>
+          <button class="kf-btn kf-btn-primary" id="loginSubmitBtn" style="width:100%;justify-content:center;">Log In</button>
+        </div>
+      </div>
+
+      <div id="viewRoot" class="hidden"></div>
+    </div>
+  </div>
+</div>
+
+<!-- License Modal -->
+<div class="kf-overlay hidden" id="licenseOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="licenseModalTitle">Edit license</h2>
+      <button class="kf-btn kf-btn-ghost" id="licenseModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div class="kf-field-row">
+        <div class="kf-field">
+          <label for="licenseSeatCostInput">Seat cost</label>
+          <input type="number" id="licenseSeatCostInput" min="0" step="0.01">
+        </div>
+        <div class="kf-field">
+          <label for="licenseCurrencyInput">Currency</label>
+          <input type="text" id="licenseCurrencyInput" maxlength="8" placeholder="USD">
+        </div>
+      </div>
+      <div class="kf-field-row">
+        <div class="kf-field">
+          <label for="licenseDiscountInput">Discount %</label>
+          <input type="number" id="licenseDiscountInput" min="0" max="100" step="0.1">
+        </div>
+        <div class="kf-field">
+          <label for="licenseEffectiveFromInput">Effective from</label>
+          <input type="date" id="licenseEffectiveFromInput">
+        </div>
+      </div>
+      <div class="kf-field">
+        <label for="licenseNotesInput">Notes</label>
+        <textarea id="licenseNotesInput" maxlength="2000"></textarea>
+      </div>
+      <div class="kf-field-error hidden" id="licenseError"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-secondary" id="licenseCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="licenseSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Contract Modal -->
+<div class="kf-overlay hidden" id="contractOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="contractModalTitle">New contract</h2>
+      <button class="kf-btn kf-btn-ghost" id="contractModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div class="kf-field" id="contractOrgField">
+        <label for="contractOrgSelect">Organisation</label>
+        <select id="contractOrgSelect"></select>
+      </div>
+      <div class="kf-field">
+        <label for="contractNameInput">Contract name</label>
+        <input type="text" id="contractNameInput" maxlength="200" placeholder="e.g. FY26 Enterprise Agreement">
+      </div>
+      <div class="kf-field-row">
+        <div class="kf-field">
+          <label for="contractStatusSelect">Status</label>
+          <select id="contractStatusSelect">
+            <option value="draft">Draft</option>
+            <option value="active">Active</option>
+            <option value="expired">Expired</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="kf-field">
+          <label for="contractBillingSelect">Billing</label>
+          <select id="contractBillingSelect">
+            <option value="monthly">Monthly</option>
+            <option value="annual">Annual</option>
+            <option value="one_time">One-time</option>
+          </select>
+        </div>
+      </div>
+      <div class="kf-field-row">
+        <div class="kf-field">
+          <label for="contractStartDateInput">Start date</label>
+          <input type="date" id="contractStartDateInput">
+        </div>
+        <div class="kf-field">
+          <label for="contractEndDateInput">End date</label>
+          <input type="date" id="contractEndDateInput">
+        </div>
+      </div>
+      <div class="kf-field">
+        <label for="contractValueInput">Contract value</label>
+        <input type="number" id="contractValueInput" min="0" step="0.01">
+      </div>
+      <div class="kf-field">
+        <label for="contractNotesInput">Notes</label>
+        <textarea id="contractNotesInput" maxlength="2000"></textarea>
+      </div>
+      <div class="kf-field-error hidden" id="contractError"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-danger kf-footer-left hidden" id="contractDeleteBtn"><span class="kf-icon" data-icon="trash" data-size="14"></span>Delete</button>
+      <button class="kf-btn kf-btn-secondary" id="contractCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="contractSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
