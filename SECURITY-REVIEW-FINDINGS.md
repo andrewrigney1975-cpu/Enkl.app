@@ -93,46 +93,61 @@ annotated with what changed. Medium/Low findings are untouched — still open.
 
 ## Medium
 
-### M1. Account/SSO-status enumeration + timing side-channel on login
+**Status: all Medium findings (M1–M10) below are REMEDIATED or confirmed clean**, same verification
+posture as Critical/High: build-verified in both tiers, live-tested where the running stack allows
+it, lint-verified only for PHP-tier/vendor-portal changes (neither runs in the active docker-compose
+stack right now).
+
+### M1. Account/SSO-status enumeration + timing side-channel on login — ✅ REMEDIATED
 - **`.NET`:** `Controllers/AuthController.cs:34-52` returns materially different messages for "SSO-required org" / "SSO-only account" / generic invalid credentials, AND the not-found/SSO-only paths return before any bcrypt call, while the wrong-password path always pays the ~50-300ms bcrypt cost — both are real (if narrow) enumeration channels.
 - **`vendor-portal`:** the identical timing pattern exists in `server/auth.js:9-13` (early-return on missing user skips the bcrypt call).
 - **Fix:** normalize timing with a dummy bcrypt verify on the not-found path in both apps; reconsider whether SSO discovery needs to happen via `login`'s error text at all versus only the already-anonymized `sso-lookup` endpoint.
+- **Fixed:** a dummy password-hash verify (matching the real hash's cost factor) now runs on every early-rejection path in all three tiers (.NET, PHP, vendor-portal) before returning, so every login failure pays the same bcrypt cost regardless of which branch rejected it. The differentiated error messages themselves were left as-is (a UX tradeoff, not re-litigated this pass).
 
-### M2. Vendor-portal session fixation
+### M2. Vendor-portal session fixation — ✅ REMEDIATED
 - **Where:** `vendor-portal/server/routes/auth.js:17-18` sets `req.session.adminId`/`username` directly without calling `req.session.regenerate()` first.
 - **Fix:** regenerate the session ID on successful login before setting any session data.
+- **Fixed:** `req.session.regenerate()` now wraps the post-auth session mutation — a pre-auth session ID (fixed by an attacker) is destroyed and replaced before adminId/username are ever set on it.
 
-### M3. PHP JWT signing key fails *open* to an empty string on misconfiguration (tier-parity gap)
+### M3. PHP JWT signing key fails *open* to an empty string on misconfiguration (tier-parity gap) — ✅ ALREADY CLOSED
 - **Where:** `php-api/src/Config/Config.php:16-23` / `src/Auth/JwtService.php:103` — `Config::get('JWT_SIGNING_KEY', '')` silently returns `''` if unset, and the JWT library will happily sign/verify with an empty key. The .NET tier fails *closed* (crashes at startup) via the null-forgiving operator on a missing key.
 - **Fix:** throw at boot if `JWT_SIGNING_KEY` is unset or blank, matching .NET's behavior.
+- **Status:** already covered as a side effect of the C1 fix — `bootstrap.php`'s `assertProductionSecretsAreSet()` throws if `JWT_SIGNING_KEY` is empty/the checked-in placeholder/under 32 chars, outside `APP_ENV=development`. No new code needed.
 
-### M4. JWT clock-skew mismatch between tiers
+### M4. JWT clock-skew mismatch between tiers — ✅ REMEDIATED
 - **Where:** .NET sets `ClockSkew = 1 minute` (`Program.cs:58`); PHP's `firebase/php-jwt` leeway defaults to `0` and is never set. Safe direction (PHP is stricter), but the two tiers are documented as interchangeable/parity and currently aren't for this behavior.
 - **Fix:** set `JWT::$leeway` to match, or explicitly document the intentional divergence.
+- **Fixed:** `JWT::$leeway = 60` set in `JwtService::tryDecode`, matching .NET's `ClockSkew`.
 
-### M5. SAML replay protection missing in both tiers (independently confirmed by both audits)
+### M5. SAML replay protection missing in both tiers (independently confirmed by both audits) — ✅ REMEDIATED
 - **Where:** `.NET` `Controllers/SamlController.cs:97-102`; `PHP` `src/Controllers/SamlController.php:94` (`processResponse()` called with no `$requestId`). Neither tier persists the outgoing `AuthnRequest` ID for later `InResponseTo` correlation, so replay protection depends entirely on the assertion's own `NotOnOrAfter` time window as enforced internally by each tier's SAML library.
 - **Why flagged Medium not Critical:** requires an attacker to have captured a validly-signed SAML response in the first place (e.g. via H4's cleartext-transport gap, or a compromised IdP-side log) — but once captured, it's replayable until expiry with no additional check.
 - **Fix:** track consumed assertion IDs (or the original `AuthnRequest` ID) server-side in both tiers and reject reuse.
+- **Fixed:** `Login` now records the AuthnRequest's own ID (new `SamlRequestIdStore`, .NET in-memory singleton; new DB-backed `SamlRequestIdService`/`SamlRequestIds` table, PHP — same "PHP-FPM worker holds no state between requests" reasoning as the existing `ExchangeCodes` table). `Acs` single-use-consumes it against the response's `InResponseTo` — in .NET only after `Unbind()`'s signature validation (InResponseTo is untrusted before that); in PHP by peeking the not-yet-validated response then passing the matched ID into `Auth::processResponse($requestId)`, so the library's own signature validation cryptographically ties the check together. A captured, replayed response now fails the second time it's used, before its `NotOnOrAfter` window would otherwise still accept it.
 
-### M6. Missing security headers across all three server tiers
+### M6. Missing security headers across all three server tiers — ✅ REMEDIATED
 - **Where:** `web/nginx.conf` (no CSP/X-Frame-Options/X-Content-Type-Options/HSTS/Referrer-Policy at all), `php-api` (no security-header middleware anywhere), `.NET` `Program.cs` (same gap).
 - **Fix:** add a shared header-hardening layer — easiest done once in `nginx.conf` in front of everything, plus mirroring in `php-api` if it's ever deployed without nginx in front.
+- **Fixed:** `nginx.conf` now sends `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Strict-Transport-Security`, and a `Content-Security-Policy` (`default-src 'self'`, explicit allowlist for Google Fonts + the data:-URI favicon/manifest/icons, `frame-ancestors 'none'`) — live-verified present on responses. `script-src`/`style-src` keep `unsafe-inline` since `build.js` inlines the entire bundled JS/CSS into one self-contained `dist/index.html` by design; tightening that to hash/nonce-based would need a build-step change, flagged as a reasonable follow-up. `.NET`/`PHP` each add the non-CSP headers as defense-in-depth in case either is ever reached directly without nginx in front.
 
-### M7. Vendor-portal: three of four routers lack the unhandled-rejection guard used in the fourth
+### M7. Vendor-portal: three of four routers lack the unhandled-rejection guard used in the fourth — ✅ REMEDIATED
 - **Where:** `organisations.js`, `licenses.js`, `contracts.js` are plain `async (req,res)=>{}` handlers with no try/catch, unlike `dashboard.js` which wraps its routes in an `asyncRoute()` helper specifically because (per its own comment) an unhandled rejection in Express 4/Node 20 crashes the whole process. A malformed (non-UUID) `:id` on e.g. `GET /api/organisations/:id` is a plausible trigger (not confirmed by actually reproducing the crash).
 - **Fix:** wrap all four routers in the same `asyncRoute` helper.
+- **Fixed:** `asyncRoute` extracted into its own shared `server/asyncRoute.js` module and applied to every route in all four routers — including `dashboard.js`'s own first route (`GET /dashboard`), which turned out to be missing the guard too despite being the file the helper originally lived in.
 
-### M8. Containers running as root
+### M8. Containers running as root — ✅ REMEDIATED
 - **Where:** `api/Enkl.Api/Dockerfile` and `web/Dockerfile` have no `USER` directive.
 - **Fix:** add `USER app` (the `aspnet` base image ships one) for the API; lower priority for the nginx image since nginx's worker processes already drop privilege internally.
+- **Fixed:** `USER app` added to `api/Enkl.Api/Dockerfile` (live-verified: container runs as `uid=1654(app)`) and `USER node` added to `vendor-portal/Dockerfile`. `web/Dockerfile` deliberately left as root — nginx binds port 80 (privileged, <1024) and already drops worker-process privilege internally by default; documented why in the Dockerfile itself.
 
-### M9. `PrincipleService.CopyAsync` checks org membership but not target-project membership
+### M9. `PrincipleService.CopyAsync` checks org membership but not target-project membership — ✅ REMEDIATED
 - **Where:** `api/Enkl.Api/Services/PrincipleService.cs:89-105`, exposed via `Controllers/OrganisationPrinciplesController.cs:38-43`. Confirms the target project belongs to the caller's organisation, but not that the caller is a *member* of that specific project — any authenticated org member could write a copied Principle into a project they don't belong to, if they can guess/enumerate its GUID.
 - **Fix:** confirm whether this is intentional (the controller's own doc comment suggests "any org member, same trust level" was a deliberate choice); if not, add a project-membership check consistent with every other project-scoped mutation in the codebase.
+- **Fixed:** confirmed the "any org member" trust level was intended for *browsing* the shared library (read-only, matches Templates), not for *copying* (a write into a specific project) — those are different in kind. Added a project-membership check (reading the JWT's `projects` claim directly, since this route isn't under a `{projectId}` segment so the usual policy-based check can't apply) in both `OrganisationPrinciplesController.cs` and its PHP equivalent, returning 403 if the caller isn't a member of the target project.
 
-### M10. `onelogin/php-saml` 4.3.2 — version needs explicit CVE-database confirmation
+### M10. `onelogin/php-saml` 4.3.2 — version needs explicit CVE-database confirmation — ✅ CONFIRMED CLEAN
 - Structurally looks current and correctly configured (`strict`, `wantAssertionsSigned` both enforced), but the audit couldn't fully rule out an unpatched advisory from static inspection alone given this library's history. Recommend running `composer audit` or checking a vulnerability database directly.
+- **Confirmed:** the one disclosed advisory for this library (GHSA-5j8p-438x-rgg5 / CVE-2025-66475, a signature-wrapping issue via `xmlseclibs`) affects `< 4.3.1`; this project is pinned to `4.3.2`. The `robrichards/xmlseclibs` dependency itself is locked at `3.1.5`, past that same CVE's `3.1.4` patch threshold. No code change needed.
 
 ---
 

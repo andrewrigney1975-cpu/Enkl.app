@@ -87,6 +87,7 @@ builder.Services.AddScoped<ScimUserService>();
 builder.Services.AddScoped<ScimGroupService>();
 builder.Services.AddSingleton<SseBroadcaster>();
 builder.Services.AddSingleton<SsoExchangeCodeStore>();
+builder.Services.AddSingleton<SamlRequestIdStore>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -145,6 +146,17 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
 }
+
+// Security review finding M6: defense-in-depth in case this API is ever reached directly without
+// nginx in front (which carries the fuller header set, including a CSP — see nginx.conf's own
+// comment). Every response here is JSON, never HTML/JS, so no CSP is needed at this layer.
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    await next();
+});
 
 if (app.Environment.IsDevelopment())
 {

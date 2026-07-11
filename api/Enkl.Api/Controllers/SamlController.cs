@@ -1,3 +1,4 @@
+using Enkl.Api.Auth;
 using Enkl.Api.Services;
 using ITfoxtec.Identity.Saml2;
 using ITfoxtec.Identity.Saml2.MvcCore;
@@ -21,10 +22,12 @@ namespace Enkl.Api.Controllers;
 public class SamlController : ControllerBase
 {
     private readonly SamlService _saml;
+    private readonly SamlRequestIdStore _requestIds;
 
-    public SamlController(SamlService saml)
+    public SamlController(SamlService saml, SamlRequestIdStore requestIds)
     {
         _saml = saml;
+        _requestIds = requestIds;
     }
 
     [HttpGet("metadata")]
@@ -75,6 +78,10 @@ public class SamlController : ControllerBase
                 Format = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
             }
         };
+        // Security review finding M5: recorded so Acs can correlate+single-use-consume the IdP's
+        // eventual InResponseTo against a request this SP actually issued, closing the replay gap
+        // (a captured, validly-signed response was otherwise reusable until its own NotOnOrAfter).
+        _requestIds.Record(orgId, authnRequest.IdAsString);
         var binding = new Saml2RedirectBinding();
         return binding.Bind(authnRequest).ToActionResult();
     }
@@ -100,6 +107,16 @@ public class SamlController : ControllerBase
             return Redirect(_saml.ErrorRedirectUrl($"SAML sign-in failed ({authnResponse.Status})."));
         }
         binding.Unbind(Request.ToGenericHttpRequest(validate: true), authnResponse);
+
+        // Security review finding M5: only checked here, AFTER Unbind's signature validation —
+        // InResponseTo is untrusted input before that (part of the signed content, so forgeable in
+        // an unsigned/badly-signed response). Single-use: a captured, replayed copy of an otherwise
+        // perfectly valid response fails this the second time, since the first successful use already
+        // consumed the matching entry.
+        if (!_requestIds.TryConsume(orgId, authnResponse.InResponseToAsString))
+        {
+            return Redirect(_saml.ErrorRedirectUrl("This sign-in link has already been used or has expired. Please sign in again."));
+        }
 
         var email = authnResponse.NameId?.Value;
         if (string.IsNullOrWhiteSpace(email))

@@ -16,6 +16,19 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 /** Ported from Controllers/AuthController.cs — kept thin, no separate service, same as the .NET version. */
 final class AuthController extends BaseController
 {
+    // Security review finding M1: the not-found/SSO-required/SSO-only paths used to return
+    // immediately, skipping bcrypt entirely, while the wrong-password path always paid its cost — a
+    // timing side-channel letting an attacker distinguish "no such account" from "account exists,
+    // wrong password" by response time alone. A dummy verify against a hash nobody's real password
+    // will ever match normalizes every rejection path to pay the same cost. The `static $hash`
+    // persists across every request a given PHP-FPM worker process handles (not just one request),
+    // the same "computed once, reused many times" effect as the .NET side's static readonly field.
+    private static function dummyPasswordHash(): string
+    {
+        static $hash = null;
+        return $hash ??= PasswordHasher::hash('dummy-password-for-timing-normalization');
+    }
+
     public function login(Request $request, Response $response): Response
     {
         $body = $this->body($request);
@@ -34,15 +47,18 @@ final class AuthController extends BaseController
         $user = $stmt->fetch();
 
         if ($user === false || !(bool) $user['IsActive']) {
+            PasswordHasher::verify($password, self::dummyPasswordHash());
             return $this->json($response, ['message' => 'Invalid username or password.'], 401);
         }
         if ((bool) ($user['RequireSso'] ?? false)) {
+            PasswordHasher::verify($password, self::dummyPasswordHash());
             return $this->json($response, ['message' => 'This organisation requires SSO sign-in. Use the "Sign in with SSO" option.'], 401);
         }
         // An SSO-only user (SAML JIT-provisioned or SCIM-created) never gets a local password hash —
         // tell them where to actually sign in rather than a generic "invalid password" that implies
         // retrying with a different password would help.
         if ($user['PasswordHash'] === null) {
+            PasswordHasher::verify($password, self::dummyPasswordHash());
             return $this->json($response, ['message' => 'This account signs in via your organisation\'s SSO. Use the "Sign in with SSO" option.'], 401);
         }
         if (!PasswordHasher::verify($password, $user['PasswordHash'])) {

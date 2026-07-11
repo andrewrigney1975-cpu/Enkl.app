@@ -109,7 +109,10 @@ final class PrincipleService
      * Clones title/description/documentUrl into a brand-new Principle row owned by the target
      * project — a real independent copy (new Id/Key), not a cross-project reference, so it can be
      * edited afterwards without affecting the shared original. Both the source principle and the
-     * target project must belong to the caller's own organisation.
+     * target project must belong to the caller's own organisation; the caller must also actually be
+     * a member of the target project — checked in OrganisationPrinciplesController::copy before this
+     * is ever called (security review finding M9), since that check needs the JWT's "projects"
+     * claim, not anything this service layer has access to.
      */
     public function copy(string $organisationId, string $principleId, array $request): ?array
     {

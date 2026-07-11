@@ -85,7 +85,10 @@ public class PrincipleService
     /// <summary>Clones title/description/documentUrl into a brand-new Principle row owned by the
     /// target project — a real independent copy (new Id/Key), not a cross-project reference, so it
     /// can be edited afterwards without affecting the shared original. Both the source principle and
-    /// the target project must belong to the caller's own organisation.</summary>
+    /// the target project must belong to the caller's own organisation; the caller must also
+    /// actually be a member of the target project — checked in OrganisationPrinciplesController
+    /// before this is ever called (security review finding M9), since that check needs the JWT's
+    /// "projects" claim, not anything this service layer has access to.</summary>
     public async Task<PrincipleDto?> CopyAsync(Guid organisationId, Guid principleId, CopyPrincipleRequest request)
     {
         var source = await _db.Principles.FirstOrDefaultAsync(p => p.Id == principleId && p.OrganisationId == organisationId && p.IsOrganisationWide);

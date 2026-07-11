@@ -21,6 +21,17 @@ function buildApp(): \Slim\App
     $app = AppFactory::create();
     $app->addBodyParsingMiddleware();
 
+    // Security review finding M6: defense-in-depth in case this tier is ever reached directly
+    // without nginx in front (which carries the fuller header set, including a CSP — see
+    // web/nginx.conf's own comment, and Program.cs's equivalent for the .NET tier). Every response
+    // here is JSON, never HTML/JS, so no CSP is needed at this layer.
+    $app->add(function (\Psr\Http\Message\ServerRequestInterface $request, \Psr\Http\Server\RequestHandlerInterface $handler): \Psr\Http\Message\ResponseInterface {
+        return $handler->handle($request)
+            ->withHeader('X-Content-Type-Options', 'nosniff')
+            ->withHeader('X-Frame-Options', 'DENY')
+            ->withHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    });
+
     if (Config::getBool('RUN_MIGRATIONS_ON_STARTUP', true)) {
         runMigrationsWithLogging();
     }

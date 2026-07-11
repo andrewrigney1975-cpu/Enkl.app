@@ -19,6 +19,15 @@ namespace Enkl.Api.Controllers;
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
+    // Security review finding M1: the not-found/SSO-required/SSO-only paths used to return
+    // immediately, skipping bcrypt entirely, while the wrong-password path always paid its ~50-300ms
+    // cost — a timing side-channel that lets an attacker distinguish "no such account" from "account
+    // exists, wrong password" by response time alone, even though the messages themselves are
+    // already deliberately generic. A dummy verify against a hash nobody's real password will ever
+    // match (computed once at class load, not per-request) normalizes every rejection path to pay
+    // the same bcrypt cost.
+    private static readonly string DummyPasswordHash = PasswordHasher.Hash("dummy-password-for-timing-normalization");
+
     private readonly AppDbContext _db;
     private readonly JwtTokenService _jwt;
     private readonly SsoExchangeCodeStore _exchange;
@@ -38,10 +47,12 @@ public class AuthController : ControllerBase
             .FirstOrDefaultAsync(u => u.NormalizedUsername == normalized);
         if (user is null || !user.IsActive)
         {
+            PasswordHasher.Verify(request.Password, DummyPasswordHash);
             return Unauthorized(new { message = "Invalid username or password." });
         }
         if (user.Organisation.SsoConfig?.RequireSso == true)
         {
+            PasswordHasher.Verify(request.Password, DummyPasswordHash);
             return Unauthorized(new { message = "This organisation requires SSO sign-in. Use the \"Sign in with SSO\" option." });
         }
         // An SSO-only user (SAML JIT-provisioned or SCIM-created) never gets a local password hash —
@@ -49,6 +60,7 @@ public class AuthController : ControllerBase
         // retrying with a different password would help.
         if (user.PasswordHash is null)
         {
+            PasswordHasher.Verify(request.Password, DummyPasswordHash);
             return Unauthorized(new { message = "This account signs in via your organisation's SSO. Use the \"Sign in with SSO\" option." });
         }
         if (!PasswordHasher.Verify(request.Password, user.PasswordHash))

@@ -75,6 +75,12 @@ final class JwtService
     /** Returns the decoded claims object, or null if the token is missing/expired/invalid/wrong signature. */
     public static function tryDecode(string $token): ?stdClass
     {
+        // Security review finding M4: firebase/php-jwt's leeway defaults to 0, while the .NET side
+        // sets ClockSkew = 1 minute (Program.cs) — the two tiers are documented as interchangeable/
+        // parity and weren't for this behavior (a token minted by one, validated a few seconds late
+        // by the other across a container clock drift, would fail here but not there).
+        JWT::$leeway = 60;
+
         try {
             $decoded = JWT::decode($token, new Key(self::signingKey(), 'HS256'));
         } catch (\Throwable) {
