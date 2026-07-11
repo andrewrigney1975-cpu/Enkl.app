@@ -1576,77 +1576,167 @@
 
 <!-- App Settings Modal -->
 <div class="kf-overlay hidden" id="appSettingsOverlay">
-  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+  <div class="kf-modal kf-modal-appsettings" role="dialog" aria-modal="true">
     <div class="kf-modal-header">
       <h2>App Settings</h2>
       <button class="kf-btn kf-btn-ghost" id="appSettingsClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
     </div>
     <div class="kf-modal-body">
-      <div class="kf-field-row" style="margin-bottom:4px;">
-        <label style="font-size:13px;font-weight:600;color:var(--kf-text);">Extended Project Modules</label>
-      </div>
-      <p style="margin:0 0 12px;color:var(--kf-text-faint);font-size:12px;line-height:1.5;">Choose which modules should be used in this Project</p>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowHealthBtn">
-          <span class="kf-icon" data-icon="heartPulse" data-size="14"></span>
-          <span>Health Dashboard</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowPrinciplesBtn">
-          <span class="kf-icon" data-icon="compass" data-size="14"></span>
-          <span>Principles</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowObjectivesBtn">
-          <span class="kf-icon" data-icon="target" data-size="14"></span>
-          <span>Objectives</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowDocumentsBtn">
-          <span class="kf-icon" data-icon="ty_document" data-size="14"></span>
-          <span>Documents</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowRisksBtn">
-          <span class="kf-icon" data-icon="warning" data-size="14"></span>
-          <span>Risks</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowDecisionsBtn">
-          <span class="kf-icon" data-icon="ty_approve" data-size="14"></span>
-          <span>Decisions</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowTeamsCommitteesBtn">
-          <span class="kf-icon" data-icon="orgChart" data-size="14"></span>
-          <span>Teams &amp; Committees</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowWorkflowBtn">
-          <span class="kf-icon" data-icon="workflow" data-size="14"></span>
-          <span>Workflow</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowTimeTrackingBtn">
-          <span class="kf-icon" data-icon="stopwatch" data-size="14"></span>
-          <span>Time Tracking and Progress</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowChangeAuditingBtn">
-          <span class="kf-icon" data-icon="ty_audit" data-size="14"></span>
-          <span>Change Auditing</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowSubTasksBtn">
-          <span class="kf-icon" data-icon="orgChart" data-size="14"></span>
-          <span>Sub-Tasks</span>
-        </label>
-        <label class="kf-risk-doc-picker-row">
-          <input type="checkbox" id="settingsShowRetrospectiveBtn">
-          <span class="kf-icon" data-icon="retrospective" data-size="14"></span>
-          <span>Retrospectives</span>
-        </label>
+      <p style="margin:0 0 16px;color:var(--kf-text-faint);font-size:12px;line-height:1.5;">Choose which modules are switched on for this project.</p>
+
+      <div class="kf-settings-columns">
+        <div class="kf-settings-column">
+          <div class="kf-settings-category">
+            <div class="kf-settings-category-header">
+              <span class="kf-icon" data-icon="grid" data-size="20"></span>
+              <span>General</span>
+            </div>
+            <div class="kf-settings-category-body">
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowHealthBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="heartPulse" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Health Dashboard</span>
+                  <span class="kf-setting-row-desc">See how your project is tracking. At-a-glance visibility of overall health using Releases, Tasks, Risks and Decisions as signals.</span>
+                </span>
+              </label>
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowDocumentsBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="ty_document" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Documents</span>
+                  <span class="kf-setting-row-desc">Collate and relate your project documents. Link them to Objectives, Risks and Decisions, and see their relationships in the Document Map.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="kf-settings-category">
+            <div class="kf-settings-category-header">
+              <span class="kf-icon" data-icon="workflow" data-size="20"></span>
+              <span>Workflow</span>
+            </div>
+            <div class="kf-settings-category-body">
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowWorkflowBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="workflow" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Workflow</span>
+                  <span class="kf-setting-row-desc">Set up control gates that govern how tasks can move between columns (states). You have full control over what can happen, when, and how it's communicated to your team members.</span>
+                </span>
+              </label>
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowTimeTrackingBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="stopwatch" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Time Tracking and Progress</span>
+                  <span class="kf-setting-row-desc">Capture estimates for effort and actuals, and measure progress. These feed back into the Monte Carlo predictive model used to estimate the health of your timeline.</span>
+                </span>
+              </label>
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowSubTasksBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="orgChart" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Sub-Tasks</span>
+                  <span class="kf-setting-row-desc">For more complex projects where you need to describe, monitor and manage the interconnectedness of tasks. These relationships are reflected in the Dependency Graph and can help identify future bottleneck risks.</span>
+                </span>
+              </label>
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowChangeAuditingBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="ty_audit" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Change Auditing</span>
+                  <span class="kf-setting-row-desc">Know what has happened to a task across its lifetime — the who, what and when.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="kf-settings-category hidden" id="appSettingsEnterpriseCategory">
+            <div class="kf-settings-category-header">
+              <span class="kf-icon" data-icon="lock" data-size="20"></span>
+              <span>Enterprise</span>
+            </div>
+            <div class="kf-settings-category-body">
+              <div class="kf-setting-row kf-setting-row-static">
+                <span class="kf-icon kf-setting-row-icon" data-icon="lock" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Authentication and Provisioning</span>
+                  <span class="kf-setting-row-desc">Available only to Enterprise customers. Enables SAML authentication and SCIM integration, so access and user/group setup can be managed automatically from your enterprise identity platform.</span>
+                  <button type="button" class="kf-btn kf-btn-secondary" id="appSettingsSsoConfigBtn" style="margin-top:8px;">Configure SSO &amp; Provisioning</button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="kf-settings-column">
+          <div class="kf-settings-category">
+            <div class="kf-settings-category-header">
+              <span class="kf-icon" data-icon="compass" data-size="20"></span>
+              <span>Governance</span>
+            </div>
+            <div class="kf-settings-category-body">
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowPrinciplesBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="compass" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Principles</span>
+                  <span class="kf-setting-row-desc">Define your overarching business and technical architectural approaches. Link them to other governance artefacts to see where they're having an impact.</span>
+                </span>
+              </label>
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowObjectivesBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="target" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Objectives</span>
+                  <span class="kf-setting-row-desc">Articulate the goals of the project so everyone can align. Principles, Risks and Documents can all be linked and viewed, so you can see where strategy is winning and where it needs support.</span>
+                </span>
+              </label>
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowRisksBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="warning" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Risks</span>
+                  <span class="kf-setting-row-desc">Document, measure and track your risks. Connect them to other artefacts to see potential impacts, and link them to tasks that implement controls and mitigations.</span>
+                </span>
+              </label>
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowDecisionsBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="ty_approve" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Decisions</span>
+                  <span class="kf-setting-row-desc">Centralise your strategic, tactical and operational decisions in a single repository, accessible across the project, so your team and stakeholders stay aligned on direction.</span>
+                </span>
+              </label>
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowRetrospectiveBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="retrospective" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Retrospectives</span>
+                  <span class="kf-setting-row-desc">Reflect on a milestone — what worked, what didn't, and what could be better. Derive new Principles from hard-won experience and carry the benefits into the next release and the next project.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="kf-settings-category">
+            <div class="kf-settings-category-header">
+              <span class="kf-icon" data-icon="orgChart" data-size="20"></span>
+              <span>Structures</span>
+            </div>
+            <div class="kf-settings-category-body">
+              <label class="kf-setting-row">
+                <input type="checkbox" id="settingsShowTeamsCommitteesBtn">
+                <span class="kf-icon kf-setting-row-icon" data-icon="orgChart" data-size="16"></span>
+                <span class="kf-setting-row-text">
+                  <span class="kf-setting-row-title">Teams and Committees</span>
+                  <span class="kf-setting-row-desc">Build out your team and committee structures to help current and new team members find the right person to talk to, and to articulate the governance structures in place for the project. The Organisational Chart lays this out clearly.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="kf-modal-footer">

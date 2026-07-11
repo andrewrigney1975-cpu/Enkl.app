@@ -100,6 +100,10 @@ export function openAppSettingsOverlay(){
   document.getElementById('settingsShowChangeAuditingBtn').checked = visibility.changeAuditing;
   document.getElementById('settingsShowSubTasksBtn').checked = visibility.subTasks;
   document.getElementById('settingsShowRetrospectiveBtn').checked = visibility.retrospective;
+  // SAML/SCIM configuration is an org-admin-only concern (same gating as the Account menu's own
+  // "SSO & Provisioning" link) — shown here purely as a discoverability shortcut into that same
+  // modal, not a per-project toggle of its own.
+  document.getElementById('appSettingsEnterpriseCategory').classList.toggle('hidden', !isOrgAdmin());
   document.getElementById('appSettingsOverlay').classList.remove('hidden');
 }
 export function closeAppSettingsOverlay(){
