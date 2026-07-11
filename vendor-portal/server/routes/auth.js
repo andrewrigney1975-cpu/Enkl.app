@@ -26,9 +26,18 @@ authRouter.post('/login', loginRateLimiter, async (req, res) => {
     return res.status(401).json({ error: 'Invalid username or password.' });
   }
 
-  req.session.adminId = admin.id;
-  req.session.username = admin.username;
-  res.json({ username: admin.username, mustChangePassword: admin.mustChangePassword });
+  // Security review finding M2 (session fixation): regenerating the session ID on successful login
+  // means a session ID an attacker set (e.g. via a shared/public machine, or a session cookie fixed
+  // before authentication) never becomes an authenticated session — the pre-auth session is
+  // destroyed and a brand-new ID is issued here, only then populated with adminId/username.
+  req.session.regenerate((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Could not establish a session. Please try again.' });
+    }
+    req.session.adminId = admin.id;
+    req.session.username = admin.username;
+    res.json({ username: admin.username, mustChangePassword: admin.mustChangePassword });
+  });
 });
 
 authRouter.post('/logout', (req, res) => {

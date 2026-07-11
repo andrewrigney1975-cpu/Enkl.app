@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { asyncRoute } from '../asyncRoute.js';
 
 export const contractsRouter = Router();
 
@@ -28,7 +29,7 @@ function validateContract(body) {
   };
 }
 
-contractsRouter.post('/organisations/:id/contracts', async (req, res) => {
+contractsRouter.post('/organisations/:id/contracts', asyncRoute(async (req, res) => {
   const parsed = validateContract(req.body || {});
   if (parsed.error) return res.status(400).json({ error: parsed.error });
 
@@ -42,9 +43,9 @@ contractsRouter.post('/organisations/:id/contracts', async (req, res) => {
   );
 
   res.status(201).json(rows[0]);
-});
+}));
 
-contractsRouter.put('/contracts/:contractId', async (req, res) => {
+contractsRouter.put('/contracts/:contractId', asyncRoute(async (req, res) => {
   const parsed = validateContract(req.body || {});
   if (parsed.error) return res.status(400).json({ error: parsed.error });
 
@@ -61,9 +62,9 @@ contractsRouter.put('/contracts/:contractId', async (req, res) => {
 
   if (!rows[0]) return res.status(404).json({ error: 'Contract not found.' });
   res.json(rows[0]);
-});
+}));
 
-contractsRouter.delete('/contracts/:contractId', async (req, res) => {
+contractsRouter.delete('/contracts/:contractId', asyncRoute(async (req, res) => {
   await pool.query('DELETE FROM vendor_contracts WHERE id = $1', [req.params.contractId]);
   res.status(204).end();
-});
+}));

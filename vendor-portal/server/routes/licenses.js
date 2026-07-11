@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { asyncRoute } from '../asyncRoute.js';
 
 export const licensesRouter = Router();
 
@@ -23,7 +24,7 @@ function validateLicense(body) {
   };
 }
 
-licensesRouter.put('/organisations/:id/license', async (req, res) => {
+licensesRouter.put('/organisations/:id/license', asyncRoute(async (req, res) => {
   const parsed = validateLicense(req.body || {});
   if (parsed.error) return res.status(400).json({ error: parsed.error });
 
@@ -44,9 +45,9 @@ licensesRouter.put('/organisations/:id/license', async (req, res) => {
   );
 
   res.json(rows[0]);
-});
+}));
 
-licensesRouter.delete('/organisations/:id/license', async (req, res) => {
+licensesRouter.delete('/organisations/:id/license', asyncRoute(async (req, res) => {
   await pool.query('DELETE FROM vendor_licenses WHERE org_id = $1', [req.params.id]);
   res.status(204).end();
-});
+}));

@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { asyncRoute } from '../asyncRoute.js';
 
 export const organisationsRouter = Router();
 
-organisationsRouter.get('/organisations', async (_req, res) => {
+organisationsRouter.get('/organisations', asyncRoute(async (_req, res) => {
   const { rows } = await pool.query(`
     SELECT
       o."Id" AS id,
@@ -25,9 +26,9 @@ organisationsRouter.get('/organisations', async (_req, res) => {
     ORDER BY o."Name"
   `);
   res.json(rows);
-});
+}));
 
-organisationsRouter.get('/organisations/:id', async (req, res) => {
+organisationsRouter.get('/organisations/:id', asyncRoute(async (req, res) => {
   const { rows } = await pool.query(
     `
     SELECT
@@ -54,4 +55,4 @@ organisationsRouter.get('/organisations/:id', async (req, res) => {
   );
 
   res.json({ ...org, license: license.rows[0] || null, contracts: contracts.rows });
-});
+}));

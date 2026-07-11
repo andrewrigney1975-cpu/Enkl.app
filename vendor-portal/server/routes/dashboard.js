@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { asyncRoute } from '../asyncRoute.js';
 
 export const dashboardRouter = Router();
 
-dashboardRouter.get('/dashboard', async (_req, res) => {
+dashboardRouter.get('/dashboard', asyncRoute(async (_req, res) => {
   const { rows } = await pool.query(`
     SELECT
       (SELECT COUNT(*) FROM "Organisations")::int AS org_count,
@@ -29,7 +30,7 @@ dashboardRouter.get('/dashboard', async (_req, res) => {
     ...rows[0],
     recentContracts: recentContracts.rows
   });
-});
+}));
 
 function parseDateParam(value, fallback) {
   if (!value) return fallback;
@@ -57,17 +58,6 @@ function resolveRange(req) {
   // Half-open [start, endExclusive) so the end date's own day is fully included.
   const endExclusive = addDaysUTC(end, 1);
   return { start, end, endExclusive };
-}
-
-// A rejected promise in an async Express handler is otherwise an unhandled rejection
-// that crashes the whole process (Node 15+) rather than just failing the one request.
-function asyncRoute(fn) {
-  return (req, res) => {
-    fn(req, res).catch((err) => {
-      console.error(err);
-      res.status(500).json({ error: 'Internal error.' });
-    });
-  };
 }
 
 dashboardRouter.get('/dashboard/activity', asyncRoute(async (req, res) => {
