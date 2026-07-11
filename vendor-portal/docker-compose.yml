@@ -6,7 +6,7 @@ services:
     build:
       context: .
     environment:
-      DATABASE_URL: "postgres://enkl:${DB_PASSWORD:-enkl_dev_password}@host.docker.internal:5432/enkl"
+      DATABASE_URL: "postgres://enkl:${DB_PASSWORD:?DB_PASSWORD must be set in vendor-portal/.env}@host.docker.internal:5432/enkl"
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must be set in vendor-portal/.env}
       PORT: "4000"
     ports:
