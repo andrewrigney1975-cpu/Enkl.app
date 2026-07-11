@@ -20,6 +20,7 @@ use Enkl\Api\Controllers\ObjectivesController;
 use Enkl\Api\Controllers\OrganisationPrinciplesController;
 use Enkl\Api\Controllers\OrganisationSsoConfigController;
 use Enkl\Api\Controllers\OrganisationsController;
+use Enkl\Api\Controllers\PortfolioController;
 use Enkl\Api\Controllers\PrinciplesController;
 use Enkl\Api\Controllers\ProjectsController;
 use Enkl\Api\Controllers\ReleasesController;
@@ -109,6 +110,15 @@ function registerRoutes(App $app): void
         $group->get('/sso-config', [OrganisationSsoConfigController::class, 'get']);
         $group->put('/sso-config', [OrganisationSsoConfigController::class, 'update']);
         $group->post('/sso-config/scim-token', [OrganisationSsoConfigController::class, 'generateScimToken']);
+    })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
+
+    // ---- Portfolio Dashboard (OrgAdmin only, deliberately NO ProjectMemberMiddleware — an admin
+    // reviewing their organisation's portfolio may not personally belong to every project in it; see
+    // PortfolioService.php's own doc comment for the cross-org isolation guarantee this relies on) ----
+    $app->group('/api/organisations/me/portfolio', function ($group) {
+        $group->get('/projects', [PortfolioController::class, 'listProjects']);
+        $group->get('/aggregate', [PortfolioController::class, 'getAggregate']);
+        $group->get('/activity', [PortfolioController::class, 'getActivity']);
     })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
 
     // ---- Project Templates (Organisation-owned) — list/detail/create need only auth (any signed-in

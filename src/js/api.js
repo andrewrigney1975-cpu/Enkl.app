@@ -384,3 +384,31 @@ export var organisationPrincipleApi = {
     return apiFetch('/organisations/me/principles/' + principleId + '/copy', {method: 'POST', body: JSON.stringify(body)});
   }
 };
+
+/* Backs the Org-Admin-only Portfolio Dashboard (modals/portfolio-dashboard.js) — route base
+   /api/organisations/me/portfolio, see PortfolioController.cs/.php. Every one of these is
+   OrgAdmin-gated server-side regardless of what this client sends; project ids here are only ever
+   a request for data the server independently re-validates against the caller's own organisation. */
+export var portfolioApi = {
+  listProjects: function(){
+    return apiFetch('/organisations/me/portfolio/projects', {method: 'GET'});
+  },
+  /* GET, not POST: this is a pure read (no side effects), and POST would trip the global
+     MustChangePassword gate that blocks every mutating request — see PortfolioController.cs's
+     GetAggregate for why that would wrongly lock a freshly-migrated Org Admin out of this dashboard.
+     projectIds is joined into a single comma-separated query value rather than repeated/bracketed
+     params — see PortfolioController.cs's GetActivity for why (ASP.NET Core and Slim/PHP parse
+     array-shaped query strings differently, and this same call needs to work unchanged against
+     either tier). */
+  getAggregate: function(projectIds){
+    return apiFetch('/organisations/me/portfolio/aggregate?projectIds=' + encodeURIComponent(projectIds.join(',')), {method: 'GET'});
+  },
+  /* start/end are 'YYYY-MM-DD' strings; projectIds is joined into a single comma-separated query
+     value rather than repeated/bracketed params — see PortfolioController.cs's GetActivity for why
+     (ASP.NET Core and Slim/PHP parse array-shaped query strings differently, and this same call
+     needs to work unchanged against either tier). */
+  getActivity: function(projectIds, start, end){
+    var query = 'projectIds=' + encodeURIComponent(projectIds.join(',')) + '&start=' + encodeURIComponent(start) + '&end=' + encodeURIComponent(end);
+    return apiFetch('/organisations/me/portfolio/activity?' + query, {method: 'GET'});
+  }
+};

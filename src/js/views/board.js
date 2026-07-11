@@ -84,6 +84,13 @@ export function applyHeaderButtonVisibility(){
     return '<a href="#" class="kf-header-more-link" data-nav-target="' + item.id + '">' + escapeHTML(item.label) + '</a>';
   }).join('') : '';
 
+  /* Portfolio Dashboard is Org-Admin-only, and only meaningful once a project is actually
+     server-authoritative — a local-only project has no admin/auth concept at all, same "for a
+     server project" gating already used for teamsCommitteesBtn above. Unlike the movable-group
+     buttons above, this isn't a per-project on/off App Setting — it's a permissions gate, so it's
+     handled here alongside Org Chart/Workflow rather than folded into isEffectivelyVisible. */
+  document.getElementById('portfolioDashboardBtn').classList.toggle('kf-vis-hidden', !(isServerAuthoritative(project) && isOrgAdmin()));
+
   document.getElementById('orgChartBtn').classList.toggle('kf-vis-hidden', !visibility.teamsCommittees);
   document.getElementById('navOrgChartBtn').classList.toggle('kf-vis-hidden', !visibility.teamsCommittees);
   document.getElementById('workflowBtn').classList.toggle('kf-vis-hidden', !visibility.workflow);

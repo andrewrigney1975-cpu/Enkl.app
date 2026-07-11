@@ -61,6 +61,7 @@
       </div>
       <div class="kf-header-divider"></div>
       <div class="kf-drawer-action-group">
+        <button class="kf-header-btn kf-vis-hidden" id="portfolioDashboardBtn" title="Portfolio Dashboard"><span class="kf-icon" data-icon="ty_analyse" data-size="14"></span>Portfolio Dashboard</button>
         <button class="kf-header-btn" id="healthBtn" title="Health Dashboard"><span class="kf-icon" data-icon="heartPulse" data-size="14"></span>Health Dashboard</button>
         <div class="kf-header-movable-group" id="headerMovableGroup">
           <button class="kf-header-btn" id="principlesBtn" title="Principles"><span class="kf-icon" data-icon="compass" data-size="14"></span>Principles</button>
@@ -1820,6 +1821,106 @@
       <div class="kf-health-section">
         <h3 class="kf-health-section-title">Top 5 Team Members by Active Workload</h3>
         <div id="healthTopMembers"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Portfolio Dashboard Modal (Org-Admin only) -->
+<div class="kf-overlay hidden" id="portfolioDashboardOverlay">
+  <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="portfolioDashboardTitle">Portfolio Dashboard</h2>
+      <div class="kf-modal-header-actions">
+        <button class="kf-btn kf-btn-ghost" id="portfolioDashboardClose" title="Close"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+      </div>
+    </div>
+    <div class="kf-modal-body" id="portfolioDashboardBody">
+      <div class="kf-health-section">
+        <h3 class="kf-health-section-title">Projects</h3>
+        <div id="portfolioProjectPicker" class="kf-risk-doc-picker"></div>
+      </div>
+
+      <div class="kf-portfolio-summary-row" id="portfolioSummaryBoxes"></div>
+
+      <div class="kf-health-overall-row">
+        <div id="portfolioOverallGauge"></div>
+        <div id="portfolioOverallNote" class="kf-health-overall-note"></div>
+      </div>
+      <div class="kf-health-gauges-row" id="portfolioGaugesRow"></div>
+
+      <div class="kf-health-section">
+        <div class="kf-health-section-header-row">
+          <h3 class="kf-health-section-title">Risks (all selected projects)</h3>
+          <div class="kf-export-as-wrap">
+            <button class="kf-btn kf-btn-ghost" id="portfolioRiskMatrixExportAsBtn" title="Export As..."><span class="kf-icon" data-icon="download" data-size="14"></span>Export As...</button>
+            <div class="kf-export-as-panel hidden" id="portfolioRiskMatrixExportAsPanel">
+              <button type="button" class="kf-export-as-option" data-export-type="svg">Export as SVG</button>
+              <button type="button" class="kf-export-as-option" data-export-type="png">Export as PNG (4x resolution)</button>
+            </div>
+          </div>
+        </div>
+        <div id="portfolioRiskMatrixChart"></div>
+        <div id="portfolioRiskMatrixNoData" class="kf-health-no-data hidden"></div>
+        <div id="portfolioRiskMatrixLegend" class="kf-health-legend"></div>
+      </div>
+
+      <div class="kf-health-section">
+        <h3 class="kf-health-section-title">Top 10 Team Members by Active Workload</h3>
+        <div id="portfolioTopMembers"></div>
+      </div>
+
+      <div class="kf-health-section">
+        <div class="kf-health-section-header-row">
+          <h3 class="kf-health-section-title">Timeline</h3>
+          <div class="kf-chart-controls">
+            <select id="portfolioTimelineScaleSelect" class="kf-timeline-scale-select" aria-label="Timeline granularity">
+              <option value="day">Day</option>
+              <option value="week">Week</option>
+              <option value="fortnight">Fortnight</option>
+              <option value="month">Month</option>
+              <option value="quarter">Quarter</option>
+            </select>
+            <input type="date" id="portfolioTimelineStartInput" aria-label="Timeline start date">
+            <input type="date" id="portfolioTimelineEndInput" aria-label="Timeline end date">
+            <div class="kf-export-as-wrap">
+              <button class="kf-btn kf-btn-ghost" id="portfolioTimelineExportAsBtn" title="Export As..."><span class="kf-icon" data-icon="download" data-size="14"></span>Export As...</button>
+              <div class="kf-export-as-panel hidden" id="portfolioTimelineExportAsPanel">
+                <button type="button" class="kf-export-as-option" data-export-type="svg">Export as SVG</button>
+                <button type="button" class="kf-export-as-option" data-export-type="png">Export as PNG (4x resolution)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="portfolioTimelineChart"></div>
+        <div id="portfolioTimelineNoData" class="kf-health-no-data hidden"></div>
+      </div>
+
+      <div class="kf-health-section">
+        <div class="kf-health-section-header-row">
+          <h3 class="kf-health-section-title">Activity</h3>
+          <div class="kf-chart-controls">
+            <select id="portfolioActivityScaleSelect" class="kf-timeline-scale-select" aria-label="Activity chart granularity">
+              <option value="day">Day</option>
+              <option value="week">Week</option>
+              <option value="fortnight">Fortnight</option>
+              <option value="month">Month</option>
+              <option value="quarter">Quarter</option>
+            </select>
+            <input type="date" id="portfolioActivityStartInput" aria-label="Activity start date">
+            <input type="date" id="portfolioActivityEndInput" aria-label="Activity end date">
+            <div class="kf-export-as-wrap">
+              <button class="kf-btn kf-btn-ghost" id="portfolioActivityExportAsBtn" title="Export As..."><span class="kf-icon" data-icon="download" data-size="14"></span>Export As...</button>
+              <div class="kf-export-as-panel hidden" id="portfolioActivityExportAsPanel">
+                <button type="button" class="kf-export-as-option" data-export-type="svg">Export as SVG</button>
+                <button type="button" class="kf-export-as-option" data-export-type="png">Export as PNG (4x resolution)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="portfolioActivityChart"></div>
+        <div id="portfolioActivityNoData" class="kf-health-no-data hidden"></div>
+        <div id="portfolioActivityLegend" class="kf-health-legend"></div>
       </div>
     </div>
   </div>

@@ -486,6 +486,8 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
     serverProjectId: detail.id,
     name: detail.name,
     key: detail.key,
+    startDate: serverDateOnlyToIso(detail.startDate),
+    endDate: serverDateOnlyToIso(detail.endDate),
     taskCounter: preserved.taskCounter || maxTaskCounterFrom(detail.tasks),
     columns: columns,
     tasks: tasks,

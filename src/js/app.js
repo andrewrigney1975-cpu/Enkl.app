@@ -50,6 +50,7 @@ import { openDocumentsOverlay, closeDocumentsOverlay, isDocumentsOverlayOpen, sh
 import { scheduleDocumentSuggestions } from './features/document-suggestions.js';
 import { openRisksOverlay, closeRisksOverlay, isRisksOverlayOpen, showRisksFormView, showRisksListView, renderRisksList, saveRiskFromModal, deleteRiskFromModal, updateRiskScorePreview } from './modals/risks.js';
 import { openHealthOverlay, closeHealthOverlay, isHealthOverlayOpen, cancelHealthGaugeAnimation } from './modals/health.js';
+import { openPortfolioDashboardOverlay, closePortfolioDashboardOverlay, isPortfolioDashboardOverlayOpen, onPortfolioProjectSelectionChanged, onPortfolioTimelineControlsChanged, onPortfolioActivityControlsChanged } from './modals/portfolio-dashboard.js';
 import { openDecisionsOverlay, closeDecisionsOverlay, isDecisionsOverlayOpen, showDecisionsFormView, showDecisionsListView, renderDecisionsList, saveDecisionFromModal, deleteDecisionFromModal } from './modals/decisions.js';
 import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen, showPrinciplesFormView, showPrinciplesListView, renderPrinciplesList, savePrincipleFromModal, deletePrincipleFromModal, switchPrinciplesTab, updatePrincipleShareFromModal } from './modals/principles.js';
 import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen, showObjectivesFormView, showObjectivesListView, renderObjectivesList, saveObjectiveFromModal, deleteObjectiveFromModal } from './modals/objectives.js';
@@ -277,6 +278,18 @@ function wireEvents(){
   document.getElementById('riskImpactSelect').addEventListener('change', updateRiskScorePreview);
 
   document.getElementById('decisionsBtn').addEventListener('click', openDecisionsOverlay);
+  document.getElementById('portfolioDashboardBtn').addEventListener('click', openPortfolioDashboardOverlay);
+  document.getElementById('portfolioDashboardClose').addEventListener('click', closePortfolioDashboardOverlay);
+  document.getElementById('portfolioDashboardOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'portfolioDashboardOverlay') closePortfolioDashboardOverlay();
+  });
+  document.getElementById('portfolioProjectPicker').addEventListener('change', onPortfolioProjectSelectionChanged);
+  document.getElementById('portfolioTimelineScaleSelect').addEventListener('change', onPortfolioTimelineControlsChanged);
+  document.getElementById('portfolioTimelineStartInput').addEventListener('change', onPortfolioTimelineControlsChanged);
+  document.getElementById('portfolioTimelineEndInput').addEventListener('change', onPortfolioTimelineControlsChanged);
+  document.getElementById('portfolioActivityScaleSelect').addEventListener('change', onPortfolioActivityControlsChanged);
+  document.getElementById('portfolioActivityStartInput').addEventListener('change', onPortfolioActivityControlsChanged);
+  document.getElementById('portfolioActivityEndInput').addEventListener('change', onPortfolioActivityControlsChanged);
   document.getElementById('healthBtn').addEventListener('click', openHealthOverlay);
   document.getElementById('healthClose').addEventListener('click', closeHealthOverlay);
   document.getElementById('healthOverlay').addEventListener('mousedown', function(e){
@@ -717,6 +730,45 @@ function wireEvents(){
       if(!svgEl){ toast('Nothing to export.'); return; }
       if(btn.getAttribute('data-export-type') === 'svg') exportSvgElementAsSvgFile(svgEl, filenameBase);
       else exportSvgElementAsPng(svgEl, filenameBase, 4);
+    });
+  });
+  document.getElementById('portfolioRiskMatrixExportAsBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('portfolioRiskMatrixExportAsPanel');
+  });
+  document.querySelectorAll('#portfolioRiskMatrixExportAsPanel .kf-export-as-option').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      closeAllExportAsPanels();
+      var svgEl = document.querySelector('#portfolioRiskMatrixChart svg');
+      if(!svgEl){ toast('Nothing to export.'); return; }
+      if(btn.getAttribute('data-export-type') === 'svg') exportSvgElementAsSvgFile(svgEl, 'portfolio-risk-matrix');
+      else exportSvgElementAsPng(svgEl, 'portfolio-risk-matrix', 4);
+    });
+  });
+  document.getElementById('portfolioTimelineExportAsBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('portfolioTimelineExportAsPanel');
+  });
+  document.querySelectorAll('#portfolioTimelineExportAsPanel .kf-export-as-option').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      closeAllExportAsPanels();
+      var svgEl = document.querySelector('#portfolioTimelineChart svg');
+      if(!svgEl){ toast('Nothing to export.'); return; }
+      if(btn.getAttribute('data-export-type') === 'svg') exportSvgElementAsSvgFile(svgEl, 'portfolio-timeline');
+      else exportSvgElementAsPng(svgEl, 'portfolio-timeline', 4);
+    });
+  });
+  document.getElementById('portfolioActivityExportAsBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleExportAsPanel('portfolioActivityExportAsPanel');
+  });
+  document.querySelectorAll('#portfolioActivityExportAsPanel .kf-export-as-option').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      closeAllExportAsPanels();
+      var svgEl = document.querySelector('#portfolioActivityChart svg');
+      if(!svgEl){ toast('Nothing to export.'); return; }
+      if(btn.getAttribute('data-export-type') === 'svg') exportSvgElementAsSvgFile(svgEl, 'portfolio-activity');
+      else exportSvgElementAsPng(svgEl, 'portfolio-activity', 4);
     });
   });
   document.getElementById('risksMatrixExportAsBtn').addEventListener('click', function(e){
@@ -1292,6 +1344,7 @@ function wireEvents(){
     else if(isObjectivesOverlayOpen()) closeObjectivesOverlay();
     else if(isProjectSearchOverlayOpen()) closeProjectSearchOverlay();
     else if(isTeamsCommitteesOverlayOpen()) closeTeamsCommitteesOverlay();
+    else if(isPortfolioDashboardOverlayOpen()) closePortfolioDashboardOverlay();
     else if(isHealthOverlayOpen()){ cancelHealthGaugeAnimation(); closeHealthOverlay(); }
     else if(isAppSettingsOverlayOpen()) closeAppSettingsOverlay();
     else if(isAboutModalOpen()) closeAboutModal();

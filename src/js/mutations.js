@@ -1517,7 +1517,14 @@ export function computeRiskMatrixPoints(risks, marginLeft, marginTop, cellWidth,
   return points;
 }
 
-export function buildRiskMatrixSvg(risks, height){
+/* options.colorForRisk(risk) -> hex color string, optional — when provided, overrides the default
+   solid marker fill (#1b2a4a) per-point. Used by the Portfolio Dashboard's risk matrix to color
+   each risk by its source project (with its own legend, built by the caller — this function only
+   ever draws the matrix itself, same as before). Omitted entirely, this is 100% unchanged from the
+   single-project Health Dashboard / standalone Risks view's existing 2-arg calls. */
+export function buildRiskMatrixSvg(risks, height, options){
+  options = options || {};
+  var colorForRisk = options.colorForRisk || function(){ return '#1b2a4a'; };
   height = height || 560;
   var marginLeft = 100, marginRight = 30, marginTop = 26, marginBottom = 70;
   var plotHeight = height - marginTop - marginBottom;
@@ -1560,7 +1567,7 @@ export function buildRiskMatrixSvg(risks, height){
     var labelOffset = 10;
     return '<g class="kf-risk-matrix-point' + (isClosed ? ' kf-risk-matrix-point-faded' : '') + '">' +
       '<title>' + escapeHTML(r.key) + ' — ' + escapeHTML(r.title) + (isClosed ? ' [Closed]' : '') + '</title>' +
-      '<circle cx="' + p.x + '" cy="' + p.y + '" r="6" fill="#1b2a4a" stroke="#fff" stroke-width="1.5"></circle>' +
+      '<circle cx="' + p.x + '" cy="' + p.y + '" r="6" fill="' + colorForRisk(r) + '" stroke="#fff" stroke-width="1.5"></circle>' +
       '<text x="' + (p.x + labelOffset) + '" y="' + (p.y + 4) + '" font-size="10" font-weight="700" fill="var(--kf-text)" style="paint-order:stroke;stroke:var(--kf-surface);stroke-width:3px;">' + escapeHTML(r.key) + '</text>' +
     '</g>';
   }).join('');

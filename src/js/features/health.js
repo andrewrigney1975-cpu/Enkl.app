@@ -236,24 +236,43 @@ export function computeOverallHealth(project){
   };
 }
 
-/* ---- Top 5 team members by active & remaining work ----
-   Counts only non-archived, non-Done tasks (current workload, not
-   lifetime total). Excludes Unassigned. Ties broken alphabetically. */
-export function computeTopTeamMembers(project){
+/* ---- Top N team members by active & remaining work ----
+   Counts only non-archived, non-Done tasks (current workload, not lifetime total). Excludes
+   Unassigned. Ties broken alphabetically. Default behavior (no options) is unchanged from before:
+   top 5, grouped by each task's own project-scoped assigneeId (memberId).
+
+   options.limit: how many rows to return (default 5).
+   options.groupByUserId: the Portfolio Dashboard's cross-project use — the SAME person has a
+   DIFFERENT memberId (ProjectMember.Id) in each project they're on, so grouping by raw assigneeId
+   would undercount them as several different people. When true, groups by each resolved member's
+   userId instead (available once the aggregate payload's members carry it — see
+   modals/portfolio-dashboard.js's buildPortfolioPseudoProject) — a real, org-stable identity, unlike
+   memberId which only makes sense within one project. */
+export function computeTopTeamMembers(project, options){
+  options = options || {};
+  var limit = options.limit || 5;
+  var groupByUserId = !!options.groupByUserId;
+
   var counts = {};
+  var infoByKey = {};
   getTasksArray(project).filter(function(t){ return !t.archived; }).forEach(function(t){
     if(!t.assigneeId) return;
     var c = getColumn(project, t.columnId);
     if(c && c.done) return;
-    counts[t.assigneeId] = (counts[t.assigneeId] || 0) + 1;
+    var m = getMemberById(project, t.assigneeId);
+    var key = (groupByUserId && m && m.userId) ? m.userId : t.assigneeId;
+    counts[key] = (counts[key] || 0) + 1;
+    if(!infoByKey[key]){
+      infoByKey[key] = {name: m ? m.name : 'Unknown', role: m ? (m.role || null) : null, color: m ? m.color : '#8993a4'};
+    }
   });
-  var rows = Object.keys(counts).map(function(memberId){
-    var m = getMemberById(project, memberId);
-    return {memberId: memberId, name: m ? m.name : 'Unknown', role: m ? (m.role || null) : null, color: m ? m.color : '#8993a4', count: counts[memberId]};
+  var rows = Object.keys(counts).map(function(key){
+    var info = infoByKey[key];
+    return {memberId: key, name: info.name, role: info.role, color: info.color, count: counts[key]};
   });
   rows.sort(function(a, b){
     if(b.count !== a.count) return b.count - a.count;
     return a.name.localeCompare(b.name);
   });
-  return rows.slice(0, 5);
+  return rows.slice(0, limit);
 }

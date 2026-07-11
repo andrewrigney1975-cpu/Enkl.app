@@ -77,6 +77,7 @@ builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<RiskService>();
 builder.Services.AddScoped<ObjectiveService>();
 builder.Services.AddScoped<TeamCommitteeService>();
+builder.Services.AddScoped<PortfolioService>();
 builder.Services.AddScoped<DecisionService>();
 builder.Services.AddScoped<MemberService>();
 builder.Services.AddScoped<TemplateService>();

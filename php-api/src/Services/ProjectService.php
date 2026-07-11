@@ -67,6 +67,8 @@ final class ProjectService
             'retrospectives' => $this->fetchRetrospectives($projectId),
             'headerButtonVisibility' => ProjectSettingsSerializer::parse($project['HeaderButtonVisibilityJson']),
             'workflow' => $project['WorkflowJson'] !== null ? json_decode($project['WorkflowJson']) : null,
+            'startDate' => $project['StartDate'],
+            'endDate' => $project['EndDate'],
         ];
     }
 

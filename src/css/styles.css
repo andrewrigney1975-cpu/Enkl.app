@@ -2090,6 +2090,50 @@
   }
 
   /* Project Health Dashboard */
+  .kf-portfolio-summary-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 4px 0 16px;
+  }
+
+  .kf-portfolio-summary-box {
+    flex: 1 1 110px;
+    min-width: 110px;
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 12px 10px;
+    text-align: center;
+  }
+
+  .kf-portfolio-summary-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--kf-text);
+  }
+
+  .kf-portfolio-summary-label {
+    font-size: 11px;
+    color: var(--kf-text-secondary);
+    margin-top: 2px;
+  }
+
+  .kf-chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .kf-chart-controls input[type="date"] {
+    border: 1.5px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 5px 8px;
+    font-size: 12px;
+    color: var(--kf-text);
+    background: var(--kf-input-bg);
+  }
+
   .kf-health-overall-row {
     display: flex;
     align-items: center;
@@ -2276,6 +2320,7 @@
   }
 
   .kf-health-top-member-bar-fill {
+    display: block;
     height: 100%;
     background: #0c66e4;
     border-radius: 4px;

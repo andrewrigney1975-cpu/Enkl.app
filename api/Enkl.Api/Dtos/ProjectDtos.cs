@@ -54,7 +54,8 @@ public record ProjectDetailDto(
     List<DocumentDto> Documents, List<RiskDto> Risks, List<ObjectiveDto> Objectives,
     List<TeamCommitteeDto> TeamsCommittees, List<DecisionDto> Decisions,
     List<RetrospectiveDto> Retrospectives,
-    ProjectSettingsDto HeaderButtonVisibility, JsonElement? Workflow);
+    ProjectSettingsDto HeaderButtonVisibility, JsonElement? Workflow,
+    DateOnly? StartDate, DateOnly? EndDate);
 
 /// <summary>
 /// The 11 opt-in/opt-out feature-flag booleans shown in the "App Settings" modal

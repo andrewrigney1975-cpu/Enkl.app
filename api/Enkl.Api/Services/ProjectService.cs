@@ -79,7 +79,8 @@ public class ProjectService
                 d.Documents.Select(x => x.DocumentId).ToList(), d.Risks.Select(x => x.RiskId).ToList(), d.Principles.Select(x => x.PrincipleId).ToList(), d.Objectives.Select(x => x.ObjectiveId).ToList())).ToList(),
             project.Retrospectives.Select(ToRetrospectiveDto).ToList(),
             ProjectSettingsSerializer.Parse(project.HeaderButtonVisibilityJson),
-            ParseWorkflow(project.WorkflowJson));
+            ParseWorkflow(project.WorkflowJson),
+            project.StartDate, project.EndDate);
     }
 
     /// <summary>

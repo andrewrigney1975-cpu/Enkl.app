@@ -39,7 +39,10 @@ function buildGaugeSvg(pct, size, startAtZero){
     '<text class="kf-gauge-value-text" x="' + cx + '" y="' + (cy - r * 0.15) + '" text-anchor="middle" font-size="' + (size * 0.17) + '" font-weight="700" fill="var(--kf-text)">' + labelText + '</text>' +
   '</svg>';
 }
-function buildGaugeBlock(pct, label, size, startAtZero){
+/* Exported so the Portfolio Dashboard (modals/portfolio-dashboard.js) can render the exact same
+   gauge markup for its own aggregated pct values — "use the same health dials" is satisfied by
+   reusing this unchanged, not re-deriving gauge SVG drawing a second time. */
+export function buildGaugeBlock(pct, label, size, startAtZero){
   return '<div class="kf-health-gauge-block">' +
     buildGaugeSvg(pct, size, startAtZero) +
     '<div class="kf-health-gauge-label">' + escapeHTML(label) + '</div>' +
@@ -66,11 +69,15 @@ function applyGaugeDisplayValue(svgEl, displayPct, finalPct, size){
   valuePathEl.setAttribute('stroke', valueColor);
   textEl.textContent = Math.round(clamped) + '%';
 }
-export function startHealthGaugeAnimation(){
+/* containerSelector defaults to the per-project Health Dashboard's own body — the Portfolio
+   Dashboard (modals/portfolio-dashboard.js) passes its own gauges row's id instead, so the two
+   modals' gauge animations never interfere with each other even if somehow both were mid-animation
+   at once. */
+export function startHealthGaugeAnimation(containerSelector){
   cancelHealthGaugeAnimation();
   ui.healthGaugeAnimTimeoutId = setTimeout(function(){
     ui.healthGaugeAnimTimeoutId = null;
-    var gaugeEls = Array.prototype.slice.call(document.querySelectorAll('#healthBody .kf-gauge-svg')).filter(function(el){
+    var gaugeEls = Array.prototype.slice.call(document.querySelectorAll((containerSelector || '#healthBody') + ' .kf-gauge-svg')).filter(function(el){
       return el.getAttribute('data-target-pct') !== '';
     });
     if(gaugeEls.length === 0) return;

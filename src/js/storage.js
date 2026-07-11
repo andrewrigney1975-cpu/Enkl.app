@@ -28,6 +28,43 @@ export function saveDB(){
   }
 }
 
+/* Portfolio Dashboard's selected-project-ids, remembered between runs of the same browser only (per
+   user's explicit choice — no server-side persistence). Deliberately its own localStorage key, not
+   folded into state.db: it's a per-Org-Admin UI preference, not project data, and must survive
+   independently of which local project happens to be open. Defensive against corrupted/garbled data
+   the same way normalizeHeaderButtonVisibility is — anything that isn't an array of non-empty
+   strings collapses to "nothing selected" rather than an error, and is never treated as
+   authoritative: it only pre-checks checkboxes, since the actual data returned always comes from
+   whatever the server independently validates against the caller's own organisation (see
+   PortfolioService.cs's own doc comment). */
+export var PORTFOLIO_SELECTED_PROJECTS_STORAGE_KEY = 'kanbanflow_portfolio_selected_projects';
+
+export function getPortfolioSelectedProjectIds(){
+  var raw;
+  try{
+    raw = localStorage.getItem(PORTFOLIO_SELECTED_PROJECTS_STORAGE_KEY);
+  }catch(e){
+    return [];
+  }
+  if(!raw) return [];
+  try{
+    var parsed = JSON.parse(raw);
+    if(!Array.isArray(parsed)) return [];
+    return parsed.filter(function(id){ return typeof id === 'string' && id.length > 0; });
+  }catch(e){
+    return [];
+  }
+}
+
+export function setPortfolioSelectedProjectIds(ids){
+  var clean = (Array.isArray(ids) ? ids : []).filter(function(id){ return typeof id === 'string' && id.length > 0; });
+  try{
+    localStorage.setItem(PORTFOLIO_SELECTED_PROJECTS_STORAGE_KEY, JSON.stringify(clean));
+  }catch(e){
+    console.error('Enkl: failed to save Portfolio Dashboard selection to localStorage', e);
+  }
+}
+
 export function loadDB(){
   var raw;
   try{
