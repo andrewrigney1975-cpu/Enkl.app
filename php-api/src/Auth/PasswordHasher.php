@@ -11,9 +11,16 @@ namespace Enkl\Api\Auth;
  */
 final class PasswordHasher
 {
+    // Security review (Low/Informational finding): pinned explicitly rather than left at
+    // password_hash()'s implicit PASSWORD_BCRYPT default cost, so the actual work factor is
+    // visible/reviewable here instead of depending on whatever PHP ships as its own default.
+    // Matches vendor-portal/server/scripts/seed-admin.js's existing cost factor and .NET's
+    // PasswordHasher.
+    private const WORK_FACTOR = 12;
+
     public static function hash(string $plainTextPassword): string
     {
-        return password_hash($plainTextPassword, PASSWORD_BCRYPT);
+        return password_hash($plainTextPassword, PASSWORD_BCRYPT, ['cost' => self::WORK_FACTOR]);
     }
 
     public static function verify(string $plainTextPassword, string $hash): bool

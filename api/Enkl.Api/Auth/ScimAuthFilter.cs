@@ -52,7 +52,17 @@ public class ScimAuthFilter : IAsyncAuthorizationFilter
             !PasswordHasher.Verify(token, cfg.ScimBearerTokenHash))
         {
             context.Result = ScimResult(401, "Invalid bearer token.");
+            return;
         }
+
+        // Security review (Low/Informational finding): usage audit trail for a rotate-only token.
+        // ExecuteUpdateAsync (a bulk update, no tracked entity needed) rather than loading `cfg`
+        // trackable and calling SaveChangesAsync — cfg above is AsNoTracking() by design (a
+        // read-only auth check shouldn't otherwise pay for change-tracking), so this stays a single
+        // targeted UPDATE instead of a second full row load.
+        await _db.OrganisationSsoConfigs
+            .Where(c => c.OrganisationId == orgId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.ScimTokenLastUsedAt, DateTime.UtcNow));
     }
 
     private static ObjectResult ScimResult(int status, string detail) => new(new

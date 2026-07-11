@@ -153,15 +153,29 @@ stack right now).
 
 ## Low / Informational
 
+**Status: every actionable item below is REMEDIATED** except the one explicitly deferred by user
+decision (per-project roles — a product/feature decision, not a bug). Verified live against the
+running .NET stack where feasible (IdP cert rejection tested through the real API endpoint); PHP-tier
+and vendor-portal changes are lint/functionally-verified in isolation (neither runs in the active
+docker-compose stack).
+
 - **IdP certificate hygiene** — `SamlCertificateHelper.cs` never validates expiry or key strength of an admin-pasted IdP signing certificate.
+  - **Fixed:** both tiers now reject an expired, not-yet-valid, or weak-key (RSA < 2048 bits) certificate at save time, with a specific caller-facing message. Live-verified through the real `PUT /api/organisations/me/sso-config` endpoint with a 1024-bit test cert (400, exact expected message) and a healthy 2048-bit one (accepted).
 - **BCrypt work factor** left at library default rather than explicitly pinned in `Auth/PasswordHasher.cs` (informational — current default is reasonable, just not visible/reviewable in code).
+  - **Fixed:** cost factor 12 pinned explicitly in both tiers (matching vendor-portal's existing convention). Verified: hash embeds cost 12, existing pre-change hashes still verify correctly (bcrypt reads the cost from the hash itself, not the caller).
 - **No per-project role enforcement** beyond flat membership — any project member can add/remove other members, delete tasks, etc. May be intentional; confirm against product intent.
+  - **Deferred by user decision:** left as flat membership. Building real RBAC is a product/feature effort, not a security patch — revisit as its own project if wanted.
 - **SCIM tokens are rotate-only**, no usage audit trail beyond a "generated at" timestamp.
+  - **Fixed:** new `ScimTokenLastUsedAt` column (both tiers), updated on every successful SCIM authentication — gives an OrgAdmin/support engineer investigating suspected token compromise a coarse "is this IdP still calling us" signal.
 - **Vendor-portal `seed-admin.js`** only enforces password length ≥ 12, no complexity/entropy check.
+  - **Fixed:** now also rejects a password equal to the username, a small hardcoded common-weak-password list, and anything not mixing at least 3 of 4 character classes.
 - **`jsdom`** listed as a production dependency in root `package.json` rather than a devDependency — packaging nit, it's only actually used under `tests/`.
+  - **Fixed:** moved to `devDependencies`.
 - **No CORS configuration anywhere** in `.NET`/PHP tiers — currently a non-issue (fails safe / same-origin nginx-proxied topology), but would need explicit configuration if the API is ever consumed from a different origin.
+  - **Fixed:** an explicit default-deny CORS policy now exists in `.NET` (`AddCors`/`UseCors`, no origins allowed — behavior unchanged, just made intentional and reviewable); PHP has no implicit CORS behavior to override, so a parity comment documents the same stance. Live-verified: no `Access-Control-*` headers returned for a foreign `Origin`.
 - **Frontend client-side admin gates** (`isOrgAdmin()`, `isServerAuthoritative()`) are correctly documented as UI-only convenience — **cross-checked against the backend audits and confirmed properly re-enforced server-side** (`OrganisationService.SetUserAdminAsync`/`SetUserEmail` re-check the target user's org; the `OrgAdmin` policy gates the actual management endpoints). No outstanding concern here.
 - **`npm audit`** came back clean (0 vulnerabilities) for both the root frontend and vendor-portal dependency trees at time of review — re-run periodically.
+  - **Update:** installing `express-rate-limit` for H1 surfaced a pre-existing high-severity `node-tar` advisory via `bcrypt`'s unmaintained `@mapbox/node-pre-gyp` dependency chain (not caused by that change, just newly visible). **Fixed:** forced `tar` to `^7.5.16` via an npm `overrides` entry; verified `npm audit` now reports 0 vulnerabilities and bcrypt's native module still hashes/compares correctly.
 - **SQL injection**: both the .NET (EF Core) and PHP (raw PDO) tiers, plus vendor-portal's raw `pg` queries, were reviewed call-by-call and found consistently clean — no string-concatenated SQL anywhere, all dynamic `IN (...)` lists and SCIM filter clauses are built from hardcoded literals with values bound via placeholders. This is a genuine strength worth preserving explicitly in future code review.
 
 ---
@@ -172,3 +186,8 @@ stack right now).
 2. **C5–C6** next — stored XSS is the other side of full account takeover, this time from a malicious *insider* (any project member) against everyone else who views the board, including admins.
 3. **H1–H5** — rate limiting and revocation close the two most likely follow-on abuse paths once C1–C4 are fixed; TLS/HSTS and the dependency upgrades are lower-effort, do them alongside.
 4. **M1–M10** — work through as capacity allows; none of these are exploitable on their own without one of the Critical/High issues as a prerequisite, but several (M5 SAML replay, M9 Principle copy) are worth deliberate sign-off even if left as-is.
+
+**All of the above (Critical, High, Medium, and Low/Informational) are now remediated**, with the
+single exception of per-project role enforcement, deliberately deferred as a product decision rather
+than a security patch. This document remains uncommitted — decide whether to commit it, `.gitignore`
+it, or archive its contents elsewhere now that the roadmap it describes has been worked through.

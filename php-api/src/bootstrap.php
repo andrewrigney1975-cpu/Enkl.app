@@ -32,6 +32,15 @@ function buildApp(): \Slim\App
             ->withHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     });
 
+    // Security review (Low/Informational finding): no CORS configuration exists anywhere in this
+    // codebase, .NET side included. Already safe by default — this tier is only ever reached through
+    // nginx in the same origin as the frontend, so a cross-origin browser request is already blocked
+    // by the browser's own same-origin policy with no Access-Control-Allow-Origin header present —
+    // Slim (unlike ASP.NET Core) has no implicit CORS behavior to begin with, so there's nothing to
+    // register here to make that explicit the way Program.cs's AddCors/UseCors call does; this
+    // comment is the parity note. Would need explicit configuration if this API is ever consumed
+    // from a different origin.
+
     if (Config::getBool('RUN_MIGRATIONS_ON_STARTUP', true)) {
         runMigrationsWithLogging();
     }

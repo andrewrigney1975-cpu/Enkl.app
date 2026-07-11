@@ -52,6 +52,12 @@ final class ScimAuthMiddleware implements MiddlewareInterface
             return $this->scimError(401, 'Invalid bearer token.');
         }
 
+        // Security review (Low/Informational finding): usage audit trail for a rotate-only token —
+        // see 012_add_scim_token_last_used_at.sql's own note.
+        Database::connection()
+            ->prepare('UPDATE "OrganisationSsoConfigs" SET "ScimTokenLastUsedAt" = now() WHERE "OrganisationId" = :id')
+            ->execute(['id' => $orgId]);
+
         return $handler->handle($request);
     }
 

@@ -57,8 +57,11 @@ final class OrganisationSsoConfigService
         $idpSigningCertificate = $existing !== false ? $existing['IdpSigningCertificate'] : null;
         $rawCertificate = trim((string) ($request['idpSigningCertificate'] ?? ''));
         if ($rawCertificate !== '') {
-            if (!SamlCertificateHelper::isValid($rawCertificate)) {
-                throw new ApiValidationException('Could not parse the IdP signing certificate. Paste the PEM block or base64 DER value your identity provider gave you.');
+            // Security review (Low/Informational finding): rejects an expired/not-yet-valid/
+            // weak-key certificate at save time too, not just an unparseable one.
+            $certificateError = SamlCertificateHelper::validationError($rawCertificate);
+            if ($certificateError !== null) {
+                throw new ApiValidationException($certificateError);
             }
             $idpSigningCertificate = $rawCertificate;
         }

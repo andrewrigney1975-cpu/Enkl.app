@@ -29,6 +29,11 @@ public class OrganisationSsoConfig
     // OrgAdmin exactly once at generation time and never persisted or retrievable again.
     public string? ScimBearerTokenHash { get; set; }
     public DateTime? ScimTokenGeneratedAt { get; set; }
+    // Security review (Low/Informational finding): a rotate-only token otherwise had no usage
+    // audit trail at all beyond its own generation time — this gives an OrgAdmin/support engineer
+    // investigating suspected token compromise at least a coarse "is this IdP still actually
+    // calling us" signal. Updated by ScimAuthFilter on every successful authentication.
+    public DateTime? ScimTokenLastUsedAt { get; set; }
 
     public DateTime DateLastModified { get; set; }
 }

@@ -111,6 +111,16 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("OrgAdmin", policy => policy.RequireClaim("orgAdmin", "true"));
 builder.Services.AddSingleton<IAuthorizationHandler, ProjectMemberAuthorizationHandler>();
 
+// Security review (Low/Informational finding): no CORS policy existed at all anywhere in this
+// codebase. Already safe by default — this API is only ever reached through nginx in the same
+// origin as the frontend (docker-compose.yml publishes no host port for `api` directly), so a
+// cross-origin browser request was already blocked by the browser's own same-origin policy with no
+// CORS headers present. This makes that an explicit, reviewable decision instead of an omission:
+// the default policy below allows no origins at all (no .WithOrigins()/.AllowAnyOrigin() call), so
+// behavior is unchanged — it's the one obvious place to add a real policy if this API is ever
+// consumed from a different origin.
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy => { }));
+
 // Security review finding H1: none of login/change-password/sso-exchange/sso-lookup/migration had
 // any brute-force protection at all. Partitioned per client IP (see ForwardedHeadersOptions above —
 // this API is only ever reached through nginx, so RemoteIpAddress is the real caller once that's
@@ -198,6 +208,7 @@ app.UseExceptionHandler(errApp => errApp.Run(async context =>
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
+app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

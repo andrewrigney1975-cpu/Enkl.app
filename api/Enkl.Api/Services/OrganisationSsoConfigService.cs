@@ -55,9 +55,17 @@ public class OrganisationSsoConfigService
         // own doc comment. A non-empty value replaces it; empty/omitted leaves it as-is.
         if (!string.IsNullOrWhiteSpace(request.IdpSigningCertificate))
         {
-            if (!SamlCertificateHelper.TryParse(request.IdpSigningCertificate, out _))
+            if (!SamlCertificateHelper.TryParse(request.IdpSigningCertificate, out var parsedCertificate))
             {
                 throw new ApiValidationException("Could not parse the IdP signing certificate. Paste the PEM block or base64 DER value your identity provider gave you.");
+            }
+            // Security review (Low/Informational finding): reject an expired/not-yet-valid/weak-key
+            // certificate at save time rather than accepting it silently and only surfacing a
+            // confusing failure the first time an assertion fails to verify against it.
+            var healthIssue = SamlCertificateHelper.ValidateHealth(parsedCertificate!);
+            if (healthIssue is not null)
+            {
+                throw new ApiValidationException(healthIssue);
             }
             cfg.IdpSigningCertificate = request.IdpSigningCertificate.Trim();
         }
