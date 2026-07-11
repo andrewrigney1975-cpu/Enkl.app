@@ -1064,6 +1064,10 @@ function wireEvents(){
   document.getElementById('appSettingsOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'appSettingsOverlay') closeAppSettingsOverlay();
   });
+  document.getElementById('appSettingsSsoConfigBtn').addEventListener('click', function(){
+    closeAppSettingsOverlay();
+    openSsoConfigModal();
+  });
   document.getElementById('aboutBtn').addEventListener('click', openAboutModal);
   document.getElementById('aboutModalClose').addEventListener('click', closeAboutModal);
   document.getElementById('aboutOverlay').addEventListener('mousedown', function(e){
