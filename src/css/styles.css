@@ -4552,12 +4552,15 @@
   }
 
   .kf-about-company-placeholder {
-    border: 1px dashed var(--kf-border-strong);
-    border-radius: var(--kf-radius);
     padding: 16px;
     text-align: center;
-    font-size: 12px;
-    color: var(--kf-text-faint);
+    color: var(--kf-text);
+  }
+
+  .kf-about-company-placeholder svg {
+    width: 100%;
+    max-width: 260px;
+    height: auto;
   }
 
   /* Tab strip (Principles: My Principles / Organisation Library) */
