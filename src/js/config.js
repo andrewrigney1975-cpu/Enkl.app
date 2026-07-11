@@ -8,7 +8,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-export var APP_VERSION = '2.34.20260711.1510';
+export var APP_VERSION = '2.36.20260711.1531';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -34,9 +34,10 @@ export var ICON_PATHS = {
   stopwatch:   '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5"/><path d="M9 2h6"/><path d="M12 3.5v1.5"/><path d="M17.5 5.5l1 1"/>',
   search:      '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>',
   board:       '<rect x="3" y="4" width="5" height="16" rx="1"/><rect x="9.5" y="4" width="5" height="10" rx="1"/><rect x="16" y="4" width="5" height="13" rx="1"/>',
-  /* Same path as `board` above, deliberately duplicated under its own key rather than reused —
-     the Retrospective nav item's icon shouldn't silently shift meaning if `board` is later restyled. */
-  retrospective: '<rect x="3" y="4" width="5" height="16" rx="1"/><rect x="9.5" y="4" width="5" height="10" rx="1"/><rect x="16" y="4" width="5" height="13" rx="1"/>',
+  /* Deliberately its own path rather than reusing `board` — equal-height columns crossed by one
+     horizontal line near the top, so it reads as swimlanes (a header lane + body) rather than a
+     plain kanban board. */
+  retrospective: '<rect x="3" y="4" width="5" height="16" rx="1"/><rect x="9.5" y="4" width="5" height="16" rx="1"/><rect x="16" y="4" width="5" height="16" rx="1"/><path d="M3 8h18"/>',
   p_critical:  '<path d="M6 16l6-6 6 6"/><path d="M6 10l6-6 6 6"/>',
   p_high:      '<path d="M6 15l6-6 6 6"/>',
   p_medium:    '<path d="M5 9h14"/><path d="M5 15h14"/>',

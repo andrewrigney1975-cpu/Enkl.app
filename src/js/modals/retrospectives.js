@@ -32,14 +32,14 @@ var PROMOTABLE_COLUMNS = {start: true, keep: true};
    per-instance data), rendered once the first time the panel is shown. */
 var HOW_IT_WORKS_HTML =
   '<ol class="kf-retro-howto-list">' +
-    '<li><strong>Schedule the meeting.</strong> Get the team on the calendar for a regular cadence — ' +
-      'right after a release, or at whatever interval works for this project.</li>' +
-    '<li><strong>Set the tone.</strong> Before the meeting, fill in the Background field above so ' +
-      'everyone understands why you\'re getting together (a recent release, a team change, etc.), and ' +
-      'briefly highlight it when you kick off.</li>' +
-    '<li><strong>Time-box each section.</strong> Spend the first few minutes reminding everyone all ' +
-      'opinions and suggestions are welcome, for an honest and open discussion — then use the timer ' +
-      'below for each section, so there\'s room to talk without spiraling into unsolvable tangents.</li>' +
+    '<li><strong>Set up the Retro.</strong> Get the team together regularly — ' +
+      'at a release, quarterly or something that works for everyone in the project.</li>' +
+    '<li><strong>Clearly define the why.</strong> Before the Retro, fill in the information so ' +
+      'everyone understands why you\'re doing this, and ' +
+      'call out what\'s going to happen (the process).</li>' +
+    '<li><strong>Use the timer.</strong> These things can take on a life of their own. ' +
+      'Opinions, constructive criticism and suggested improvements are needed for this to work - use the timer to keep it meaningful ' +
+      'and on-track.</li>' +
   '</ol>';
 
 var _retroTimer = null;
