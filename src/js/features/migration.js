@@ -524,8 +524,6 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
        changes) must never silently clobber a draft this browser hasn't pushed yet. Server is only
        consulted as a fallback — e.g. this browser's very first load after another browser saved one. */
     workflow: preserved.workflow || detail.workflow || null,
-    startDate: preserved.startDate || null,
-    endDate: preserved.endDate || null,
     dateCreated: preserved.dateCreated || now,
     dateLastModified: now,
     dateLastExported: preserved.dateLastExported || null
