@@ -18,6 +18,7 @@ import { hydrateIcons } from '../icons.js';
 import { clampTaskScore, utcISOToLocalDisplayDate } from '../date-utils.js';
 import { getTasksArray, isTaskOverdue, isTaskUnscored, getTaskOverrunStatus } from '../utils.js';
 import { exportProjectJSON } from './export.js';
+import { isServerAuthoritative } from './migration.js';
 
 var BACKUP_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
 var backupQueue = [];
@@ -200,6 +201,10 @@ function checkBackupReminders(){
   db.projectOrder.forEach(function(pid){
     var p = db.projects[pid];
     if(!p) return;
+    // Cloud (server-authoritative) projects live safely on the server — a local JSON export isn't
+    // the only copy of their data the way it is for a local-only project, so they never need this
+    // nag regardless of how long it's been since one was last exported.
+    if(isServerAuthoritative(p)) return;
     var referenceDate = p.dateLastExported || p.dateCreated || null;
     if(!referenceDate) return;
     var age = now - new Date(referenceDate).getTime();
