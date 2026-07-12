@@ -74,13 +74,17 @@ function loadPortfolioProjectsAndRender(){
 function renderProjectPicker(){
   var pickerEl = document.getElementById('portfolioProjectPicker');
   var noMatchesEl = document.getElementById('portfolioProjectNoMatches');
-  if(_allProjects.length === 0){
+  // Inactive (Portfolio-Planner placeholder) projects are never offered in this picker — an admin
+  // can still see one on the Timeline if it was selected before going inactive (persisted selection
+  // is never filtered against this), but can't newly add one from here.
+  var activeProjects = _allProjects.filter(function(p){ return p.isActive !== false; });
+  if(activeProjects.length === 0){
     pickerEl.innerHTML = '<div class="kf-health-empty">No projects exist in this organisation yet.</div>';
     noMatchesEl.classList.add('hidden');
     return;
   }
   var term = _projectSearchTerm.trim().toLowerCase();
-  var sorted = _allProjects.slice().sort(function(a, b){ return a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}); });
+  var sorted = activeProjects.slice().sort(function(a, b){ return a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}); });
   var filtered = term
     ? sorted.filter(function(p){ return p.name.toLowerCase().indexOf(term) !== -1 || p.key.toLowerCase().indexOf(term) !== -1; })
     : sorted;

@@ -2556,6 +2556,15 @@
     font-size: 13px;
   }
 
+  /* This codebase has no generic ".hidden { display:none }" utility — every component needs its own
+     compound selector (see .kf-overlay.hidden etc.). #portfolioProjectNoMatches is the only static
+     element that combines kf-health-empty with a toggled .hidden class (every other kf-health-empty
+     use just conditionally sets/clears innerHTML instead), so it was the one place this was missed —
+     the "No projects match your search" text was permanently visible regardless of the toggle. */
+  .kf-health-empty.hidden {
+    display: none;
+  }
+
   /* Project Search */
   .kf-search-group {
     margin-bottom: 20px;
