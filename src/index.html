@@ -95,6 +95,7 @@
         <button class="kf-header-btn kf-header-nav-projectaction" id="serverLoginBtn" title="Log in to the server"><span class="kf-icon" data-icon="upload" data-size="14"></span>Login</button>
         <button class="kf-header-btn kf-header-nav-projectaction kf-vis-hidden" id="serverLogoutBtn" title="Log out of the server"><span class="kf-icon" data-icon="logout" data-size="14"></span>Logout</button>
         <button class="kf-header-btn kf-header-nav-projectaction" id="changePasswordBtn" title="Change your server password"><span class="kf-icon" data-icon="lock" data-size="14"></span>Change Password</button>
+        <button class="kf-header-btn kf-header-nav-projectaction kf-vis-hidden" id="myPreferencesBtn" title="Choose what Enkl opens to by default"><span class="kf-icon" data-icon="ty_configure" data-size="14"></span>My Preferences</button>
         <div class="kf-export-as-wrap kf-desktop-menu-wrap" id="projectsMenuWrap">
           <button class="kf-header-btn" id="projectsMenuBtn" title="Projects"><span class="kf-icon" data-icon="chevronDown" data-size="14"></span>Projects...</button>
           <div class="kf-export-as-panel hidden kf-header-more-panel" id="projectsMenuPanel">
@@ -112,6 +113,7 @@
         <div class="kf-export-as-wrap kf-desktop-menu-wrap" id="accountMenuWrap">
           <button class="kf-header-btn" id="accountMenuBtn" title="Account"><span class="kf-icon" data-icon="chevronDown" data-size="14"></span>Account</button>
           <div class="kf-export-as-panel hidden kf-header-more-panel" id="accountMenuPanel">
+            <a href="#" class="kf-header-more-link kf-vis-hidden" data-nav-target="myPreferencesBtn">My Preferences</a>
             <a href="#" class="kf-header-more-link" data-nav-target="serverLoginBtn">Login</a>
             <a href="#" class="kf-header-more-link kf-vis-hidden" data-nav-target="serverLogoutBtn">Logout</a>
             <a href="#" class="kf-header-more-link" data-nav-target="changePasswordBtn">Change Password</a>
@@ -992,6 +994,42 @@
       <span id="bulkEditPendingCount" class="kf-footer-left kf-bulkedit-pending-count"></span>
       <button class="kf-btn kf-btn-secondary" id="bulkEditCancelBtn">Cancel</button>
       <button class="kf-btn kf-btn-primary" id="bulkEditSaveBtn" disabled>Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- First-run mobile Opening Experience picker (see modals/opening-experience.js) — anonymous mobile
+     users only, shown once, the very first time the app is opened on a phone-width screen. -->
+<div class="kf-overlay hidden" id="openingExperienceOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>Welcome!</h2>
+      <button class="kf-btn kf-btn-ghost" id="openingExperienceClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body kf-opening-experience-body">
+      <svg viewBox="108.73 157.4 653.67 820.08" width="288" height="362" class="kf-opening-experience-graphic" aria-hidden="true">
+        <style>.kf-opening-experience-graphic-fill{fill:currentColor;}</style>
+        <g id="head">
+          <path class="kf-opening-experience-graphic-fill" d="M351.74,743.39h0c-1.55,0-3.12-.03-4.67-.09-46.85-1.81-94.24-30.57-137.04-83.18-27.34-34.23-73.86-105.52-78.83-199.18-2.47-37.49,2.32-74.61,14.24-110.32,10.84-32.5,27.79-63.59,49-89.91,21.1-26,45.24-46.45,71.78-60.81,27.57-14.92,56.34-22.49,85.52-22.5,29.18.01,57.95,7.58,85.52,22.5,26.54,14.36,50.69,34.81,71.76,60.78,21.23,26.35,38.18,57.44,49.02,89.94,11.92,35.73,16.71,72.87,14.24,110.37-.33,4.96-4.63,8.7-9.57,8.39-4.96-.33-8.71-4.61-8.39-9.57,2.32-35.17-2.17-69.98-13.35-103.49-10.17-30.49-26.06-59.64-45.94-84.32-19.56-24.1-41.88-43.04-66.33-56.27-24.91-13.48-50.81-20.32-76.96-20.33-26.15.01-52.04,6.85-76.95,20.33-24.45,13.23-46.78,32.17-66.35,56.3-19.86,24.65-35.75,53.81-45.92,84.29-11.18,33.51-15.67,68.32-13.35,103.49v.12c4.69,88.68,48.92,156.42,74.88,188.9,39.39,48.42,82.19,74.89,123.72,76.49,1.33.05,2.67.08,3.99.08,4.97,0,9,4.03,9,9,0,4.97-4.03,9-9,9Z"/>
+        </g>
+        <g id="phone">
+          <path class="kf-opening-experience-graphic-fill" d="M529.73,899.98h-87.65c-14.98,0-27.17-12.19-27.17-27.17v-30.6c0-4.42,3.58-8,8-8s8,3.58,8,8v30.6c0,6.16,5.01,11.17,11.17,11.17h87.65c4.42,0,8,3.58,8,8s-3.58,8-8,8Z"/>
+          <path class="kf-opening-experience-graphic-fill" d="M647.63,744.13c-4.42,0-8-3.58-8-8v-210.56c0-6.16-5.01-11.17-11.17-11.17h-186.37c-6.16,0-11.17,5.01-11.17,11.17v42.17c0,4.42-3.58,8-8,8s-8-3.58-8-8v-42.17c0-14.98,12.19-27.17,27.17-27.17h186.37c14.98,0,27.17,12.19,27.17,27.17v210.56c0,4.42-3.58,8-8,8Z"/>
+          <path class="kf-opening-experience-graphic-fill" d="M527.06,583.74h-70.3c-9.29,0-16.85-7.56-16.85-16.85v-24.76c0-9.29,7.56-16.85,16.85-16.85h70.3c9.29,0,16.85,7.56,16.85,16.85v24.76c0,9.29-7.56,16.85-16.85,16.85ZM456.76,533.28c-4.88,0-8.85,3.97-8.85,8.85v24.76c0,4.88,3.97,8.85,8.85,8.85h70.3c4.88,0,8.85-3.97,8.85-8.85v-24.76c0-4.88-3.97-8.85-8.85-8.85h-70.3Z"/>
+          <path class="kf-opening-experience-graphic-fill" d="M469.35,571.51c-9.37,0-17-7.63-17-17s7.63-17,17-17,17,7.63,17,17-7.63,17-17,17ZM469.35,543.51c-6.07,0-11,4.93-11,11s4.93,11,11,11,11-4.93,11-11-4.93-11-11-11Z"/>
+        </g>
+        <g id="hand">
+          <path class="kf-opening-experience-graphic-fill" d="M515.17,832.75l-126.32-83.97c-14.35-9.54-18.26-28.97-8.72-43.32l.83-1.25c9.54-14.35,28.97-18.26,43.32-8.72l121.33,80.65-9.96,14.99-121.33-80.65c-6.08-4.04-14.32-2.38-18.37,3.7l-.83,1.25c-4.04,6.08-2.38,14.32,3.7,18.37l126.32,83.97-9.96,14.99Z"/>
+          <path class="kf-opening-experience-graphic-fill" d="M531.5,788.28l-145.48-96.71c-14.35-9.54-18.26-28.97-8.72-43.32l.83-1.25c9.54-14.35,28.98-18.26,43.32-8.73l142.15,94.49-9.96,14.99-142.15-94.49c-6.08-4.04-14.33-2.39-18.37,3.7l-.83,1.25c-4.04,6.08-2.38,14.33,3.7,18.37l145.48,96.71-9.96,14.99Z"/>
+          <path class="kf-opening-experience-graphic-fill" d="M727.52,881.21l-49.83-73.63,10.66-149.74c.04-3.45-1.25-6.73-3.66-9.27-2.45-2.58-5.73-4.05-9.25-4.14l-1.5-.04c-3.49-.08-6.87,1.21-9.45,3.66-2.58,2.45-4.05,5.73-4.14,9.25v.27s-4.79,85.56-4.79,85.56l-7.26,12.23-225.48-149.89c-2.93-1.95-6.46-2.63-9.95-1.93-3.49.7-6.48,2.7-8.42,5.63l-.83,1.25c-1.95,2.93-2.63,6.46-1.93,9.95.7,3.49,2.7,6.48,5.63,8.42l145.48,96.71-9.96,14.99-145.48-96.71c-6.93-4.61-11.66-11.66-13.31-19.86-1.65-8.2-.02-16.53,4.58-23.46l.83-1.25c4.61-6.93,11.66-11.66,19.86-13.31,8.2-1.65,16.53-.02,23.46,4.58l205.64,136.7,3.93-70.49c.25-8.26,3.7-15.96,9.73-21.69,6.06-5.76,13.99-8.81,22.31-8.6l1.5.04c8.32.21,16.07,3.67,21.83,9.73,5.76,6.06,8.82,13.99,8.6,22.31l-.02.41-10.24,143.76,46.34,68.47-14.91,10.09Z"/>
+          <path class="kf-opening-experience-graphic-fill" d="M590.88,957.48l-95.27-86.18-88.1-58.56c-7.1-4.72-11.94-11.94-13.63-20.34-1.69-8.4-.02-16.93,4.69-24.03,8.83-13.29,26.83-16.91,40.12-8.08l89.97,59.81-9.96,14.99-89.97-59.81c-5.02-3.34-11.82-1.97-15.16,3.05-2.06,3.09-2.78,6.83-2.04,10.51.74,3.68,2.85,6.84,5.95,8.9l89.21,59.31.5.45,95.77,86.63-12.08,13.35Z"/>
+        </g>
+      </svg>
+      <p class="kf-opening-experience-question">What would you like to open to by default — your To-Do List, or your Board?</p>
+      <div class="kf-opening-experience-options">
+        <button type="button" class="kf-btn kf-btn-secondary" id="openingExperienceTodoBtn">To-Do List</button>
+        <button type="button" class="kf-btn kf-btn-primary" id="openingExperienceBoardBtn">Board</button>
+      </div>
     </div>
   </div>
 </div>

@@ -2968,6 +2968,31 @@
     max-height: 86vh;
   }
 
+  .kf-opening-experience-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    padding: 8px 16px 24px;
+  }
+
+  .kf-opening-experience-graphic {
+    color: var(--kf-text-secondary);
+  }
+
+  .kf-opening-experience-question {
+    font-size: 15px;
+    color: var(--kf-text);
+    margin: 0;
+    max-width: 320px;
+  }
+
+  .kf-opening-experience-options {
+    display: flex;
+    gap: 10px;
+  }
+
   /* Task modal only, 25% wider than the base .kf-modal (560px -> 700px), desktop only — below the
      app's MOBILE_BREAKPOINT (config.js) the base rule's max-width:100% already governs, and 700px
      would just get clamped there anyway, but scoping to desktop keeps the intent explicit. */

@@ -1,7 +1,7 @@
 "use strict";
 
 /* ---- Core ---- */
-import { state, loadDB, saveDB } from './storage.js';
+import { state, loadDB, saveDB, getOpeningExperience } from './storage.js';
 import { getCurrentProject } from './store.js';
 import { ui, toast, resetFilters, renderThemeToggleIcon, toggleTheme, setThemeDeps, relocateViewButtonsForViewport, toggleSideNav, toggleMobileDrawer, closeMobileDrawer, isMobileDrawerOpen } from './ui.js';
 import { hydrateIcons } from './icons.js';
@@ -11,7 +11,7 @@ import { setOnAuthExpired, setOnMustChangePassword, clearToken, ssoLookupApi } f
 import { deleteProject, closeAllTaskTypeIconPanels, setMutationsToast } from './mutations.js';
 
 /* ---- Views ---- */
-import { renderAll, renderBoard, setBoardDeps, closeTeamFilterPanel, closeAssigneeFilterPanel, closeTaskTypeFilterPanel, toggleTeamFilterPanel, toggleAssigneeFilterPanel, toggleTaskTypeFilterPanel, openAppSettingsOverlay, closeAppSettingsOverlay, isAppSettingsOverlayOpen, updateHeaderButtonVisibilitySetting, renderPriorityFilterChips } from './views/board.js';
+import { renderAll, renderBoard, renderToolbar, setBoardDeps, closeTeamFilterPanel, closeAssigneeFilterPanel, closeTaskTypeFilterPanel, toggleTeamFilterPanel, toggleAssigneeFilterPanel, toggleTaskTypeFilterPanel, openAppSettingsOverlay, closeAppSettingsOverlay, isAppSettingsOverlayOpen, updateHeaderButtonVisibilitySetting, renderPriorityFilterChips } from './views/board.js';
 import { setTaskListDeps, openTaskListOverlay, closeTaskListOverlay, isTaskListOpen, renderTaskListBody, collapseAllTaskListGroups, expandAllTaskListGroups, exportTaskListAsCsv } from './views/task-list.js';
 import { setDepMapDeps, depMapState, lastDepLayout, openDepMapOverlay, closeDepMapOverlay, isDepMapOpen, renderDependencyMap, toggleDepMapShowArchived, toggleDepMapColumnFilterPanel, closeDepMapColumnFilterPanel, setDepMapZoom, resetDepMapZoom, zoomDepMapAtPoint } from './views/dependency-map.js';
 import { setOrgChartDeps, orgChartState, lastOrgChartLayout, openOrgChartOverlay, closeOrgChartOverlay, isOrgChartOpen, toggleOrgChartFilter, setOrgChartZoom, resetOrgChartZoom, zoomOrgChartAtPoint, openOrgChartMemberPopover, closeOrgChartMemberPopover, isOrgChartMemberPopoverOpen } from './views/org-chart.js';
@@ -59,6 +59,7 @@ import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitt
 import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick } from './modals/project-search.js';
 import { openAboutModal, closeAboutModal, isAboutModalOpen } from './modals/about.js';
 import { openUfoModal, closeUfoModal, isUfoModalOpen } from './modals/ufo.js';
+import { openOpeningExperienceModal, closeOpeningExperienceModal, isOpeningExperienceModalOpen, chooseOpeningExperience, recordDeviceTypeAndMaybeShowPicker } from './modals/opening-experience.js';
 import { randomise } from './features/randomise.js';
 
 /* ---- Dependency injection (break circular import chains) ---- */
@@ -1124,6 +1125,8 @@ function wireEvents(){
     }, function(){ /* toast already shown by changePasswordOnServer */ });
   });
 
+  document.getElementById('myPreferencesBtn').addEventListener('click', openOpeningExperienceModal);
+
   document.getElementById('manageUsersLink').addEventListener('click', function(e){
     e.preventDefault();
     openOrgUsersModal();
@@ -1389,6 +1392,20 @@ function wireEvents(){
     if(e.target.id === 'ufoOverlay') closeUfoModal();
   });
 
+  document.getElementById('openingExperienceTodoBtn').addEventListener('click', function(){
+    chooseOpeningExperience('todo');
+    renderToolbar(); // reveals "My Preferences" immediately if this was the first-ever answer
+    openTodoOverlay();
+  });
+  document.getElementById('openingExperienceBoardBtn').addEventListener('click', function(){
+    chooseOpeningExperience('board');
+    renderToolbar(); // reveals "My Preferences" immediately if this was the first-ever answer
+  });
+  document.getElementById('openingExperienceClose').addEventListener('click', closeOpeningExperienceModal);
+  document.getElementById('openingExperienceOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'openingExperienceOverlay') closeOpeningExperienceModal();
+  });
+
   document.addEventListener('keydown', function(e){
     if(e.key !== 'Escape') return;
     if(!document.getElementById('unlockPrivateTaskOverlay').classList.contains('hidden')) closeUnlockPrivateTaskModal();
@@ -1442,6 +1459,7 @@ function wireEvents(){
     else if(isProjectFilterPanelOpen()) closeProjectFilterPanel();
     else if(isMobileDrawerOpen()) closeMobileDrawer();
     else if(isUfoModalOpen()) closeUfoModal();
+    else if(isOpeningExperienceModalOpen()) closeOpeningExperienceModal();
   });
 }
 
@@ -1496,6 +1514,19 @@ function handleSsoCallbackIfPresent(){
   }, function(){ /* toast already shown by completeSsoLogin */ });
 }
 
+/* Signed-in users always land on the Board (per product decision — this whole feature, including
+   recording device type, is skipped for them). For an anonymous/local session: the very first time
+   the app ever runs in this browser, record mobile-vs-desktop and — mobile only — show the Opening
+   Experience picker instead of deciding anything here; on every later run, honor whatever was
+   actually chosen (or stay on the Board if the picker was dismissed without an answer / this browser
+   was first used on desktop, since board is the normal default anyway). */
+function applyOpeningExperience(){
+  if(isServerLoggedIn()) return;
+  var pickerShown = recordDeviceTypeAndMaybeShowPicker();
+  if(pickerShown) return;
+  if(getOpeningExperience() === 'todo') openTodoOverlay();
+}
+
 /* =========================================================
    INIT
    ========================================================= */
@@ -1506,6 +1537,7 @@ function init(){
   checkProjectAlerts();
   openTaskFromHashIfPresent();
   handleSsoCallbackIfPresent();
+  applyOpeningExperience();
 
   // Reconciles a still-logged-in returning browser the same way the interactive login flow does
   // (see the serverLoginSubmitBtn handler above) — previously this only ran right after an

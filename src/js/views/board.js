@@ -1,6 +1,6 @@
 "use strict";
 import { state } from '../storage.js';
-import { normalizeHeaderButtonVisibility, isTimeTrackingEnabled, saveDB } from '../storage.js';
+import { normalizeHeaderButtonVisibility, isTimeTrackingEnabled, saveDB, getOpeningExperience } from '../storage.js';
 import { PRIORITY_META, PRIORITY_ORDER, PRIORITY_COLORS, MOBILE_BREAKPOINT } from '../config.js';
 import { iconSvg } from '../icons.js';
 import { getTasksArray, getColumn, getMemberById, getTaskTypeById, getTeamCommitteeById, isTaskBlocked, isTaskOverdue, getTaskOverrunStatus, getDescendants, buildChildrenMap, wouldCreateCycle, escapeHTML } from '../utils.js';
@@ -229,9 +229,21 @@ export function renderToolbar(){
     logoTextEl.textContent = orgName ? (_baseLogoText + ' - ' + orgName) : _baseLogoText;
   }
 
+  // Unlike Manage Users below, this has a real "target" button (myPreferencesBtn, in the
+  // kf-drawer-action-group row) so toggleHeaderActionButton's dual-element toggle also reaches the
+  // mobile drawer's flattened button list — a plain link-only toggle (as Manage Users uses) is
+  // invisible there, since .kf-desktop-menu-wrap (the whole Account dropdown) is display:none on
+  // mobile and the drawer only ever shows the raw buttons directly. Only meaningful for an
+  // anonymous/local session that actually has a stored opening-experience preference to revisit (see
+  // modals/opening-experience.js) — signed-in users always land on the Board regardless, and a
+  // browser that never got the first-run picker (desktop, or dismissed without answering) has
+  // nothing to "change" here yet.
+  toggleHeaderActionButton('myPreferencesBtn', !loggedIn && !!getOpeningExperience());
+
   // Manage Users has no corresponding hidden "target" button to reuse toggleHeaderActionButton's
   // dual-element lookup with — it's a plain link with its own click handler (see app.js) — so it's
   // just toggled directly here.
+
   var manageUsersLink = document.getElementById('manageUsersLink');
   if(manageUsersLink) manageUsersLink.classList.toggle('kf-vis-hidden', !isOrgAdmin());
 

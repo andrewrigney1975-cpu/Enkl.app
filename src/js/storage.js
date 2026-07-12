@@ -65,6 +65,54 @@ export function setPortfolioSelectedProjectIds(ids){
   }
 }
 
+/* First-run device-type + opening-experience preference (see modals/opening-experience.js and
+   app.js's init()) — both localStorage-only, per-browser, and never treated as authoritative for
+   anything beyond which local view opens first; signed-in users skip this whole feature entirely and
+   always land on the Board. Deliberately two separate keys rather than one: device type is recorded
+   permanently on first-ever use (mobile or desktop) and never rechecked again, while opening
+   experience is only ever set by an explicit choice in the picker (and stays unset — implicitly
+   "Board" — if that picker is dismissed without an answer). */
+export var DEVICE_TYPE_STORAGE_KEY = 'kanbanflow_device_type';
+export var OPENING_EXPERIENCE_STORAGE_KEY = 'kanbanflow_opening_experience';
+
+export function getDeviceType(){
+  var raw;
+  try{
+    raw = localStorage.getItem(DEVICE_TYPE_STORAGE_KEY);
+  }catch(e){
+    return null;
+  }
+  return (raw === 'mobile' || raw === 'desktop') ? raw : null;
+}
+
+export function setDeviceType(type){
+  if(type !== 'mobile' && type !== 'desktop') return;
+  try{
+    localStorage.setItem(DEVICE_TYPE_STORAGE_KEY, type);
+  }catch(e){
+    console.error('Enkl: failed to save device type to localStorage', e);
+  }
+}
+
+export function getOpeningExperience(){
+  var raw;
+  try{
+    raw = localStorage.getItem(OPENING_EXPERIENCE_STORAGE_KEY);
+  }catch(e){
+    return null;
+  }
+  return (raw === 'todo' || raw === 'board') ? raw : null;
+}
+
+export function setOpeningExperience(value){
+  if(value !== 'todo' && value !== 'board') return;
+  try{
+    localStorage.setItem(OPENING_EXPERIENCE_STORAGE_KEY, value);
+  }catch(e){
+    console.error('Enkl: failed to save opening experience to localStorage', e);
+  }
+}
+
 export function loadDB(){
   var raw;
   try{
