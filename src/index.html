@@ -1838,7 +1838,17 @@
     <div class="kf-modal-body" id="portfolioDashboardBody">
       <div class="kf-health-section">
         <h3 class="kf-health-section-title">Projects</h3>
-        <div id="portfolioProjectPicker" class="kf-risk-doc-picker"></div>
+        <div class="kf-dropdown-filter" id="portfolioProjectFilterWrap">
+          <button type="button" class="kf-dropdown-filter-btn" id="portfolioProjectFilterBtn">
+            <span id="portfolioProjectFilterLabel">Select projects</span>
+            <span class="kf-icon" data-icon="chevronDown" data-size="12"></span>
+          </button>
+          <div class="kf-dropdown-filter-panel kf-dropdown-filter-panel-wide hidden" id="portfolioProjectFilterPanel">
+            <input type="text" class="kf-dropdown-filter-search" id="portfolioProjectSearchInput" placeholder="Search projects…" autocomplete="off">
+            <div id="portfolioProjectPicker"></div>
+            <div class="kf-health-empty hidden" id="portfolioProjectNoMatches">No projects match your search.</div>
+          </div>
+        </div>
       </div>
 
       <div class="kf-portfolio-summary-row" id="portfolioSummaryBoxes"></div>
@@ -1922,6 +1932,31 @@
         <div id="portfolioActivityNoData" class="kf-health-no-data hidden"></div>
         <div id="portfolioActivityLegend" class="kf-health-legend"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Portfolio Dashboard: Timeline click-to-edit / drag-to-schedule dates modal -->
+<div class="kf-overlay hidden" id="portfolioProjectDatesOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="portfolioProjectDatesTitle">Project dates</h2>
+      <button class="kf-btn kf-btn-ghost" id="portfolioProjectDatesClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div class="kf-field">
+        <label for="portfolioProjectDatesStartInput">Start date</label>
+        <input type="date" id="portfolioProjectDatesStartInput">
+      </div>
+      <div class="kf-field">
+        <label for="portfolioProjectDatesEndInput">End date</label>
+        <input type="date" id="portfolioProjectDatesEndInput">
+      </div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-secondary" id="portfolioProjectDatesClearBtn">Clear dates</button>
+      <button class="kf-btn kf-btn-secondary" id="portfolioProjectDatesCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="portfolioProjectDatesSaveBtn">Save</button>
     </div>
   </div>
 </div>

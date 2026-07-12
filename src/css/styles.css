@@ -823,6 +823,30 @@
     display: none;
   }
 
+  /* Wider variant for panels whose rows carry longer text (e.g. the Portfolio Dashboard's project
+     picker — key + full project name — vs. the narrower member/team-name-only filter panels). */
+  .kf-dropdown-filter-panel-wide {
+    min-width: 320px;
+    max-height: 340px;
+  }
+
+  .kf-dropdown-filter-search {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--kf-border-strong);
+    border-radius: var(--kf-radius);
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--kf-text);
+    background: var(--kf-input-bg);
+    margin-bottom: 6px;
+  }
+
+  .kf-dropdown-filter-search:focus {
+    outline: none;
+    border-color: var(--kf-blue);
+  }
+
   .kf-dropdown-filter-row {
     display: flex;
     align-items: center;
@@ -2134,6 +2158,33 @@
     background: var(--kf-input-bg);
   }
 
+  /* Portfolio Dashboard Timeline: draggable project bars (see modals/portfolio-dashboard.js). The
+     whole bar body grabs to reschedule (shifts both dates, same duration); the two edge handles
+     resize just one date. Handles are transparent at rest and only reveal themselves on hover/drag so
+     a row with many short bars doesn't look cluttered with grab handles all the time. */
+  .kf-portfolio-timeline-svg {
+    user-select: none;
+  }
+
+  .kf-portfolio-timeline-bar {
+    cursor: grab;
+  }
+
+  .kf-portfolio-timeline-handle {
+    cursor: ew-resize;
+    fill: #fff;
+    opacity: 0;
+    transition: opacity .1s ease;
+  }
+
+  .kf-portfolio-timeline-row:hover .kf-portfolio-timeline-handle {
+    opacity: 0.85;
+  }
+
+  .kf-portfolio-timeline-nodatesbar {
+    cursor: pointer;
+  }
+
   .kf-health-overall-row {
     display: flex;
     align-items: center;
@@ -2188,6 +2239,7 @@
   #healthRiskMatrixChart,
   #risksMatrixChart,
   #documentsMapChart,
+  #portfolioRiskMatrixChart,
   #costBenefitScroll {
     text-align: center;
     max-width: 1000px;

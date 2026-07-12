@@ -119,6 +119,7 @@ function registerRoutes(App $app): void
         $group->get('/projects', [PortfolioController::class, 'listProjects']);
         $group->get('/aggregate', [PortfolioController::class, 'getAggregate']);
         $group->get('/activity', [PortfolioController::class, 'getActivity']);
+        $group->put('/projects/{projectId}/dates', [PortfolioController::class, 'updateProjectDates']);
     })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
 
     // ---- Project Templates (Organisation-owned) — list/detail/create need only auth (any signed-in

@@ -54,6 +54,16 @@ public class PortfolioController : ControllerBase
         return Ok(await _portfolio.GetActivityAsync(CallerOrgId(), ParseProjectIds(projectIds), start, end));
     }
 
+    // A genuine mutation (unlike GetAggregate/GetActivity above), so this deliberately stays PUT —
+    // it's meant to trip the global MustChangePassword gate in Program.cs like any other write.
+    [HttpPut("projects/{projectId:guid}/dates")]
+    public async Task<IActionResult> UpdateProjectDates(Guid projectId, UpdatePortfolioProjectDatesRequest request)
+    {
+        var updated = await _portfolio.UpdateProjectDatesAsync(CallerOrgId(), projectId, request.StartDate, request.EndDate);
+        if (!updated) return NotFound();
+        return NoContent();
+    }
+
     private static List<Guid> ParseProjectIds(string? projectIds) =>
         (projectIds ?? "")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

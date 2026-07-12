@@ -7,7 +7,7 @@ import { portfolioApi, isOrgAdmin } from '../api.js';
 import { computeOverallHealth, computeTopTeamMembers } from '../features/health.js';
 import { buildGaugeBlock, startHealthGaugeAnimation, cancelHealthGaugeAnimation } from './health.js';
 import { buildRiskMatrixSvg } from '../mutations.js';
-import { buildTimelineColumns, tlDateToPixel } from '../views/timeline.js';
+import { buildTimelineColumns, tlDateToPixel, tlPixelToDate } from '../views/timeline.js';
 
 /* =========================================================
    PORTFOLIO DASHBOARD — Org-Admin-only, cross-project reporting across 1+ of the caller's
@@ -25,6 +25,7 @@ var PORTFOLIO_PROJECT_COLORS = ['#0c66e4', '#7f5af0', '#e8590c', '#2f9e44', '#c2
 
 var _allProjects = [];
 var _selectedProjectIds = [];
+var _projectSearchTerm = '';
 var _aggregate = null;
 var _activity = null;
 
@@ -38,6 +39,7 @@ export function openPortfolioDashboardOverlay(){
 }
 export function closePortfolioDashboardOverlay(){
   cancelHealthGaugeAnimation();
+  closeProjectFilterPanel();
   document.getElementById('portfolioDashboardOverlay').classList.add('hidden');
 }
 export function isPortfolioDashboardOverlayOpen(){
@@ -55,35 +57,102 @@ function loadPortfolioProjectsAndRender(){
     var existingIds = _allProjects.map(function(p){ return p.id; });
     _selectedProjectIds = getPortfolioSelectedProjectIds().filter(function(id){ return existingIds.indexOf(id) !== -1; });
     renderProjectPicker();
+    renderProjectFilterButtonLabel();
     refreshPortfolioData();
   }, function(){
     pickerEl.innerHTML = '<div class="kf-health-empty">Could not load projects.</div>';
   });
 }
 
+/* Combobox: a button (kf-dropdown-filter-btn) opens a searchable checkbox panel, same shell as the
+   board's existing Team/Assignee/Type filter dropdowns (kf-dropdown-filter*, see board.js), sized
+   wider (kf-dropdown-filter-panel-wide) since rows here carry a key + full project name rather than
+   just a short name — built fresh rather than reusing the board's own picker because an org can have
+   far more projects than any one project has team members, which is exactly the "gets long and
+   cumbersome" case a plain checkbox list doesn't scale to. */
 function renderProjectPicker(){
   var pickerEl = document.getElementById('portfolioProjectPicker');
+  var noMatchesEl = document.getElementById('portfolioProjectNoMatches');
   if(_allProjects.length === 0){
     pickerEl.innerHTML = '<div class="kf-health-empty">No projects exist in this organisation yet.</div>';
+    noMatchesEl.classList.add('hidden');
     return;
   }
+  var term = _projectSearchTerm.trim().toLowerCase();
   var sorted = _allProjects.slice().sort(function(a, b){ return a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}); });
-  pickerEl.innerHTML = sorted.map(function(p){
+  var filtered = term
+    ? sorted.filter(function(p){ return p.name.toLowerCase().indexOf(term) !== -1 || p.key.toLowerCase().indexOf(term) !== -1; })
+    : sorted;
+
+  if(filtered.length === 0){
+    pickerEl.innerHTML = '';
+    noMatchesEl.classList.remove('hidden');
+    return;
+  }
+  noMatchesEl.classList.add('hidden');
+  pickerEl.innerHTML = filtered.map(function(p){
     var checked = _selectedProjectIds.indexOf(p.id) !== -1;
-    return '<label class="kf-risk-doc-picker-row">' +
+    return '<label class="kf-dropdown-filter-row">' +
       '<input type="checkbox" data-project-id="' + p.id + '" ' + (checked ? 'checked' : '') + '>' +
       '<span class="kf-dep-key">' + escapeHTML(p.key) + '</span>' +
-      '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(p.name) + '</span>' +
+      '<span class="kf-dropdown-filter-name">' + escapeHTML(p.name) + '</span>' +
     '</label>';
   }).join('');
 }
 
-export function onPortfolioProjectSelectionChanged(){
-  var checked = Array.from(document.querySelectorAll('#portfolioProjectPicker input[type=checkbox]:checked'))
-    .map(function(cb){ return cb.getAttribute('data-project-id'); });
-  _selectedProjectIds = checked;
+function renderProjectFilterButtonLabel(){
+  var wrap = document.getElementById('portfolioProjectFilterWrap');
+  var label = document.getElementById('portfolioProjectFilterLabel');
+  var n = _selectedProjectIds.length;
+  if(n === 0){
+    label.textContent = 'Select projects';
+  } else if(n === 1){
+    var only = _allProjects.filter(function(p){ return p.id === _selectedProjectIds[0]; })[0];
+    label.textContent = only ? only.name : '1 project selected';
+  } else {
+    label.textContent = n + ' projects selected';
+  }
+  wrap.classList.toggle('active', n > 0);
+}
+
+/* Delegated (one listener on the panel, wired in app.js) rather than per-row — but updates
+   _selectedProjectIds incrementally from the SPECIFIC checkbox that changed, not by re-scanning every
+   checkbox currently in the DOM. That distinction matters here specifically because of the search
+   filter: a project already selected can be scrolled out of the CURRENT filtered view, and re-deriving
+   the whole selection from "checkboxes visible right now" would silently drop it. */
+export function onPortfolioProjectSelectionChanged(e){
+  var checkbox = e.target.closest ? e.target.closest('input[type=checkbox][data-project-id]') : null;
+  if(!checkbox) return;
+  var projectId = checkbox.getAttribute('data-project-id');
+  if(checkbox.checked){
+    if(_selectedProjectIds.indexOf(projectId) === -1) _selectedProjectIds.push(projectId);
+  } else {
+    _selectedProjectIds = _selectedProjectIds.filter(function(id){ return id !== projectId; });
+  }
   setPortfolioSelectedProjectIds(_selectedProjectIds);
+  renderProjectFilterButtonLabel();
   refreshPortfolioData();
+}
+
+export function onPortfolioProjectSearchInput(e){
+  _projectSearchTerm = e.target.value || '';
+  renderProjectPicker();
+}
+
+export function toggleProjectFilterPanel(){
+  var panel = document.getElementById('portfolioProjectFilterPanel');
+  var wasHidden = panel.classList.contains('hidden');
+  panel.classList.toggle('hidden');
+  if(wasHidden){
+    var searchInput = document.getElementById('portfolioProjectSearchInput');
+    searchInput.focus();
+  }
+}
+export function closeProjectFilterPanel(){
+  document.getElementById('portfolioProjectFilterPanel').classList.add('hidden');
+}
+export function isProjectFilterPanelOpen(){
+  return !document.getElementById('portfolioProjectFilterPanel').classList.contains('hidden');
 }
 
 function projectColorFor(projectId){
@@ -101,16 +170,18 @@ function refreshPortfolioData(){
   }
   portfolioApi.getAggregate(_selectedProjectIds).then(function(aggregate){
     _aggregate = aggregate;
-    // Reporting range defaults follow the aggregate's own bounding project date range the first
-    // time data loads for this selection — an admin who changes the selection keeps whatever
-    // custom range they'd already set, rather than silently resetting it underneath them.
+    // Reporting range defaults to the current calendar year (1-Jan to 31-Dec) the first time data
+    // loads for this selection — an admin who changes the selection keeps whatever custom range
+    // they'd already set, rather than silently resetting it underneath them.
     if(!_timelineState.start || !_timelineState.end){
-      _timelineState.start = aggregate.startDate ? new Date(aggregate.startDate) : defaultRangeStart();
-      _timelineState.end = aggregate.endDate ? new Date(aggregate.endDate) : new Date();
+      var timelineDefault = defaultYearRange();
+      _timelineState.start = timelineDefault.start;
+      _timelineState.end = timelineDefault.end;
     }
     if(!_activityChartState.start || !_activityChartState.end){
-      _activityChartState.end = new Date();
-      _activityChartState.start = defaultRangeStart();
+      var activityDefault = defaultYearRange();
+      _activityChartState.start = activityDefault.start;
+      _activityChartState.end = activityDefault.end;
     }
     return fetchActivityAndRender();
   }, function(){
@@ -118,10 +189,9 @@ function refreshPortfolioData(){
   });
 }
 
-function defaultRangeStart(){
-  var d = new Date();
-  d.setDate(d.getDate() - 90);
-  return d;
+function defaultYearRange(){
+  var year = new Date().getFullYear();
+  return {start: new Date(year, 0, 1), end: new Date(year, 11, 31)};
 }
 
 function toServerDateOnly(date){
@@ -309,16 +379,28 @@ export function onPortfolioTimelineControlsChanged(){
   if(endInput.value) _timelineState.end = new Date(endInput.value + 'T00:00:00');
   renderTimelineChart();
 }
+/* Cached from the most recent renderTimelineChart() — the drag handlers below need the EXACT same
+   nameColWidth/scaledColumns a render used to place bars, so tlPixelToDate's inverse lands on the
+   same dates tlDateToPixel placed them at. Never read during a render itself, only by drag code
+   that runs strictly after one has already completed. */
+var _timelineLayout = null;
+var _timelineDrag = null;
+var TIMELINE_HANDLE_WIDTH = 8;
+var TIMELINE_DRAG_CLICK_THRESHOLD = 4; // px of pointer movement (client space) before a press counts as a drag, not a click
+
 function renderTimelineChart(){
   var chartEl = document.getElementById('portfolioTimelineChart');
   var noDataEl = document.getElementById('portfolioTimelineNoData');
-  var projects = _allProjects.filter(function(p){ return _selectedProjectIds.indexOf(p.id) !== -1 && p.startDate && p.endDate; });
+  // Every selected project gets a row now, not just ones with both dates set — one lacking either
+  // date still renders (see the hatch-pattern branch below), so an Org Admin can see at a glance
+  // which projects in the selection have no timeline set yet, rather than that project silently
+  // vanishing from the chart.
+  var projects = _allProjects.filter(function(p){ return _selectedProjectIds.indexOf(p.id) !== -1; });
   if(!_timelineState.start || !_timelineState.end || projects.length === 0){
     chartEl.innerHTML = '';
     noDataEl.classList.remove('hidden');
-    noDataEl.textContent = _selectedProjectIds.length === 0
-      ? 'Select one or more projects above to plot their timeline here.'
-      : 'None of the selected projects have both a start and end date set.';
+    noDataEl.textContent = 'Select one or more projects above to plot their timeline here.';
+    _timelineLayout = null;
     return;
   }
   noDataEl.classList.add('hidden');
@@ -333,6 +415,14 @@ function renderTimelineChart(){
   var width = nameColWidth + scaledTrackWidth + 20;
   var height = marginTop + projects.length * rowHeight + 10;
 
+  _timelineLayout = {nameColWidth: nameColWidth, rowHeight: rowHeight, marginTop: marginTop, scaledColumns: scaledColumns, scaledTrackWidth: scaledTrackWidth};
+
+  var defsHTML =
+    '<defs><pattern id="portfolioNoDatesPattern" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
+      '<rect width="8" height="8" fill="var(--kf-column-bg)"></rect>' +
+      '<line x1="0" y1="0" x2="0" y2="8" stroke="var(--kf-text-faint)" stroke-width="4"></line>' +
+    '</pattern></defs>';
+
   var headerHTML = '';
   var x = nameColWidth;
   scaledColumns.forEach(function(c){
@@ -342,18 +432,220 @@ function renderTimelineChart(){
   });
   headerHTML += '<line x1="' + x + '" y1="' + (marginTop - 4) + '" x2="' + x + '" y2="' + height + '" stroke="var(--kf-border)" stroke-width="1" stroke-dasharray="2,3"/>';
 
-  var sortedProjects = projects.slice().sort(function(a, b){ return new Date(a.startDate) - new Date(b.startDate); });
+  // Dated projects first (earliest start first), undated ones after (alphabetically) — sorting by
+  // start date alone would put every undated project first via an Invalid Date comparison.
+  var sortedProjects = projects.slice().sort(function(a, b){
+    var aHasDates = !!(a.startDate && a.endDate), bHasDates = !!(b.startDate && b.endDate);
+    if(aHasDates && bHasDates) return new Date(a.startDate) - new Date(b.startDate);
+    if(aHasDates !== bHasDates) return aHasDates ? -1 : 1;
+    return a.name.localeCompare(b.name, undefined, {sensitivity: 'base'});
+  });
   var rowsHTML = sortedProjects.map(function(p, idx){
     var y = marginTop + idx * rowHeight;
+    var barY = y + 6, barHeight = rowHeight - 14;
+    var nameHTML = '<text x="8" y="' + (y + rowHeight / 2 + 4) + '" font-size="11" font-weight="600" fill="var(--kf-text)">' + escapeHTML(p.key) + '</text>';
+    if(!p.startDate || !p.endDate){
+      // Click-only (nothing to drag from) — always opens the dates modal, same as clicking a dated
+      // bar without moving it does.
+      return nameHTML +
+        '<rect class="kf-portfolio-timeline-nodatesbar" data-project-id="' + p.id + '" data-role="click-only" ' +
+        'x="' + nameColWidth + '" y="' + barY + '" width="' + scaledTrackWidth + '" height="' + barHeight + '" rx="4" ' +
+        'fill="url(#portfolioNoDatesPattern)" stroke="var(--kf-text-faint)" stroke-width="1.5" stroke-dasharray="5,3">' +
+        '<title>' + escapeHTML(p.name) + ' — click to set a start/end date</title></rect>';
+    }
     var barStartX = nameColWidth + tlDateToPixel(new Date(p.startDate), scaledColumns);
     var barEndX = nameColWidth + tlDateToPixel(new Date(p.endDate), scaledColumns);
     var barWidth = Math.max(4, barEndX - barStartX);
     var color = projectColorFor(p.id);
-    return '<text x="8" y="' + (y + rowHeight / 2 + 4) + '" font-size="11" font-weight="600" fill="var(--kf-text)">' + escapeHTML(p.key) + '</text>' +
-      '<rect x="' + barStartX + '" y="' + (y + 6) + '" width="' + barWidth + '" height="' + (rowHeight - 14) + '" rx="4" fill="' + color + '"><title>' + escapeHTML(p.name) + '</title></rect>';
+    var hw = TIMELINE_HANDLE_WIDTH;
+    // Grouped in a <g> (not flat siblings) so the handle-reveal-on-hover CSS can scope to just this
+    // row's own handles — a plain CSS sibling combinator can't tell "this row's handles" apart from
+    // every other row's, since every row's shapes would otherwise sit as flat siblings of each other
+    // under the same <svg>.
+    return nameHTML +
+      '<g class="kf-portfolio-timeline-row">' +
+      '<rect class="kf-portfolio-timeline-bar" data-project-id="' + p.id + '" data-role="move" ' +
+      'x="' + barStartX + '" y="' + barY + '" width="' + barWidth + '" height="' + barHeight + '" rx="4" fill="' + color + '">' +
+      '<title>' + escapeHTML(p.name) + ' — drag to reschedule, drag an edge to resize, click to edit dates</title></rect>' +
+      '<rect class="kf-portfolio-timeline-handle" data-project-id="' + p.id + '" data-role="resize-start" ' +
+      'x="' + (barStartX - hw / 2) + '" y="' + barY + '" width="' + hw + '" height="' + barHeight + '" rx="2"></rect>' +
+      '<rect class="kf-portfolio-timeline-handle" data-project-id="' + p.id + '" data-role="resize-end" ' +
+      'x="' + (barEndX - hw / 2) + '" y="' + barY + '" width="' + hw + '" height="' + barHeight + '" rx="2"></rect>' +
+      '</g>';
   }).join('');
 
-  chartEl.innerHTML = '<svg viewBox="0 0 ' + width + ' ' + height + '" width="100%" height="auto" class="kf-portfolio-timeline-svg">' + headerHTML + rowsHTML + '</svg>';
+  chartEl.innerHTML = '<svg viewBox="0 0 ' + width + ' ' + height + '" width="100%" height="auto" class="kf-portfolio-timeline-svg">' + defsHTML + headerHTML + rowsHTML + '</svg>';
+}
+
+/* =========================================================
+   TIMELINE DRAG-TO-SCHEDULE — a click (no meaningful pointer movement) on any bar, handle, or the
+   grey "no dates" placeholder opens the dates modal below. Actually dragging a bar body shifts both
+   dates together (duration preserved); dragging an edge handle resizes just that one date. Built on
+   tlPixelToDate (views/timeline.js), the exact inverse of the tlDateToPixel this chart already draws
+   bars with — kept as a generic pixel<->date pair specifically so a future proper planning-tool Gantt
+   view can reuse the same drag mechanics against the same column model, not just this chart.
+   ========================================================= */
+export function onPortfolioTimelineBarPointerDown(e){
+  var target = e.target.closest ? e.target.closest('[data-project-id]') : null;
+  if(!target || !_timelineLayout) return;
+  var projectId = target.getAttribute('data-project-id');
+  var role = target.getAttribute('data-role');
+  var project = _allProjects.filter(function(p){ return p.id === projectId; })[0];
+  if(!project) return;
+
+  if(role === 'click-only'){
+    openPortfolioProjectDatesModal(projectId);
+    return;
+  }
+
+  var svgEl = document.querySelector('#portfolioTimelineChart svg');
+  if(!svgEl) return;
+  e.preventDefault();
+
+  var barEl = svgEl.querySelector('.kf-portfolio-timeline-bar[data-project-id="' + cssEscape(projectId) + '"]');
+  var startHandleEl = svgEl.querySelector('.kf-portfolio-timeline-handle[data-project-id="' + cssEscape(projectId) + '"][data-role="resize-start"]');
+  var endHandleEl = svgEl.querySelector('.kf-portfolio-timeline-handle[data-project-id="' + cssEscape(projectId) + '"][data-role="resize-end"]');
+  if(!barEl || !startHandleEl || !endHandleEl) return;
+
+  var vb = svgEl.viewBox.baseVal;
+  var rect = svgEl.getBoundingClientRect();
+  var scaleRatio = rect.width > 0 ? vb.width / rect.width : 1;
+
+  var layout = _timelineLayout;
+  var barStartX = layout.nameColWidth + tlDateToPixel(new Date(project.startDate), layout.scaledColumns);
+  var barEndX = layout.nameColWidth + tlDateToPixel(new Date(project.endDate), layout.scaledColumns);
+
+  _timelineDrag = {
+    projectId: projectId, role: role, scaleRatio: scaleRatio,
+    pointerStartClientX: e.clientX, moved: false,
+    origBarStartX: barStartX, origBarEndX: barEndX,
+    liveBarStartX: barStartX, liveBarEndX: barEndX,
+    barEl: barEl, startHandleEl: startHandleEl, endHandleEl: endHandleEl,
+    handleWidth: TIMELINE_HANDLE_WIDTH
+  };
+  document.addEventListener('mousemove', onPortfolioTimelineDragMove);
+  document.addEventListener('mouseup', onPortfolioTimelineDragEnd);
+}
+
+function onPortfolioTimelineDragMove(e){
+  if(!_timelineDrag || !_timelineLayout) return;
+  var d = _timelineDrag;
+  var deltaXClient = e.clientX - d.pointerStartClientX;
+  if(Math.abs(deltaXClient) >= TIMELINE_DRAG_CLICK_THRESHOLD) d.moved = true;
+  var deltaX = deltaXClient * d.scaleRatio;
+
+  var layout = _timelineLayout;
+  var minBarWidth = 8;
+  var chartMinX = layout.nameColWidth;
+  var chartMaxX = layout.nameColWidth + layout.scaledTrackWidth;
+  var newStartX = d.origBarStartX, newEndX = d.origBarEndX;
+
+  if(d.role === 'move'){
+    var span = d.origBarEndX - d.origBarStartX;
+    newStartX = d.origBarStartX + deltaX;
+    newEndX = d.origBarEndX + deltaX;
+    if(newStartX < chartMinX){ newStartX = chartMinX; newEndX = newStartX + span; }
+    if(newEndX > chartMaxX){ newEndX = chartMaxX; newStartX = newEndX - span; }
+  } else if(d.role === 'resize-start'){
+    newStartX = d.origBarStartX + deltaX;
+    if(newStartX < chartMinX) newStartX = chartMinX;
+    if(newStartX > d.origBarEndX - minBarWidth) newStartX = d.origBarEndX - minBarWidth;
+  } else if(d.role === 'resize-end'){
+    newEndX = d.origBarEndX + deltaX;
+    if(newEndX > chartMaxX) newEndX = chartMaxX;
+    if(newEndX < d.origBarStartX + minBarWidth) newEndX = d.origBarStartX + minBarWidth;
+  }
+
+  d.liveBarStartX = newStartX;
+  d.liveBarEndX = newEndX;
+  d.barEl.setAttribute('x', newStartX);
+  d.barEl.setAttribute('width', Math.max(1, newEndX - newStartX));
+  d.startHandleEl.setAttribute('x', newStartX - d.handleWidth / 2);
+  d.endHandleEl.setAttribute('x', newEndX - d.handleWidth / 2);
+}
+
+function onPortfolioTimelineDragEnd(){
+  if(!_timelineDrag) return;
+  var d = _timelineDrag;
+  document.removeEventListener('mousemove', onPortfolioTimelineDragMove);
+  document.removeEventListener('mouseup', onPortfolioTimelineDragEnd);
+  _timelineDrag = null;
+
+  if(!d.moved){
+    openPortfolioProjectDatesModal(d.projectId);
+    return;
+  }
+
+  var layout = _timelineLayout;
+  var newStartDate = tlPixelToDate(d.liveBarStartX - layout.nameColWidth, layout.scaledColumns);
+  var newEndDate = tlPixelToDate(d.liveBarEndX - layout.nameColWidth, layout.scaledColumns);
+  var startVal = toServerDateOnly(newStartDate);
+  var endVal = toServerDateOnly(newEndDate);
+
+  portfolioApi.updateProjectDates(d.projectId, startVal, endVal).then(function(){
+    applyLocalProjectDates(d.projectId, startVal, endVal);
+    renderTimelineChart();
+  }, function(){
+    toast('Could not update project dates.');
+    renderTimelineChart();
+  });
+}
+
+/* Minimal fallback for browsers/environments without window.CSS.escape (project ids are GUIDs, so
+   in practice only needed for the astronomically unlikely case that ever changes). */
+function cssEscape(value){
+  return (window.CSS && window.CSS.escape) ? window.CSS.escape(value) : value.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+}
+
+function applyLocalProjectDates(projectId, startVal, endVal){
+  _allProjects = _allProjects.map(function(p){
+    return p.id === projectId ? Object.assign({}, p, {startDate: startVal, endDate: endVal}) : p;
+  });
+}
+
+/* =========================================================
+   PROJECT DATES MODAL — click-to-edit counterpart to the drag gestures above. Opened either by a
+   non-dragging click on a bar/handle, or by clicking the grey "no dates" placeholder (which has
+   nothing to drag from at all).
+   ========================================================= */
+var _projectDatesModalProjectId = null;
+
+export function openPortfolioProjectDatesModal(projectId){
+  var project = _allProjects.filter(function(p){ return p.id === projectId; })[0];
+  if(!project) return;
+  _projectDatesModalProjectId = projectId;
+  document.getElementById('portfolioProjectDatesTitle').textContent = project.name;
+  document.getElementById('portfolioProjectDatesStartInput').value = project.startDate || '';
+  document.getElementById('portfolioProjectDatesEndInput').value = project.endDate || '';
+  document.getElementById('portfolioProjectDatesOverlay').classList.remove('hidden');
+}
+export function closePortfolioProjectDatesModal(){
+  document.getElementById('portfolioProjectDatesOverlay').classList.add('hidden');
+  _projectDatesModalProjectId = null;
+}
+export function isPortfolioProjectDatesModalOpen(){
+  return !document.getElementById('portfolioProjectDatesOverlay').classList.contains('hidden');
+}
+export function clearPortfolioProjectDatesInModal(){
+  document.getElementById('portfolioProjectDatesStartInput').value = '';
+  document.getElementById('portfolioProjectDatesEndInput').value = '';
+}
+export function savePortfolioProjectDatesFromModal(){
+  if(!_projectDatesModalProjectId) return;
+  var startVal = document.getElementById('portfolioProjectDatesStartInput').value || null;
+  var endVal = document.getElementById('portfolioProjectDatesEndInput').value || null;
+  if(startVal && endVal && endVal < startVal){
+    toast('End date cannot be before the start date.');
+    return;
+  }
+  var projectId = _projectDatesModalProjectId;
+  portfolioApi.updateProjectDates(projectId, startVal, endVal).then(function(){
+    applyLocalProjectDates(projectId, startVal, endVal);
+    closePortfolioProjectDatesModal();
+    renderTimelineChart();
+  }, function(){
+    toast('Could not update project dates.');
+  });
 }
 
 /* =========================================================
@@ -396,6 +688,14 @@ export function onPortfolioActivityControlsChanged(){
   } else {
     renderActivityChart();
   }
+}
+
+/* DD/MM only for this chart's own x-axis — deliberately not a TIMESCALE_CONFIG.labelFn change,
+   since that's shared with the Timeline chart above and the main app's Timeline view, neither of
+   which this request was about. */
+function formatDDMM(date){
+  var d = String(date.getDate()).padStart(2, '0'), m = String(date.getMonth() + 1).padStart(2, '0');
+  return d + '/' + m;
 }
 
 function bucketDailyPointsIntoColumns(dailyPoints, columns){
@@ -455,7 +755,7 @@ function renderActivityChart(){
       var by = marginTop + plotHeight - barHeight;
       barsHTML += '<rect x="' + bx + '" y="' + by + '" width="' + Math.max(1, barWidth - 2) + '" height="' + Math.max(0, barHeight) + '" rx="2" fill="' + s.color + '"><title>' + s.label + ': ' + value + '</title></rect>';
     });
-    labelsHTML += '<text x="' + (marginLeft + colIdx * colWidth + colWidth / 2) + '" y="' + (marginTop + plotHeight + 18) + '" font-size="10" text-anchor="middle" fill="var(--kf-text-secondary)">' + escapeHTML(col.label) + '</text>';
+    labelsHTML += '<text x="' + (marginLeft + colIdx * colWidth + colWidth / 2) + '" y="' + (marginTop + plotHeight + 18) + '" font-size="10" text-anchor="middle" fill="var(--kf-text-secondary)">' + formatDDMM(col.start) + '</text>';
   });
 
   var width = marginLeft + plotWidth + marginRight;

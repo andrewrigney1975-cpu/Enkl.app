@@ -145,6 +145,26 @@ public class PortfolioService
             done.OrderBy(p => p.Date).ToList());
     }
 
+    /// <summary>
+    /// Backs the Timeline chart's click-to-edit modal and drag-to-schedule bars. Deliberately its own
+    /// endpoint rather than reusing ProjectsController's PUT /api/projects/{id} — that one requires
+    /// ProjectMember (see ProjectsController.cs), which an Org Admin scheduling a project they don't
+    /// personally belong to would fail. OrgAdmin + org-ownership check only, same as every other
+    /// method here. Returns false (not found / wrong org) without revealing which — same
+    /// no-enumeration-oracle stance as ValidateProjectIdsAsync below.
+    /// </summary>
+    public async Task<bool> UpdateProjectDatesAsync(Guid organisationId, Guid projectId, DateOnly? startDate, DateOnly? endDate)
+    {
+        var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == projectId && p.OrganisationId == organisationId);
+        if (project is null) return false;
+
+        project.StartDate = startDate;
+        project.EndDate = endDate;
+        project.DateLastModified = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
     /// <summary>The one place a client-supplied project id list is trusted at all: re-derived
     /// against the caller's own OrganisationId, so every subsequent query in this class only ever
     /// touches project ids proven to belong to the caller's org.</summary>

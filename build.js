@@ -54,10 +54,17 @@ async function build() {
   const cssResult = await esbuild.transform(css, { loader: 'css', minify: true });
   const minifiedCss = cssResult.code.trim();
 
-  // Inline CSS
+  // Inline CSS. Replacer is a FUNCTION, not a string, for both this and the JS inlining below —
+  // String.prototype.replace() treats special $-sequences ($&, $$, $', $`, $1...) in a plain
+  // replacement STRING specially, even when that string came from a template literal. A function's
+  // return value is inserted verbatim with no such interpretation. This bit once: bundled app code
+  // that legitimately contained the literal text '\$&' (an ordinary regex-escaping idiom, nothing
+  // wrong with it) got silently corrupted here — $& was expanded to "the whole matched placeholder"
+  // instead of staying literal text, breaking the built JS's syntax. A function replacer is immune
+  // to this for anything the bundle could ever contain, not just this one occurrence.
   let output = html.replace(
     '<link rel="stylesheet" href="css/styles.css">',
-    `<style>\n${minifiedCss}\n  </style>`
+    () => `<style>\n${minifiedCss}\n  </style>`
   );
 
   // Inline JS. The worker has no fetchable file to load from in this single-file
@@ -66,7 +73,7 @@ async function build() {
   // a Blob URL — see src/js/features/document-suggestions.js.
   output = output.replace(
     '<script type="module" src="js/app.js"></script>',
-    `<script type="javascript/worker" id="keywordWorkerSource">\n${keywordWorkerSrc}\n  </script>\n  <script>\n${bundledJs}\n  </script>`
+    () => `<script type="javascript/worker" id="keywordWorkerSource">\n${keywordWorkerSrc}\n  </script>\n  <script>\n${bundledJs}\n  </script>`
   );
 
   writeFileSync(join(__dirname, 'dist/index.html'), output, 'utf8');

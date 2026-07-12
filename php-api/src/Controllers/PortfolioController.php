@@ -49,6 +49,19 @@ final class PortfolioController extends BaseController
         return $this->json($response, $this->service()->getActivity($this->callerOrgId($request), $projectIds, $start, $end));
     }
 
+    // A genuine mutation (unlike getAggregate/getActivity above), so this deliberately stays PUT —
+    // it's meant to trip SessionValidationMiddleware's global MustChangePassword gate like any other
+    // write, unlike the two GET actions above which were specifically routed around it.
+    public function updateProjectDates(Request $request, Response $response, array $args): Response
+    {
+        $body = $this->body($request);
+        $updated = $this->service()->updateProjectDates(
+            $this->callerOrgId($request), $args['projectId'],
+            $body['startDate'] ?? null, $body['endDate'] ?? null
+        );
+        return $updated ? $this->noContent($response) : $this->notFound($response);
+    }
+
     // A single comma-joined string, not a repeated/bracketed array query param — see
     // PortfolioController.cs's matching GetActivity for why (ASP.NET Core and Slim/PHP parse
     // array-shaped query strings differently, and the frontend talks to either tier unchanged).

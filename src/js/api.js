@@ -410,5 +410,13 @@ export var portfolioApi = {
   getActivity: function(projectIds, start, end){
     var query = 'projectIds=' + encodeURIComponent(projectIds.join(',')) + '&start=' + encodeURIComponent(start) + '&end=' + encodeURIComponent(end);
     return apiFetch('/organisations/me/portfolio/activity?' + query, {method: 'GET'});
+  },
+  /* Backs the Timeline chart's click-to-edit modal and drag-to-schedule bars — a genuine mutation,
+     unlike getAggregate/getActivity above, so PUT is correct here (not routed around
+     MustChangePassword the way those two are). Deliberately its own endpoint rather than the
+     ProjectMember-gated updateProjectApi in this same file — see PortfolioController.cs's
+     UpdateProjectDates for why. start/end are 'YYYY-MM-DD' strings or null to clear a date. */
+  updateProjectDates: function(projectId, start, end){
+    return apiFetch('/organisations/me/portfolio/projects/' + projectId + '/dates', {method: 'PUT', body: JSON.stringify({startDate: start, endDate: end})});
   }
 };

@@ -50,7 +50,7 @@ import { openDocumentsOverlay, closeDocumentsOverlay, isDocumentsOverlayOpen, sh
 import { scheduleDocumentSuggestions } from './features/document-suggestions.js';
 import { openRisksOverlay, closeRisksOverlay, isRisksOverlayOpen, showRisksFormView, showRisksListView, renderRisksList, saveRiskFromModal, deleteRiskFromModal, updateRiskScorePreview } from './modals/risks.js';
 import { openHealthOverlay, closeHealthOverlay, isHealthOverlayOpen, cancelHealthGaugeAnimation } from './modals/health.js';
-import { openPortfolioDashboardOverlay, closePortfolioDashboardOverlay, isPortfolioDashboardOverlayOpen, onPortfolioProjectSelectionChanged, onPortfolioTimelineControlsChanged, onPortfolioActivityControlsChanged } from './modals/portfolio-dashboard.js';
+import { openPortfolioDashboardOverlay, closePortfolioDashboardOverlay, isPortfolioDashboardOverlayOpen, onPortfolioProjectSelectionChanged, onPortfolioTimelineControlsChanged, onPortfolioActivityControlsChanged, toggleProjectFilterPanel, closeProjectFilterPanel, isProjectFilterPanelOpen, onPortfolioProjectSearchInput, onPortfolioTimelineBarPointerDown, closePortfolioProjectDatesModal, isPortfolioProjectDatesModalOpen, clearPortfolioProjectDatesInModal, savePortfolioProjectDatesFromModal } from './modals/portfolio-dashboard.js';
 import { openDecisionsOverlay, closeDecisionsOverlay, isDecisionsOverlayOpen, showDecisionsFormView, showDecisionsListView, renderDecisionsList, saveDecisionFromModal, deleteDecisionFromModal } from './modals/decisions.js';
 import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen, showPrinciplesFormView, showPrinciplesListView, renderPrinciplesList, savePrincipleFromModal, deletePrincipleFromModal, switchPrinciplesTab, updatePrincipleShareFromModal } from './modals/principles.js';
 import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen, showObjectivesFormView, showObjectivesListView, renderObjectivesList, saveObjectiveFromModal, deleteObjectiveFromModal } from './modals/objectives.js';
@@ -284,9 +284,22 @@ function wireEvents(){
     if(e.target.id === 'portfolioDashboardOverlay') closePortfolioDashboardOverlay();
   });
   document.getElementById('portfolioProjectPicker').addEventListener('change', onPortfolioProjectSelectionChanged);
+  document.getElementById('portfolioProjectFilterBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleProjectFilterPanel();
+  });
+  document.getElementById('portfolioProjectSearchInput').addEventListener('input', onPortfolioProjectSearchInput);
   document.getElementById('portfolioTimelineScaleSelect').addEventListener('change', onPortfolioTimelineControlsChanged);
   document.getElementById('portfolioTimelineStartInput').addEventListener('change', onPortfolioTimelineControlsChanged);
   document.getElementById('portfolioTimelineEndInput').addEventListener('change', onPortfolioTimelineControlsChanged);
+  document.getElementById('portfolioTimelineChart').addEventListener('mousedown', onPortfolioTimelineBarPointerDown);
+  document.getElementById('portfolioProjectDatesClose').addEventListener('click', closePortfolioProjectDatesModal);
+  document.getElementById('portfolioProjectDatesCancelBtn').addEventListener('click', closePortfolioProjectDatesModal);
+  document.getElementById('portfolioProjectDatesClearBtn').addEventListener('click', clearPortfolioProjectDatesInModal);
+  document.getElementById('portfolioProjectDatesSaveBtn').addEventListener('click', savePortfolioProjectDatesFromModal);
+  document.getElementById('portfolioProjectDatesOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'portfolioProjectDatesOverlay') closePortfolioProjectDatesModal();
+  });
   document.getElementById('portfolioActivityScaleSelect').addEventListener('change', onPortfolioActivityControlsChanged);
   document.getElementById('portfolioActivityStartInput').addEventListener('change', onPortfolioActivityControlsChanged);
   document.getElementById('portfolioActivityEndInput').addEventListener('change', onPortfolioActivityControlsChanged);
@@ -1225,6 +1238,8 @@ function wireEvents(){
     if(depMapColWrap && !depMapColWrap.contains(e.target)) closeDepMapColumnFilterPanel();
     var cbColWrap = document.getElementById('costBenefitColumnFilterWrap');
     if(cbColWrap && !cbColWrap.contains(e.target)) closeCbColumnFilterPanel();
+    var portfolioProjectWrap = document.getElementById('portfolioProjectFilterWrap');
+    if(portfolioProjectWrap && !portfolioProjectWrap.contains(e.target)) closeProjectFilterPanel();
   });
 
   document.getElementById('taskModalClose').addEventListener('click', closeTaskModal);
@@ -1344,6 +1359,7 @@ function wireEvents(){
     else if(isObjectivesOverlayOpen()) closeObjectivesOverlay();
     else if(isProjectSearchOverlayOpen()) closeProjectSearchOverlay();
     else if(isTeamsCommitteesOverlayOpen()) closeTeamsCommitteesOverlay();
+    else if(isPortfolioProjectDatesModalOpen()) closePortfolioProjectDatesModal();
     else if(isPortfolioDashboardOverlayOpen()) closePortfolioDashboardOverlay();
     else if(isHealthOverlayOpen()){ cancelHealthGaugeAnimation(); closeHealthOverlay(); }
     else if(isAppSettingsOverlayOpen()) closeAppSettingsOverlay();
@@ -1371,6 +1387,7 @@ function wireEvents(){
     else if(!document.getElementById('teamFilterPanel').classList.contains('hidden')) closeTeamFilterPanel();
     else if(!document.getElementById('assigneeFilterPanel').classList.contains('hidden')) closeAssigneeFilterPanel();
     else if(!document.getElementById('taskTypeFilterPanel').classList.contains('hidden')) closeTaskTypeFilterPanel();
+    else if(isProjectFilterPanelOpen()) closeProjectFilterPanel();
     else if(isMobileDrawerOpen()) closeMobileDrawer();
     else if(isUfoModalOpen()) closeUfoModal();
   });

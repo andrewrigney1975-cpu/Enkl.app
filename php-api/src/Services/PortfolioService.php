@@ -210,6 +210,20 @@ final class PortfolioService
         ], $stmt->fetchAll());
     }
 
+    /**
+     * Backs the Timeline chart's click-to-edit modal and drag-to-schedule bars. Its own endpoint
+     * rather than reusing ProjectsController's PUT /projects/{id} — that one requires
+     * ProjectMemberMiddleware, which an Org Admin scheduling a project they don't personally belong
+     * to would fail. OrgAdmin + org-ownership check only, same as every other method here. Either
+     * date may be null to clear it (reverting the project back to the "no dates" state).
+     */
+    public function updateProjectDates(string $organisationId, string $projectId, ?string $startDate, ?string $endDate): bool
+    {
+        $stmt = $this->db->prepare('UPDATE "Projects" SET "StartDate" = :start, "EndDate" = :end, "DateLastModified" = now() WHERE "Id" = :id AND "OrganisationId" = :orgId');
+        $stmt->execute(['start' => $startDate, 'end' => $endDate, 'id' => $projectId, 'orgId' => $organisationId]);
+        return $stmt->rowCount() > 0;
+    }
+
     /** The one place a client-supplied project id list is trusted at all: re-derived against the
      * caller's own organisation, so every subsequent query only ever touches project ids proven to
      * belong to the caller's org. */

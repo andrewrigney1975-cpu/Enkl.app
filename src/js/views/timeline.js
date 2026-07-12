@@ -124,6 +124,29 @@ export function tlDateToPixel(date, columns){
   return (x - last.width) + (date.getTime() - last.start.getTime()) * rate;
 }
 
+/* Exact inverse of tlDateToPixel above — walks the same variable-width columns array rather than
+   assuming a uniform pixels-per-day rate (column width varies by granularity, e.g. a 28-31 day month
+   column vs a fixed 7-day week column), so a pixel position maps back to the same date tlDateToPixel
+   would have placed there. Built for the Portfolio Dashboard's draggable Timeline bars (see
+   modals/portfolio-dashboard.js) but lives here, not there, since it's the natural sibling of
+   tlDateToPixel and is meant to be reused by any future drag-to-schedule UI (e.g. a planning-tool
+   Gantt view) built on this same column model. Extrapolates before the first / after the last column
+   at that column's own rate, mirroring tlDateToPixel's own extrapolation past the last column. */
+export function tlPixelToDate(pixelX, columns){
+  var x = 0;
+  for(var i = 0; i < columns.length; i++){
+    var col = columns[i];
+    if(pixelX < x + col.width){
+      var frac = (pixelX - x) / col.width;
+      return new Date(col.start.getTime() + frac * (col.end.getTime() - col.start.getTime()));
+    }
+    x += col.width;
+  }
+  var last = columns[columns.length - 1];
+  var rate = (last.end.getTime() - last.start.getTime()) / last.width;
+  return new Date(last.start.getTime() + (pixelX - (x - last.width)) * rate);
+}
+
 /* Start = earlier of the project's start date or the earliest ACTIVE
    task's start date. End = the project's end date. Archived tasks
    never influence this range, regardless of the show-archived toggle,

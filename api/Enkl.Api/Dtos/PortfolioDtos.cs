@@ -9,6 +9,15 @@ namespace Enkl.Api.Dtos;
 public record PortfolioProjectDto(Guid Id, string Name, string Key, DateOnly? StartDate, DateOnly? EndDate);
 
 /// <summary>
+/// Backs the Portfolio Dashboard's Timeline chart (click-to-edit modal + drag-to-schedule bars).
+/// Deliberately narrower than UpdateProjectRequest (Name/Key untouched) — this is purely a
+/// forward-planning date-scheduling action, not a general project-edit surface, so it stays scoped
+/// to exactly what the Timeline chart lets an Org Admin change. Either field can be null to clear a
+/// previously-set date (reverting that project back to the "no dates" hatched-bar state).
+/// </summary>
+public record UpdatePortfolioProjectDatesRequest(DateOnly? StartDate, DateOnly? EndDate);
+
+/// <summary>
 /// A purpose-built, narrower read shape than the existing RiskDto — the Portfolio Dashboard's risk
 /// matrix doesn't need the Document/Principle/Objective cross-reference lists RiskDto carries, but
 /// DOES need to know which selected project each risk came from (ProjectId/ProjectKey), for the
