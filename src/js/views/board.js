@@ -191,7 +191,12 @@ export function renderToolbar(){
   var p = getCurrentProject();
   var keyEl = document.getElementById('toolbarKey');
   var isServerLinked = !!(p && p.serverProjectId);
+  var reachable = isApiReachable();
   keyEl.classList.toggle('kf-board-key-server', isServerLinked);
+  // Connectivity glow only makes sense once this key already means "lives on the cloud" — a
+  // local-only project has no server to lose contact with, so it never gets either class.
+  keyEl.classList.toggle('kf-board-key-online', isServerLinked && reachable);
+  keyEl.classList.toggle('kf-board-key-offline', isServerLinked && !reachable);
   keyEl.innerHTML = (isServerLinked ? iconSvg('cloud', 11) : '') + (p ? p.key : '—');
   document.getElementById('toolbarTitle').textContent = p ? p.name : 'No project';
 
@@ -200,9 +205,10 @@ export function renderToolbar(){
   // "Re-migrate" confirm-dialog warning in app.js, kept as a manual fallback for the narrow window
   // between an anonymous migration and this browser's next login/reconciliation swap).
   // Throttled fire-and-forget re-probe of /health (see api.js) — re-renders the toolbar itself if
-  // reachability flips, so this stays eventually-consistent without polling on a timer.
+  // reachability flips, so this stays eventually-consistent without polling on a timer. The same
+  // probe result is what drives the key's online/offline glow above.
   pollApiReachability(renderToolbar);
-  toggleHeaderActionButton('migrateToServerBtn', !isServerAuthoritative(p) && isApiReachable());
+  toggleHeaderActionButton('migrateToServerBtn', !isServerAuthoritative(p) && reachable);
 
   // Login/Logout are session-level, not tied to whichever project happens to be open — Login shows
   // whenever there's no active session, Logout once there is one.

@@ -698,6 +698,33 @@
     margin-right: 3px;
   }
 
+  /* Live connectivity glow for a cloud project, driven by the same /health heartbeat probe that
+     already throttles-and-caches in api.js's pollApiReachability (see renderToolbar()) — no new
+     polling here, just a visual read on the existing result. Pulse (smooth, calm) reads as "still
+     connected"; blink (hard on/off, more urgent) reads as "lost connection" — deliberately different
+     rhythms, not just different colors, so the state is distinguishable without relying on color
+     alone (CVD/screen-glance safe). */
+  @keyframes kfKeyPulseGreen {
+    0%, 100% { box-shadow: 0 0 0 0 var(--kf-good-fg), 0 0 0 0 var(--kf-good-fg); }
+    25%, 75% { box-shadow: 0 0 2px 0 var(--kf-good-fg), 0 0 4px 1px var(--kf-good-fg); }
+    50% { box-shadow: 0 0 3px 1px var(--kf-good-fg), 0 0 7px 2px var(--kf-good-fg); }
+  }
+  @keyframes kfKeyBlinkRed {
+    0%, 49% { box-shadow: 0 0 6px 2px var(--kf-danger); }
+    50%, 100% { box-shadow: 0 0 0 0 var(--kf-danger); }
+  }
+  .kf-board-key-online {
+    animation: kfKeyPulseGreen 6s ease-in-out infinite;
+  }
+  /* Comes after .kf-board-key-server and wins on source order (equal specificity) — both classes
+     are present together while offline, since isServerLinked alone still keeps the base green
+     styling active; this overrides it to red. */
+  .kf-board-key-offline {
+    color: var(--kf-danger);
+    border-color: var(--kf-danger);
+    animation: kfKeyBlinkRed 1s steps(1, end) infinite;
+  }
+
   .kf-search {
     display: flex;
     align-items: center;
