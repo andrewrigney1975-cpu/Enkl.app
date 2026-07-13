@@ -106,17 +106,17 @@ function setTaskType(doc, taskTitle, typeName){
   doc.getElementById('taskTypesDoneBtn').click();
   await wait(10);
 
-  setTaskType(doc, 'Research competitor boards', 'Feature');
+  setTaskType(doc, 'Look at Project and App Settings', 'Feature');
   await wait(20);
-  setTaskType(doc, 'Design data schema', 'Bug');
+  setTaskType(doc, 'Configure project modules, columns and details', 'Bug');
   await wait(20);
-  setTaskType(doc, 'Set up local storage layer', 'Chore');
+  setTaskType(doc, 'Draft project objectives', 'Chore');
   await wait(20);
 
-  const featureCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Research competitor boards') !== -1);
-  const bugCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Design data schema') !== -1);
-  const choreCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Set up local storage layer') !== -1);
-  const noTypeCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Build drag-and-drop board UI') !== -1);
+  const featureCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Look at Project and App Settings') !== -1);
+  const bugCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Configure project modules, columns and details') !== -1);
+  const choreCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Draft project objectives') !== -1);
+  const noTypeCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Set up Team members for this project') !== -1);
 
   log('Feature-typed card (icon assigned) shows a type icon with the correct tooltip',
       featureCard.querySelector('.kf-card-type-icon') !== null && featureCard.querySelector('.kf-card-type-icon').getAttribute('title') === 'Feature');
@@ -134,10 +134,10 @@ function setTaskType(doc, taskTitle, typeName){
     return Array.from(doc.querySelectorAll('.kf-depnode')).find(n => n.textContent.indexOf(taskKey) !== -1);
   }
   function titlesIn(node){ return Array.from(node.querySelectorAll('title')).map(t => t.textContent); }
-  const featureNode = nodeFor('DEMO-1');
-  const bugNode = nodeFor('DEMO-2');
-  const choreNode = nodeFor('DEMO-3');
-  const noTypeNode = nodeFor('DEMO-4');
+  const featureNode = nodeFor('SMPL-1');
+  const bugNode = nodeFor('SMPL-2');
+  const choreNode = nodeFor('SMPL-3');
+  const noTypeNode = nodeFor('SMPL-4');
 
   log('Feature node (icon assigned) includes a <title> for "Feature"', titlesIn(featureNode).includes('Feature'), titlesIn(featureNode));
   log('Bug node (icon assigned) includes a <title> for "Bug"', titlesIn(bugNode).includes('Bug'), titlesIn(bugNode));
@@ -149,8 +149,8 @@ function setTaskType(doc, taskTitle, typeName){
   doc.getElementById('taskListBtn').click();
   await wait(20);
   function listRowFor(title){ return Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf(title) !== -1); }
-  const featureListRow = listRowFor('Research competitor boards');
-  const choreListRow = listRowFor('Set up local storage layer');
+  const featureListRow = listRowFor('Look at Project and App Settings');
+  const choreListRow = listRowFor('Draft project objectives');
   log('List View: Feature row (icon assigned) shows the type icon', featureListRow.querySelector('.kf-tasklist-type-icon') !== null);
   log('List View: Chore row (no icon assigned) shows nothing, consistent with board/dep-graph', choreListRow.querySelector('.kf-tasklist-type-icon') === null);
   doc.getElementById('taskListClose').click();

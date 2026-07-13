@@ -47,9 +47,9 @@ function rowsAfterHeader(headerEl){
   createRelease(doc, 'Alpha Release', '2026-01-01', '2026-01-15');
   await wait(20);
 
-  setTaskScores(doc, 'Design data schema', 800, 150, 'Alpha Release');
+  setTaskScores(doc, 'Configure project modules, columns and details', 800, 150, 'Alpha Release');
   await wait(20);
-  setTaskScores(doc, 'Set up local storage layer', 500, 200, 'Alpha Release');
+  setTaskScores(doc, 'Draft project objectives', 500, 200, 'Alpha Release');
   await wait(20);
 
   doc.getElementById('taskListBtn').click();
@@ -110,7 +110,7 @@ function rowsAfterHeader(headerEl){
   // ── 7. Collapse all only affects groups visible under the current search ──
   doc.getElementById('taskListExpandAllBtn').click();
   await wait(10);
-  doc.getElementById('taskListSearchInput').value = 'Design';
+  doc.getElementById('taskListSearchInput').value = 'Configure project modules';
   doc.getElementById('taskListSearchInput').dispatchEvent(new window.Event('input', { bubbles: true }));
   await wait(10);
   log('search narrows to just the matching group', doc.querySelectorAll('.kf-tasklist-group-header').length === 1);

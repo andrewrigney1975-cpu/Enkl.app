@@ -37,9 +37,9 @@ function setTaskType(doc, taskTitle, typeName){
   doc.getElementById('taskTypesDoneBtn').click();
   await wait(10);
 
-  setTaskType(doc, 'Design data schema', 'Feature');
+  setTaskType(doc, 'Configure project modules, columns and details', 'Feature');
   await wait(20);
-  setTaskType(doc, 'Set up local storage layer', 'Chore');
+  setTaskType(doc, 'Draft project objectives', 'Chore');
   await wait(20);
 
   doc.getElementById('timelineBtn').click();
@@ -49,15 +49,15 @@ function setTaskType(doc, taskTitle, typeName){
     return Array.from(doc.querySelectorAll('.kf-timeline-row')).find(r => r.textContent.indexOf(taskKeyOrTitle) !== -1);
   }
 
-  const featureBar = rowFor('Design data schema').querySelector('.kf-timeline-bar');
+  const featureBar = rowFor('Configure project modules, columns and details').querySelector('.kf-timeline-bar');
   const typeIcon = featureBar.querySelector('.kf-timeline-bar-type-icon');
   log('a task whose type has an icon assigned shows the type icon on its bar', typeIcon !== null);
   log('type icon shows the correct tooltip (the type\u2019s name)', typeIcon && typeIcon.getAttribute('title') === 'Feature', typeIcon && typeIcon.getAttribute('title'));
 
-  const choreBar = rowFor('Set up local storage layer').querySelector('.kf-timeline-bar');
+  const choreBar = rowFor('Draft project objectives').querySelector('.kf-timeline-bar');
   log('a task whose type has NO icon assigned shows nothing, even though it has a type', choreBar.querySelector('.kf-timeline-bar-type-icon') === null);
 
-  const noTypeBar = rowFor('Research competitor boards').querySelector('.kf-timeline-bar');
+  const noTypeBar = rowFor('Look at Project and App Settings').querySelector('.kf-timeline-bar');
   log('a task with no type at all shows nothing either', noTypeBar.querySelector('.kf-timeline-bar-type-icon') === null);
 
   log('type icon sits at the right-hand end of the bar (last child, pushed via margin-left:auto)',

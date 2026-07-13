@@ -23,10 +23,10 @@ import { setCostBenefitDeps, cbZoomState, openCostBenefitOverlay, closeCostBenef
 
 /* ---- Features ---- */
 import { parseTaskKeyFromHash, findTaskByKey, clearTaskHash } from './features/hash-router.js';
-import { exportProjectJSON } from './features/export.js';
+import { exportProjectJSON, setExportToast } from './features/export.js';
 import { migrateProjectToServer, loginToServer, completeSsoLogin, changePasswordOnServer, isServerLoggedIn, isServerAuthoritative, pullServerProjectsIntoLocal, deleteProjectOnServer, setMigrationToast } from './features/migration.js';
 import { connectEventStream, disconnectEventStream } from './features/live-updates.js';
-import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck } from './features/import.js';
+import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck, setImportToast, setImportRenderAll, setImportResetFilters } from './features/import.js';
 import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder } from './features/session-alerts.js';
 import { setBulkEditDeps, openBulkEditOverlay, closeBulkEditOverlay, isBulkEditOverlayOpen, saveBulkEditChanges } from './features/bulk-edit.js';
 import { getArchivedTasks, openArchivedTasksOverlay, closeArchivedTasksOverlay, isArchivedTasksOverlayOpen, renderArchivedTasksList, reactivateSelectedArchivedTasks } from './features/archived-tasks.js';
@@ -80,6 +80,10 @@ setBulkEditDeps({ confirmDialog, exportProjectJSON });
 setThemeDeps({ renderBoard, renderDependencyMap, isDepMapOpen, updatePriorityIcon, renderPriorityFilterChips });
 setMutationsToast(toast);
 setMigrationToast(toast);
+setExportToast(toast);
+setImportToast(toast);
+setImportRenderAll(renderAll);
+setImportResetFilters(resetFilters);
 setImportSessionAlertsCheck(checkProjectAlerts);
 
 /* ---- Console-exposed debug helpers ---- */

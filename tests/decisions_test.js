@@ -61,7 +61,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   let proj = raw.projects[raw.currentProjectId];
   let decision = proj.decisions.find(d => d.title === 'Adopt PostgreSQL');
   log('decision was created', !!decision);
-  log('key follows the <PROJECT>-DEC-NNN format, zero-padded', decision.key === 'DEMO-DEC-001', decision.key);
+  log('key follows the <PROJECT>-DEC-NNN format, zero-padded', decision.key === 'SMPL-DEC-001', decision.key);
   log('type persisted correctly', decision.type === 'technical', decision.type);
   log('owner persisted correctly', decision.ownerId === ownerOpt.value);
   log('linked task persisted correctly', decision.taskId === taskOpt.value);
@@ -76,11 +76,11 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   proj = raw.projects[raw.currentProjectId];
   const secondDecision = proj.decisions.find(d => d.title === 'Use feature flags for rollout');
-  log('second decision gets key 002', secondDecision.key === 'DEMO-DEC-002', secondDecision.key);
+  log('second decision gets key 002', secondDecision.key === 'SMPL-DEC-002', secondDecision.key);
   log('a decision left at the default still gets a valid type (Strategy)', secondDecision.type === 'strategy', secondDecision.type);
 
   const rowText = doc.getElementById('decisionsList').textContent;
-  log('list shows the decision key', rowText.indexOf('DEMO-DEC-001') !== -1);
+  log('list shows the decision key', rowText.indexOf('SMPL-DEC-001') !== -1);
   log('list shows the type label', rowText.indexOf('Technical') !== -1, rowText);
   log('list shows the linked document count', rowText.indexOf('1 doc') !== -1, rowText);
 

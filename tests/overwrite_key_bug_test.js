@@ -30,9 +30,9 @@ function cardKeys(doc){
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  // Sanity: seeded Demo Project keys are DEMO-1..DEMO-5
+  // Sanity: seeded Sample Project keys are SMPL-1..SMPL-5
   const keysBefore = cardKeys(doc);
-  log('seeded project task keys all start with DEMO-', keysBefore.every(k => k.startsWith('DEMO-')), keysBefore.join(','));
+  log('seeded project task keys all start with SMPL-', keysBefore.every(k => k.startsWith('SMPL-')), keysBefore.join(','));
 
   // Export it, then re-import and choose "Update existing" (overwrite).
   doc.getElementById('exportBtn').click();
@@ -47,13 +47,13 @@ function cardKeys(doc){
   await wait(30);
 
   const keyAfter = doc.getElementById('toolbarKey').textContent;
-  log('project key after overwrite is still DEMO (not DEMO2 etc.)', keyAfter === 'DEMO', keyAfter);
+  log('project key after overwrite is still SMPL (not SMPL2 etc.)', keyAfter === 'SMPL', keyAfter);
 
   const keysAfter = cardKeys(doc);
-  log('every task key after overwrite starts with the correct "DEMO-" prefix',
-      keysAfter.every(k => k.startsWith('DEMO-')), keysAfter.join(','));
-  log('no task key carries a stale deduplicated prefix like DEMO2-',
-      keysAfter.every(k => !/^DEMO\d+-/.test(k)), keysAfter.join(','));
+  log('every task key after overwrite starts with the correct "SMPL-" prefix',
+      keysAfter.every(k => k.startsWith('SMPL-')), keysAfter.join(','));
+  log('no task key carries a stale deduplicated prefix like SMPL2-',
+      keysAfter.every(k => !/^SMPL\d+-/.test(k)), keysAfter.join(','));
   log('task key count unchanged (5)', keysAfter.length === 5, keysAfter.length);
 
   // Verify the numeric suffixes are sane (1..5, no duplicates, no NaN)
@@ -66,8 +66,8 @@ function cardKeys(doc){
   const proj = raw.projects[raw.currentProjectId];
   const persistedKeys = Object.values(proj.tasks).map(t => t.key).sort();
   log('persisted task keys in localStorage also match the corrected prefix',
-      persistedKeys.every(k => k.startsWith('DEMO-')), persistedKeys.join(','));
-  log('persisted project.key is DEMO', proj.key === 'DEMO', proj.key);
+      persistedKeys.every(k => k.startsWith('SMPL-')), persistedKeys.join(','));
+  log('persisted project.key is SMPL', proj.key === 'SMPL', proj.key);
 
   // Re-export after the fix and confirm the export itself reflects correct keys too
   doc.getElementById('exportBtn').click();
@@ -76,8 +76,8 @@ function cardKeys(doc){
   function collectKeys(nodes, set){ (nodes||[]).forEach(n => { set.add(n.key); collectKeys(n.subtasks, set); }); }
   const exportedKeys = new Set();
   collectKeys(reExported.hierarchy, exportedKeys);
-  log('re-exported hierarchy keys also use the correct DEMO- prefix',
-      Array.from(exportedKeys).every(k => k.startsWith('DEMO-')), Array.from(exportedKeys).join(','));
+  log('re-exported hierarchy keys also use the correct SMPL- prefix',
+      Array.from(exportedKeys).every(k => k.startsWith('SMPL-')), Array.from(exportedKeys).join(','));
 
   // Now test a SECOND consecutive overwrite to make sure the fix isn't a one-shot fluke
   await triggerImport(doc, exportedText);
@@ -85,7 +85,7 @@ function cardKeys(doc){
   await wait(30);
   const keysAfterSecond = cardKeys(doc);
   log('keys remain correctly prefixed after a second overwrite in a row',
-      keysAfterSecond.every(k => k.startsWith('DEMO-')) && keysAfterSecond.length === 5, keysAfterSecond.join(','));
+      keysAfterSecond.every(k => k.startsWith('SMPL-')) && keysAfterSecond.length === 5, keysAfterSecond.join(','));
 
   console.log('\nOverwrite task-key bug regression test complete.');
   process.exit(0);

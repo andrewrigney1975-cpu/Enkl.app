@@ -25,7 +25,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  // --- 1. Export the seeded Demo Project and inspect the raw doc shape ---
+  // --- 1. Export the seeded Sample Project and inspect the raw doc shape ---
   doc.getElementById('exportBtn').click();
   await wait(20);
   const exported = JSON.parse(lastBlobText);
@@ -42,9 +42,9 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
     }
     return null;
   }
-  const designNode = findNode(exported.hierarchy, 'Design data schema');
-  log('hierarchy node for an assigned task includes assigneeId + assignee name', !!designNode && !!designNode.assigneeId && designNode.assignee === 'Riley Chen', designNode ? JSON.stringify({assigneeId: designNode.assigneeId, assignee: designNode.assignee}) : 'not found');
-  const researchNode = findNode(exported.hierarchy, 'Research competitor boards');
+  const designNode = findNode(exported.hierarchy, 'Configure project modules, columns and details');
+  log('hierarchy node for an assigned task includes assigneeId + assignee name', !!designNode && !!designNode.assigneeId && designNode.assignee === 'John Brown', designNode ? JSON.stringify({assigneeId: designNode.assigneeId, assignee: designNode.assignee}) : 'not found');
+  const researchNode = findNode(exported.hierarchy, 'Look at Project and App Settings');
   log('hierarchy node for an unassigned task has null assignee', researchNode && researchNode.assigneeId === null && researchNode.assignee === null);
 
   // --- 2. Import that file back in as a new project, verify members + assignments survive ---
@@ -53,7 +53,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   Object.defineProperty(fileInput, 'files', { value: [fakeFile], configurable: true });
   fileInput.dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(30);
-  // Conflict modal: same DEMO key — choose "Import as copy".
+  // Conflict modal: same SMPL key — choose "Import as copy".
   if(!doc.getElementById('importConflictOverlay').classList.contains('hidden')){
     doc.getElementById('importConflictCopyBtn').click();
     await wait(20);
@@ -65,14 +65,14 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   doc.getElementById('manageTeamBtn').click();
   await wait(20);
   const memberNames = Array.from(doc.querySelectorAll('.kf-member-name-input')).map(i => i.value).sort();
-  log('imported project has both members', memberNames.length === 2 && memberNames.includes('Riley Chen') && memberNames.includes('Sam Okafor'), memberNames.join(','));
+  log('imported project has both members', memberNames.length === 2 && memberNames.includes('John Brown') && memberNames.includes('Jan Smith'), memberNames.join(','));
   doc.getElementById('teamDoneBtn').click();
   await wait(10);
 
-  const designCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Design data schema') !== -1);
-  log('imported task still shows the right assignee avatar', designCard.innerHTML.indexOf('title="Assigned to Riley Chen"') !== -1, designCard.innerHTML);
+  const designCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Configure project modules, columns and details') !== -1);
+  log('imported task still shows the right assignee avatar', designCard.innerHTML.indexOf('title="Assigned to John Brown"') !== -1, designCard.innerHTML);
 
-  const researchCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Research competitor boards') !== -1);
+  const researchCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Look at Project and App Settings') !== -1);
   log('previously-unassigned task remains unassigned (no avatar)', researchCard.querySelector('.kf-avatar') === null);
 
   // --- 3. Re-export the imported project; member set + assignments should be stable ---
@@ -80,8 +80,8 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   await wait(20);
   const reExported = JSON.parse(lastBlobText);
   log('re-export still has 2 members', reExported.members.length === 2);
-  const reDesignNode = findNode(reExported.hierarchy, 'Design data schema');
-  log('re-export assignment matches original (by name)', reDesignNode.assignee === 'Riley Chen');
+  const reDesignNode = findNode(reExported.hierarchy, 'Configure project modules, columns and details');
+  log('re-export assignment matches original (by name)', reDesignNode.assignee === 'John Brown');
 
   // --- 4. Hand-edited / legacy file without a members array should import fine, unassigned ---
   const noMembersDoc = JSON.parse(JSON.stringify(exported));

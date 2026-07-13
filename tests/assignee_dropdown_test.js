@@ -10,7 +10,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  // Seeded Demo Project has 2 members (Riley Chen, Sam Okafor) and 5 tasks.
+  // Seeded Sample Project has 2 members (John Brown, Jan Smith) and 5 tasks.
   const wrap = doc.getElementById('assigneeFilterWrap');
   log('dropdown filter is visible when the project has members', !wrap.classList.contains('kf-vis-hidden'));
 
@@ -29,19 +29,19 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   let rows = doc.querySelectorAll('#assigneeFilterPanel .kf-dropdown-filter-row');
   log('panel lists 2 members + Unassigned (3 rows)', rows.length === 3, rows.length);
 
-  const rileyRow = Array.from(rows).find(r => r.textContent.indexOf('Riley Chen') !== -1);
-  const samRow = Array.from(rows).find(r => r.textContent.indexOf('Sam Okafor') !== -1);
-  rileyRow.querySelector('input').checked = true;
-  rileyRow.querySelector('input').dispatchEvent(new window.Event('change', { bubbles: true }));
+  const johnRow = Array.from(rows).find(r => r.textContent.indexOf('John Brown') !== -1);
+  const janRow = Array.from(rows).find(r => r.textContent.indexOf('Jan Smith') !== -1);
+  johnRow.querySelector('input').checked = true;
+  johnRow.querySelector('input').dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(10);
-  // panel was rebuilt — re-query Sam's row
+  // panel was rebuilt — re-query Jan's row
   rows = doc.querySelectorAll('#assigneeFilterPanel .kf-dropdown-filter-row');
-  const samRow2 = Array.from(rows).find(r => r.textContent.indexOf('Sam Okafor') !== -1);
-  samRow2.querySelector('input').checked = true;
-  samRow2.querySelector('input').dispatchEvent(new window.Event('change', { bubbles: true }));
+  const janRow2 = Array.from(rows).find(r => r.textContent.indexOf('Jan Smith') !== -1);
+  janRow2.querySelector('input').checked = true;
+  janRow2.querySelector('input').dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(20);
 
-  // Riley is assigned to 2 tasks, Sam to 1 -> union = 3 tasks visible
+  // John is assigned to 2 tasks, Jan to 1 -> union = 3 tasks visible
   const visibleCards = doc.querySelectorAll('.kf-board .kf-card');
   log('selecting two members shows the union of their tasks (3)', visibleCards.length === 3, visibleCards.length);
   log('dropdown label shows "2 assignees" for multi-select', doc.getElementById('assigneeFilterLabel').textContent === '2 assignees', doc.getElementById('assigneeFilterLabel').textContent);
@@ -53,7 +53,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   unassignedRow.querySelector('input').checked = true;
   unassignedRow.querySelector('input').dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(20);
-  // Riley(2) + Sam(1) + Unassigned(2: Research + README) = 5 (the whole seeded board)
+  // John(2) + Jan(1) + Unassigned(2: Settings + board) = 5 (the whole seeded board)
   const visibleAfterUnassigned = doc.querySelectorAll('.kf-board .kf-card');
   log('adding "Unassigned" to the selection includes unassigned tasks too', visibleAfterUnassigned.length === 5, visibleAfterUnassigned.length);
   log('dropdown label shows "3 assignees" with all three checked', doc.getElementById('assigneeFilterLabel').textContent === '3 assignees', doc.getElementById('assigneeFilterLabel').textContent);

@@ -36,8 +36,8 @@ public class MigrationService
 
         // Project keys are unique per-Organisation, not globally — a key is only ever used within its
         // own org's context (task keys, the Portfolio Dashboard's picker, etc.), so two unrelated
-        // orgs both having a "DEMO" project is fine. But every fresh local install seeds a project
-        // with the same "DEMO" key (createSeedDB in src/js/storage.js), so a key collision WITHIN the
+        // orgs both having a "SMPL" project is fine. But every fresh local install seeds a project
+        // with the same "SMPL" key (createSeedDB in src/js/storage.js), so a key collision WITHIN the
         // target org is still an expected, common case (e.g. repeat-migrating into the same org, or
         // that org already having its own same-keyed project) — not just a same-name accident.
         var uniqueKey = await ResolveUniqueProjectKeyAsync(request.Project.Key, organisation.Id);

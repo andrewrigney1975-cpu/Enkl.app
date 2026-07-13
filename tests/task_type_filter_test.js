@@ -23,11 +23,11 @@ function setTaskType(doc, taskTitle, typeName){
   const typeIdx = toolbarChildren.indexOf(doc.getElementById('taskTypeFilterWrap'));
   log('Task Type filter sits immediately after the Assignee filter', typeIdx === assigneeIdx + 1, `assignee=${assigneeIdx} type=${typeIdx}`);
 
-  setTaskType(doc, 'Research competitor boards', 'Feature');
+  setTaskType(doc, 'Look at Project and App Settings', 'Feature');
   await wait(20);
-  setTaskType(doc, 'Design data schema', 'Feature');
+  setTaskType(doc, 'Configure project modules, columns and details', 'Feature');
   await wait(20);
-  setTaskType(doc, 'Set up local storage layer', 'Bug');
+  setTaskType(doc, 'Draft project objectives', 'Bug');
   await wait(20);
 
   const wrap = doc.getElementById('taskTypeFilterWrap');

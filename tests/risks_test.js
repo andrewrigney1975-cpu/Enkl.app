@@ -84,7 +84,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   let proj = raw.projects[raw.currentProjectId];
   let risk = proj.risks.find(r => r.title === 'Key vendor may miss delivery date');
   log('risk was created', !!risk);
-  log('key follows the <PROJECT>-RISK-NNN format, zero-padded', risk.key === 'DEMO-RISK-001', risk.key);
+  log('key follows the <PROJECT>-RISK-NNN format, zero-padded', risk.key === 'SMPL-RISK-001', risk.key);
   log('likelihood persisted correctly', risk.likelihood === 3, risk.likelihood);
   log('impact persisted correctly', risk.impact === 4, risk.impact);
   log('status persisted correctly', risk.status === 'in_review', risk.status);
@@ -93,7 +93,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('dateClosed is null (status is not Closed)', risk.dateClosed === null, risk.dateClosed);
 
   const rowText = doc.getElementById('risksList').textContent;
-  log('list shows the risk key', rowText.indexOf('DEMO-RISK-001') !== -1);
+  log('list shows the risk key', rowText.indexOf('SMPL-RISK-001') !== -1);
   log('list shows the status label', rowText.indexOf('In Review') !== -1);
   log('list shows the computed score (3x4=12)', rowText.indexOf('Score 12') !== -1, rowText);
   log('list shows the linked document count', rowText.indexOf('1 doc') !== -1, rowText);

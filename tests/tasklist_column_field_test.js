@@ -22,7 +22,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('Column header appears immediately after Title', columnIdx === titleIdx + 1, headerLabels.join(','));
   log('Column header appears immediately before Assignee', assigneeIdx === columnIdx + 1, headerLabels.join(','));
 
-  const row = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Write project README') !== -1);
+  const row = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Create project board') !== -1);
   const columnCell = row.querySelector('.kf-tasklist-column');
   log('row shows a Column cell', !!columnCell);
   log('Column cell shows the correct column name for that task (seeded into Done)', columnCell.textContent.trim() === 'Done', columnCell.textContent);
@@ -34,8 +34,8 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('in the actual row markup, Column sits between Title and Assignee', columnCellIdx === titleCellIdx + 1 && assigneeCellIdx === columnCellIdx + 1,
       `title=${titleCellIdx} column=${columnCellIdx} assignee=${assigneeCellIdx}`);
 
-  const backlogRow = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Research competitor boards') !== -1);
-  const inProgressRow = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Build drag-and-drop board UI') !== -1);
+  const backlogRow = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Look at Project and App Settings') !== -1);
+  const inProgressRow = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Set up Team members for this project') !== -1);
   log('a Backlog task shows "Backlog"', backlogRow.querySelector('.kf-tasklist-column').textContent.trim() === 'Backlog');
   log('an In Progress task shows "In Progress"', inProgressRow.querySelector('.kf-tasklist-column').textContent.trim() === 'In Progress');
 
@@ -63,7 +63,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   doc.getElementById('taskListClose').click();
   await wait(10);
-  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Write project README') !== -1);
+  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Create project board') !== -1);
   card.click();
   await wait(10);
   const colSelect = doc.getElementById('taskColumnSelect');
@@ -74,7 +74,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   doc.getElementById('taskListBtn').click();
   await wait(20);
-  const movedRow = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Write project README') !== -1);
+  const movedRow = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Create project board') !== -1);
   log('after moving a task to a different column, the List View reflects the new column', movedRow.querySelector('.kf-tasklist-column').textContent.trim() === 'To Do',
       movedRow.querySelector('.kf-tasklist-column').textContent);
 

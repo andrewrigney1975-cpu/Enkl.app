@@ -32,7 +32,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('seed cards rendered (5)', cards.length === 5, 'got ' + cards.length);
 
   const toolbarTitle = doc.getElementById('toolbarTitle').textContent;
-  log('toolbar shows Demo Project', toolbarTitle === 'Demo Project', toolbarTitle);
+  log('toolbar shows Sample Project', toolbarTitle === 'Sample Project', toolbarTitle);
 
   // 2. Create a new project via modal flow
   doc.getElementById('newProjectBtn').click();

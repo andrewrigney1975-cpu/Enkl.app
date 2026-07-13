@@ -93,13 +93,20 @@ export function pollApiReachability(onChange){
 
   var controller = new AbortController();
   var timeoutId = setTimeout(function(){ controller.abort(); }, 4000);
-  fetch('/health', {cache: 'no-store', signal: controller.signal}).then(function(res){
-    clearTimeout(timeoutId);
-    applyReachability(res.ok);
-  }, function(){
+  try {
+    fetch('/health', {cache: 'no-store', signal: controller.signal}).then(function(res){
+      clearTimeout(timeoutId);
+      applyReachability(res.ok);
+    }, function(){
+      clearTimeout(timeoutId);
+      applyReachability(false);
+    });
+  } catch(e){
+    // fetch() itself can throw synchronously in environments where it isn't defined at all
+    // (rather than rejecting) — treat that the same as an unreachable API, not a render-breaking crash.
     clearTimeout(timeoutId);
     applyReachability(false);
-  });
+  }
 
   function applyReachability(reachable){
     var changed = reachable !== _apiReachable;

@@ -23,7 +23,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
     return new realBlobCtor(parts, opts);
   };
 
-  // --- 1. Round-trip: export the seeded Demo Project, then import it back ---
+  // --- 1. Round-trip: export the seeded Sample Project, then import it back ---
   doc.getElementById('exportBtn').click();
   await wait(20);
   const exportedDoc = JSON.parse(lastBlobText);
@@ -60,7 +60,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   fileInput.dispatchEvent(new window.Event('change'));
   await wait(30);
 
-  // A conflict modal should now be showing (same project key/name as the seeded Demo Project).
+  // A conflict modal should now be showing (same project key/name as the seeded Sample Project).
   const conflictVisible = !doc.getElementById('importConflictOverlay').classList.contains('hidden');
   log('conflict modal shown when re-importing same project', conflictVisible);
   // Choose "Import as copy" so the test can verify independent new-project behaviour.
@@ -71,7 +71,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('a new project was added to the selector', projectCountAfter === projectCountBefore + 1, projectCountBefore + ' -> ' + projectCountAfter);
 
   const newProjectName = doc.getElementById('toolbarTitle').textContent;
-  log('imported project becomes the active project', newProjectName === 'Demo Project', newProjectName);
+  log('imported project becomes the active project', newProjectName === 'Sample Project', newProjectName);
 
   const cards = doc.querySelectorAll('.kf-card');
   log('all 5 tasks recreated (no duplication from multi-parent task)', cards.length === 5, cards.length);
@@ -82,7 +82,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   // The Done column should have been inferred as done:true (task there shouldn't show Blocked
   // incorrectly, and more importantly the originally-blocked task graph should look identical)
   const blockedCount = doc.querySelectorAll('.kf-blocked-chip').length;
-  log('blocked-state pattern matches original (2 blocked: design schema needs t1 done? no - only tasks whose deps are unfinished)', blockedCount > 0, blockedCount);
+  log('blocked-state pattern matches original (tasks whose dependencies are unfinished show as blocked)', blockedCount > 0, blockedCount);
 
   // Open dependency map on the imported project and verify edge/node counts match the original
   doc.getElementById('depMapBtn').click();
@@ -95,7 +95,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   await wait(10);
 
   const newKey = doc.getElementById('toolbarKey').textContent;
-  log('re-imported project got a de-duplicated key (DEMO already taken by original)', newKey !== 'DEMO' && newKey.indexOf('DEMO') === 0, newKey);
+  log('re-imported project got a de-duplicated key (SMPL already taken by original)', newKey !== 'SMPL' && newKey.indexOf('SMPL') === 0, newKey);
 
   // --- 2. Malformed file handling ---
   const fakeFile2 = makeFakeFile({ foo: 'bar' }, 'bad.json');

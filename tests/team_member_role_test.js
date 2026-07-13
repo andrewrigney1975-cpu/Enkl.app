@@ -27,10 +27,10 @@ function installFakeFileReader(window){
   let raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   let proj = raw.projects[raw.currentProjectId];
   log('seed project has exactly the 2 specified roles', JSON.stringify(proj.roles) === JSON.stringify(['Project Manager','Developer']), JSON.stringify(proj.roles));
-  const riley = proj.members.find(m => m.name === 'Riley Chen');
-  const sam = proj.members.find(m => m.name === 'Sam Okafor');
-  log('Riley Chen is seeded as Project Manager', riley.role === 'Project Manager', riley.role);
-  log('Sam Okafor is seeded as Developer', sam.role === 'Developer', sam.role);
+  const john = proj.members.find(m => m.name === 'John Brown');
+  const jan = proj.members.find(m => m.name === 'Jan Smith');
+  log('John Brown is seeded as Project Manager', john.role === 'Project Manager', john.role);
+  log('Jan Smith is seeded as Developer', jan.role === 'Developer', jan.role);
 
   doc.getElementById('manageTeamBtn').click();
   await wait(20);
@@ -43,8 +43,8 @@ function installFakeFileReader(window){
   const datalistOptions = Array.from(doc.getElementById('memberRoleOptions').options).map(o => o.value);
   log('datalist offers both seeded roles', datalistOptions.includes('Project Manager') && datalistOptions.includes('Developer'), datalistOptions.join(','));
 
-  const rileyRow = Array.from(doc.querySelectorAll('.kf-member-row')).find(r => r.querySelector('.kf-member-name-input').value === 'Riley Chen');
-  log('Riley\u2019s role input is pre-filled with "Project Manager"', rileyRow.querySelector('.kf-member-role-input').value === 'Project Manager');
+  const johnRow = Array.from(doc.querySelectorAll('.kf-member-row')).find(r => r.querySelector('.kf-member-name-input').value === 'John Brown');
+  log('John’s role input is pre-filled with "Project Manager"', johnRow.querySelector('.kf-member-role-input').value === 'Project Manager');
 
   doc.getElementById('newMemberNameInput').value = 'Jordan Park';
   doc.getElementById('addMemberBtn').click();
@@ -58,8 +58,8 @@ function installFakeFileReader(window){
   raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   proj = raw.projects[raw.currentProjectId];
   let jordan = proj.members.find(m => m.name === 'Jordan Park');
-  log('Jordan\u2019s role persisted', jordan.role === 'QA Engineer', jordan.role);
-  log('the new role is added to the project\u2019s role vocabulary', proj.roles.includes('QA Engineer'), JSON.stringify(proj.roles));
+  log('Jordan’s role persisted', jordan.role === 'QA Engineer', jordan.role);
+  log('the new role is added to the project’s role vocabulary', proj.roles.includes('QA Engineer'), JSON.stringify(proj.roles));
 
   doc.getElementById('newMemberNameInput').value = 'Casey Wu';
   doc.getElementById('addMemberBtn').click();
@@ -73,7 +73,7 @@ function installFakeFileReader(window){
   const developerCount = proj.roles.filter(r => r.toLowerCase() === 'developer').length;
   log('typing "developer" (different casing) reuses the existing "Developer" entry, no duplicate created', developerCount === 1, JSON.stringify(proj.roles));
   const casey = proj.members.find(m => m.name === 'Casey Wu');
-  log('Casey\u2019s own role is stored using the existing canonical casing ("Developer")', casey.role === 'Developer', casey.role);
+  log('Casey’s own role is stored using the existing canonical casing ("Developer")', casey.role === 'Developer', casey.role);
 
   caseyRow.querySelector('.kf-member-role-input').value = '';
   caseyRow.querySelector('.kf-member-role-input').dispatchEvent(new window.Event('change', { bubbles: true }));
@@ -89,18 +89,18 @@ function installFakeFileReader(window){
   anyTask.click();
   await wait(10);
   const assigneeSelect = doc.getElementById('taskAssigneeSelect');
-  const rileyOpt = Array.from(assigneeSelect.options).find(o => o.textContent === 'Riley Chen');
-  assigneeSelect.value = rileyOpt.value;
+  const johnOpt = Array.from(assigneeSelect.options).find(o => o.textContent === 'John Brown');
+  assigneeSelect.value = johnOpt.value;
   doc.getElementById('taskSaveBtn').click();
   await wait(20);
 
   doc.getElementById('healthBtn').click();
   await wait(20);
   const topRows = Array.from(doc.querySelectorAll('.kf-health-top-member-row'));
-  const rileyTopRow = topRows.find(r => r.textContent.indexOf('Riley Chen') !== -1);
-  log('Riley appears in the Top 5 Team Members list with her role shown beside her name',
-      !!rileyTopRow && !!rileyTopRow.querySelector('.kf-health-top-member-role') && rileyTopRow.querySelector('.kf-health-top-member-role').textContent === 'Project Manager',
-      rileyTopRow && rileyTopRow.textContent);
+  const johnTopRow = topRows.find(r => r.textContent.indexOf('John Brown') !== -1);
+  log('John appears in the Top 5 Team Members list with his role shown beside his name',
+      !!johnTopRow && !!johnTopRow.querySelector('.kf-health-top-member-role') && johnTopRow.querySelector('.kf-health-top-member-role').textContent === 'Project Manager',
+      johnTopRow && johnTopRow.textContent);
   doc.getElementById('healthClose').click();
   await wait(10);
 
@@ -114,9 +114,9 @@ function installFakeFileReader(window){
   doc.getElementById('exportBtn').click();
   await wait(20);
   const exported = JSON.parse(lastBlobText);
-  log('export includes the project\u2019s role vocabulary', Array.isArray(exported.roles) && exported.roles.includes('Project Manager') && exported.roles.includes('QA Engineer'), JSON.stringify(exported.roles));
-  const exportedRiley = exported.members.find(m => m.name === 'Riley Chen');
-  log('exported member carries their role', exportedRiley.role === 'Project Manager', exportedRiley.role);
+  log('export includes the project’s role vocabulary', Array.isArray(exported.roles) && exported.roles.includes('Project Manager') && exported.roles.includes('QA Engineer'), JSON.stringify(exported.roles));
+  const exportedJohn = exported.members.find(m => m.name === 'John Brown');
+  log('exported member carries their role', exportedJohn.role === 'Project Manager', exportedJohn.role);
 
   const fileInput = doc.getElementById('importFileInput');
   Object.defineProperty(fileInput, 'files', { value: [new FakeFile(lastBlobText)], configurable: true });
@@ -129,8 +129,8 @@ function installFakeFileReader(window){
   raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   const importedProj = raw.projects[raw.currentProjectId];
   log('imported project carries over the role vocabulary', importedProj.roles.includes('Project Manager') && importedProj.roles.includes('QA Engineer'), JSON.stringify(importedProj.roles));
-  const importedRiley = importedProj.members.find(m => m.name === 'Riley Chen');
-  log('imported member retains their role', importedRiley && importedRiley.role === 'Project Manager', importedRiley && importedRiley.role);
+  const importedJohn = importedProj.members.find(m => m.name === 'John Brown');
+  log('imported member retains their role', importedJohn && importedJohn.role === 'Project Manager', importedJohn && importedJohn.role);
 
   const legacyDB = {
     projects: {

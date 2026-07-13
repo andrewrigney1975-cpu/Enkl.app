@@ -10,7 +10,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  // Seed data already has 2 members (Riley Chen, Sam Okafor) across 3 assigned tasks (Riley x2, Sam x1).
+  // Seed data already has 2 members (John Brown, Jan Smith) across 3 assigned tasks (John x2, Jan x1).
   const avatarsOnBoard = doc.querySelectorAll('.kf-card .kf-avatar');
   log('seeded demo project shows assignee avatars on cards', avatarsOnBoard.length === 3, 'got ' + avatarsOnBoard.length);
 
@@ -33,7 +33,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   // Rename a member via inline input
   const firstRow = doc.querySelector('.kf-member-row[data-member-id]');
   const nameInput = firstRow.querySelector('.kf-member-name-input');
-  nameInput.value = 'Riley Chen-Martinez';
+  nameInput.value = 'John Brown-Martinez';
   nameInput.dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(20);
 
@@ -42,7 +42,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('team modal closes via Done', doc.getElementById('teamOverlay').classList.contains('hidden'));
 
   // Renamed member should now show updated initials/tooltip on the board card it's assigned to
-  const renamedAvatar = Array.from(doc.querySelectorAll('.kf-card .kf-avatar')).find(a => a.title.indexOf('Riley Chen-Martinez') !== -1);
+  const renamedAvatar = Array.from(doc.querySelectorAll('.kf-card .kf-avatar')).find(a => a.title.indexOf('John Brown-Martinez') !== -1);
   log('card avatar reflects renamed member', !!renamedAvatar, renamedAvatar ? renamedAvatar.title : 'not found');
 
   // New member should appear in the task modal's assignee dropdown
@@ -101,7 +101,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   // Remove a member and confirm their tasks get unassigned
   doc.getElementById('manageTeamBtn').click();
   await wait(20);
-  const samRow = Array.from(doc.querySelectorAll('.kf-member-row')).find(r => r.querySelector('.kf-member-name-input').value.indexOf('Sam Okafor') !== -1);
+  const samRow = Array.from(doc.querySelectorAll('.kf-member-row')).find(r => r.querySelector('.kf-member-name-input').value.indexOf('Jan Smith') !== -1);
   samRow.querySelector('[data-action="remove-member"]').click();
   await wait(20);
   const confirmVisible = !doc.getElementById('confirmOverlay').classList.contains('hidden');
@@ -113,8 +113,8 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   doc.getElementById('teamDoneBtn').click();
   await wait(10);
-  const samAvatarsLeft = Array.from(doc.querySelectorAll('.kf-card .kf-avatar')).filter(a => a.title.indexOf('Sam Okafor') !== -1);
-  log('Sam Okafor unassigned from his task (no orphan avatar remains)', samAvatarsLeft.length === 0, samAvatarsLeft.length);
+  const samAvatarsLeft = Array.from(doc.querySelectorAll('.kf-card .kf-avatar')).filter(a => a.title.indexOf('Jan Smith') !== -1);
+  log('Jan Smith unassigned from her task (no orphan avatar remains)', samAvatarsLeft.length === 0, samAvatarsLeft.length);
 
   // Persistence check
   const raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));

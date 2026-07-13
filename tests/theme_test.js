@@ -64,15 +64,15 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
     await wait(300);
     const doc = dom.window.document;
 
-    // Seeded demo project has a "critical" priority task ("Build drag-and-drop board UI")
-    const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Build drag-and-drop board UI') !== -1);
+    // Seeded project has a "critical" priority task ("Set up Team members for this project")
+    const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Set up Team members for this project') !== -1);
     const pillLight = card.querySelector('.kf-priority-pill').getAttribute('style');
     log('light-mode critical-priority pill uses the light palette (white on red)', pillLight.indexOf('#ffffff') !== -1 && pillLight.indexOf('#c9372c') !== -1, pillLight);
 
     doc.getElementById('themeToggleBtn').click();
     await wait(20);
 
-    const cardAfter = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Build drag-and-drop board UI') !== -1);
+    const cardAfter = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Set up Team members for this project') !== -1);
     const pillDark = cardAfter.querySelector('.kf-priority-pill').getAttribute('style');
     log('dark-mode priority pill uses a DIFFERENT (dark-tuned) color set', pillDark !== pillLight, pillDark);
     log('dark-mode critical-priority pill uses the dark palette colors', pillDark.indexOf('#1d2125') !== -1 && pillDark.indexOf('#f87168') !== -1, pillDark);

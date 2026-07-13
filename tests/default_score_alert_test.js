@@ -32,12 +32,12 @@ function makeDB(projectId, tasks, projectOverrides){
 (async () => {
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  // ── 1. The default seeded Demo Project never triggers this alert ─────────
+  // ── 1. The default seeded Sample Project never triggers this alert ───────
   {
     const dom = new JSDOM(html, { runScripts: 'dangerously', resources: 'usable', url: 'http://localhost/', pretendToBeVisual: true });
     await wait(300);
     const doc = dom.window.document;
-    log('seeded Demo Project (all tasks meaningfully scored) does not show the alert on load',
+    log('seeded Sample Project (all tasks meaningfully scored) does not show the alert on load',
         doc.getElementById('defaultScoreAlertOverlay').classList.contains('hidden'));
   }
 

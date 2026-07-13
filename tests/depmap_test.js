@@ -17,7 +17,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  // Open the dependency map for the seeded Demo Project (5 tasks, with t4 depending on t2 AND t3)
+  // Open the dependency map for the seeded Sample Project (5 tasks, with t4 depending on t2 AND t3)
   doc.getElementById('depMapBtn').click();
   await wait(20);
 

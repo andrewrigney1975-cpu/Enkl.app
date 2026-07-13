@@ -95,7 +95,7 @@ function setProjectDates(doc, startVal, endVal){
 
   // ── 5. Switch to the Demo Project for the rest of the tests ──────────────
   const projSelect = doc.getElementById('projectSelect');
-  const demoOption = Array.from(projSelect.options).find(o => o.textContent.indexOf('Demo Project') !== -1);
+  const demoOption = Array.from(projSelect.options).find(o => o.textContent.indexOf('Sample Project') !== -1);
   projSelect.value = demoOption.value;
   projSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(20);
@@ -104,7 +104,7 @@ function setProjectDates(doc, startVal, endVal){
 
   doc.getElementById('timelineBtn').click();
   await wait(20);
-  log('Demo Project timeline renders 5 rows (all seeded tasks have dates)', doc.querySelectorAll('.kf-timeline-row').length === 5, doc.querySelectorAll('.kf-timeline-row').length);
+  log('Sample Project timeline renders 5 rows (all seeded tasks have dates)', doc.querySelectorAll('.kf-timeline-row').length === 5, doc.querySelectorAll('.kf-timeline-row').length);
   log('each row has a colored bar (since every seeded task has start+end dates)', doc.querySelectorAll('.kf-timeline-bar').length === 5, doc.querySelectorAll('.kf-timeline-bar').length);
 
   // ── 6. Timescale selector changes the grid ────────────────────────────────
@@ -137,7 +137,7 @@ function setProjectDates(doc, startVal, endVal){
   // ── 8. Archived tasks excluded by default; toggle reveals them ghosted ───
   doc.getElementById('timelineClose').click();
   await wait(10);
-  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Research competitor boards') !== -1);
+  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Look at Project and App Settings') !== -1);
   card.click();
   await wait(10);
   doc.getElementById('taskArchivedCheckbox').checked = true;
@@ -153,7 +153,7 @@ function setProjectDates(doc, startVal, endVal){
   await wait(20);
   log('toggle becomes active', doc.getElementById('timelineArchiveToggle').classList.contains('active'));
   log('archived task now shown (5 rows)', doc.querySelectorAll('.kf-timeline-row').length === 5, doc.querySelectorAll('.kf-timeline-row').length);
-  const archivedRow = Array.from(doc.querySelectorAll('.kf-timeline-row')).find(r => r.textContent.indexOf('Research competitor boards') !== -1);
+  const archivedRow = Array.from(doc.querySelectorAll('.kf-timeline-row')).find(r => r.textContent.indexOf('Look at Project and App Settings') !== -1);
   log('archived row is marked for ghosting', archivedRow.classList.contains('kf-timeline-row-archived'));
   const archivedBar = archivedRow.querySelector('.kf-timeline-bar');
   log('archived bar gets the ghosted class', archivedBar && archivedBar.classList.contains('kf-timeline-bar-archived'));
@@ -168,7 +168,7 @@ function setProjectDates(doc, startVal, endVal){
   await wait(10);
 
   // ── 9. Overrun alert ────────────────────────────────────────────────────────
-  function designCard(){ return Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Design data schema') !== -1); }
+  function designCard(){ return Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Configure project modules, columns and details') !== -1); }
   designCard().click();
   await wait(10);
   doc.getElementById('taskEndDateInput').value = '2027-03-01';
@@ -178,7 +178,7 @@ function setProjectDates(doc, startVal, endVal){
   doc.getElementById('timelineBtn').click();
   await wait(20);
   log('overrun alert banner appears', !doc.getElementById('timelineAlertBanner').classList.contains('hidden'));
-  log('alert names the offending task', doc.getElementById('timelineAlertBanner').textContent.indexOf('Design data schema') !== -1, doc.getElementById('timelineAlertBanner').textContent);
+  log('alert names the offending task', doc.getElementById('timelineAlertBanner').textContent.indexOf('Configure project modules, columns and details') !== -1, doc.getElementById('timelineAlertBanner').textContent);
   log('alert mentions the project end date', doc.getElementById('timelineAlertBanner').textContent.indexOf('2026') !== -1);
 
   doc.getElementById('timelineClose').click();

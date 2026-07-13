@@ -32,7 +32,7 @@ function currentTitle(doc){ return doc.getElementById('toolbarTitle').textConten
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  // Export the seeded Demo Project so we have a known payload to re-import.
+  // Export the seeded Sample Project so we have a known payload to re-import.
   doc.getElementById('exportBtn').click();
   await wait(20);
   const demoExportText = lastBlobText;
@@ -50,13 +50,13 @@ function currentTitle(doc){ return doc.getElementById('toolbarTitle').textConten
 
   // ── 2. Conflict by key ───────────────────────────────────────────────────────
   const countBeforeKeyConflict = projectCount(doc);
-  // Switch back to Demo Project first so we know what's active
-  const demoOpt = Array.from(doc.getElementById('projectSelect').options).find(o => o.textContent.indexOf('Demo Project') !== -1 && o.textContent.indexOf('(DEMO)') !== -1);
+  // Switch back to Sample Project first so we know what's active
+  const demoOpt = Array.from(doc.getElementById('projectSelect').options).find(o => o.textContent.indexOf('Sample Project') !== -1 && o.textContent.indexOf('(SMPL)') !== -1);
   doc.getElementById('projectSelect').value = demoOpt.value;
   doc.getElementById('projectSelect').dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(20);
 
-  await triggerImport(doc, demoExportText); // same key DEMO → conflict
+  await triggerImport(doc, demoExportText); // same key SMPL → conflict
   log('conflict modal shown for matching project key', conflictVisible(doc));
   log('project count unchanged while modal is open (no premature insert)', projectCount(doc) === countBeforeKeyConflict, projectCount(doc));
 
@@ -65,7 +65,7 @@ function currentTitle(doc){ return doc.getElementById('toolbarTitle').textConten
   await wait(10);
   log('cancel hides the conflict modal', !conflictVisible(doc));
   log('cancel does not add a new project', projectCount(doc) === countBeforeKeyConflict, projectCount(doc));
-  log('cancel does not change the active project', currentTitle(doc) === 'Demo Project', currentTitle(doc));
+  log('cancel does not change the active project', currentTitle(doc) === 'Sample Project', currentTitle(doc));
 
   // ── 4. Conflict by name (different key, same name) ──────────────────────────
   const nameOnlyDoc = JSON.parse(demoExportText);
@@ -84,17 +84,17 @@ function currentTitle(doc){ return doc.getElementById('toolbarTitle').textConten
   log('conflict modal hidden after choosing copy', !conflictVisible(doc));
   log('import-as-copy adds a new project entry', projectCount(doc) === countBeforeCopy + 1, projectCount(doc));
   const copyKey = currentKey(doc);
-  log('copy project has a de-duplicated key (not DEMO)', copyKey !== 'DEMO', copyKey);
-  log('copy project name still says Demo Project', currentTitle(doc) === 'Demo Project', currentTitle(doc));
+  log('copy project has a de-duplicated key (not SMPL)', copyKey !== 'SMPL', copyKey);
+  log('copy project name still says Sample Project', currentTitle(doc) === 'Sample Project', currentTitle(doc));
 
   const copyCards = doc.querySelectorAll('.kf-card');
   log('copy has all 5 original tasks', copyCards.length === 5, copyCards.length);
 
   // ── 6. "Update existing" overwrites the matched project in-place ─────────────
-  // First give the matched Demo Project a distinct local change so we can verify it was overwritten.
-  // Switch to the original DEMO project.
+  // First give the matched Sample Project a distinct local change so we can verify it was overwritten.
+  // Switch to the original SMPL project.
   const origDemoOpt = Array.from(doc.getElementById('projectSelect').options)
-    .find(o => o.textContent.includes('(DEMO)') && o.textContent.includes('Demo Project'));
+    .find(o => o.textContent.includes('(SMPL)') && o.textContent.includes('Sample Project'));
   doc.getElementById('projectSelect').value = origDemoOpt.value;
   doc.getElementById('projectSelect').dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(20);
@@ -113,13 +113,13 @@ function currentTitle(doc){ return doc.getElementById('toolbarTitle').textConten
   await triggerImport(doc, demoExportText);
   log('conflict modal shown for overwrite path', conflictVisible(doc));
   const conflictMsg = doc.getElementById('importConflictMessage').innerHTML;
-  log('conflict message names the matched project', conflictMsg.indexOf('Demo Project') !== -1, conflictMsg.slice(0,80));
+  log('conflict message names the matched project', conflictMsg.indexOf('Sample Project') !== -1, conflictMsg.slice(0,80));
   doc.getElementById('importConflictOverwriteBtn').click();
   await wait(20);
   log('conflict modal hidden after overwrite', !conflictVisible(doc));
   log('overwrite does NOT add a new project entry (same count)', projectCount(doc) === countBeforeOverwrite, projectCount(doc) + ' vs ' + countBeforeOverwrite);
-  log('overwritten project is still active', currentTitle(doc) === 'Demo Project', currentTitle(doc));
-  log('overwritten project still has DEMO key', currentKey(doc) === 'DEMO', currentKey(doc));
+  log('overwritten project is still active', currentTitle(doc) === 'Sample Project', currentTitle(doc));
+  log('overwritten project still has SMPL key', currentKey(doc) === 'SMPL', currentKey(doc));
   log('overwritten project has the original id preserved',
       doc.getElementById('projectSelect').value === origDemoId, doc.getElementById('projectSelect').value + ' vs ' + origDemoId);
 

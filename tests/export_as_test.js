@@ -58,7 +58,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   depSvgOption.click();
   await wait(10);
   log('SVG export produces a Blob of type image/svg+xml', lastBlob && lastBlob.opts.type === 'image/svg+xml', lastBlob && lastBlob.opts.type);
-  log('SVG export filename ends in .svg and includes the project key', lastFilename && lastFilename.indexOf('DEMO') === 0 && lastFilename.endsWith('.svg'), lastFilename);
+  log('SVG export filename ends in .svg and includes the project key', lastFilename && lastFilename.indexOf('SMPL') === 0 && lastFilename.endsWith('.svg'), lastFilename);
   const svgMarkup = lastBlob.parts[0];
   log('exported SVG markup has no leftover var(...) references (colors were baked)', svgMarkup.indexOf('var(--') === -1, svgMarkup.indexOf('var(--'));
   log('exported SVG text elements have an explicit font-family baked in (not left to inherit from a stylesheet that won\u2019t exist)',
@@ -134,22 +134,22 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   doc.getElementById('taskListExportCsvBtn').click();
   await wait(10);
   log('CSV export produces a Blob of type text/csv', lastBlob && lastBlob.opts.type.indexOf('text/csv') === 0, lastBlob && lastBlob.opts.type);
-  log('CSV export filename ends in .csv and includes the project key', lastFilename && lastFilename.indexOf('DEMO') === 0 && lastFilename.endsWith('.csv'), lastFilename);
+  log('CSV export filename ends in .csv and includes the project key', lastFilename && lastFilename.indexOf('SMPL') === 0 && lastFilename.endsWith('.csv'), lastFilename);
 
   const csv = lastBlob.parts[0];
   const csvLines = csv.split('\r\n');
   log('CSV header row matches the List View\u2019s column labels', csvLines[0] === 'Key,Title,Column,Assignee,Priority,Start,End,Value Prop.,Progress', csvLines[0]);
   log('CSV has one data row per non-archived seeded task (5)', csvLines.length === 6, csvLines.length);
-  log('CSV includes a row for a known seeded task', csv.indexOf('Research competitor boards') !== -1);
+  log('CSV includes a row for a known seeded task', csv.indexOf('Look at Project and App Settings') !== -1);
 
-  doc.getElementById('taskListSearchInput').value = 'README';
+  doc.getElementById('taskListSearchInput').value = 'project board';
   doc.getElementById('taskListSearchInput').dispatchEvent(new window.Event('input', { bubbles: true }));
   await wait(10);
   lastBlob = null;
   doc.getElementById('taskListExportCsvBtn').click();
   await wait(10);
   const filteredCsvLines = lastBlob.parts[0].split('\r\n');
-  log('CSV export respects the active search filter (only matching rows)', filteredCsvLines.length === 2 && filteredCsvLines[1].indexOf('Write project README') !== -1,
+  log('CSV export respects the active search filter (only matching rows)', filteredCsvLines.length === 2 && filteredCsvLines[1].indexOf('Create project board') !== -1,
       filteredCsvLines.join(' | '));
 
   doc.getElementById('taskListSearchInput').value = '';
@@ -157,7 +157,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   await wait(10);
   doc.getElementById('taskListClose').click();
   await wait(10);
-  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Write project README') !== -1);
+  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Create project board') !== -1);
   card.click();
   await wait(10);
   doc.getElementById('taskTitleInput').value = 'Title, with a comma';

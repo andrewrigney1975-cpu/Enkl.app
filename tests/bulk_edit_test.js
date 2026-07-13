@@ -14,7 +14,7 @@ function rowFor(doc, title){
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Write project README') !== -1);
+  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Create project board') !== -1);
   card.click();
   await wait(10);
   doc.getElementById('taskArchivedCheckbox').checked = true;
@@ -26,15 +26,15 @@ function rowFor(doc, title){
   doc.getElementById('bulkEditBtn').click();
   await wait(20);
   log('modal opens', !doc.getElementById('bulkEditOverlay').classList.contains('hidden'));
-  log('title includes the project name', doc.getElementById('bulkEditTitle').textContent.indexOf('Demo Project') !== -1, doc.getElementById('bulkEditTitle').textContent);
+  log('title includes the project name', doc.getElementById('bulkEditTitle').textContent.indexOf('Sample Project') !== -1, doc.getElementById('bulkEditTitle').textContent);
 
   // ── 2. Shows BOTH active and archived tasks ───────────────────────────────
   const rows = doc.querySelectorAll('.kf-bulkedit-row');
   log('shows all 5 seeded tasks, including the archived one', rows.length === 5, rows.length);
-  const archivedRow = rowFor(doc, 'Write project README');
+  const archivedRow = rowFor(doc, 'Create project board');
   log('archived task is present in the grid', !!archivedRow);
   log('archived row is visually marked (status badge + dimmed)', archivedRow.classList.contains('kf-bulkedit-archived-row') && archivedRow.textContent.indexOf('Archived') !== -1);
-  const activeRow = rowFor(doc, 'Design data schema');
+  const activeRow = rowFor(doc, 'Configure project modules, columns and details');
   log('active task shows "Active" status', activeRow.textContent.indexOf('Active') !== -1);
   log('count summary mentions archived inclusion', doc.getElementById('bulkEditCount').textContent.indexOf('archived') !== -1, doc.getElementById('bulkEditCount').textContent);
 
@@ -67,7 +67,7 @@ function rowFor(doc, title){
   log('Save button disables again once no real changes remain', doc.getElementById('bulkEditSaveBtn').disabled);
 
   // ── 6. Make several real edits across multiple tasks/fields ──────────────
-  const taskARow = rowFor(doc, 'Design data schema');
+  const taskARow = rowFor(doc, 'Configure project modules, columns and details');
   const taskAPriority = taskARow.querySelectorAll('select')[2];
   const taskANewPriority = Array.from(taskAPriority.options).find(o => o.value !== taskAPriority.value);
   taskAPriority.value = taskANewPriority.value;
@@ -79,7 +79,7 @@ function rowFor(doc, title){
   taskABV.dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(10);
 
-  const taskBRow = rowFor(doc, 'Set up local storage layer');
+  const taskBRow = rowFor(doc, 'Draft project objectives');
   const taskBColumn = taskBRow.querySelectorAll('select')[0];
   const taskBNewColumn = Array.from(taskBColumn.options).find(o => o.value !== taskBColumn.value);
   taskBColumn.value = taskBNewColumn.value;
@@ -89,7 +89,7 @@ function rowFor(doc, title){
   log('pending-count now reflects 2 tasks changed', doc.getElementById('bulkEditPendingCount').textContent.indexOf('2 task') !== -1, doc.getElementById('bulkEditPendingCount').textContent);
 
   // ── 7. Date validation blocks save when end < start for any staged row ───
-  const taskCRow = rowFor(doc, 'Research competitor boards');
+  const taskCRow = rowFor(doc, 'Look at Project and App Settings');
   const taskCStart = taskCRow.querySelectorAll('input')[0];
   const taskCEnd = taskCRow.querySelectorAll('input')[1];
   taskCStart.value = '2026-06-01';
@@ -103,7 +103,7 @@ function rowFor(doc, title){
   await wait(20);
   log('save is blocked when any staged row has end before start', !doc.getElementById('bulkEditOverlay').classList.contains('hidden'));
   const toasts1 = doc.querySelectorAll('.kf-toast');
-  log('toast names the offending task by key', toasts1[toasts1.length-1].textContent.indexOf('DEMO-1') !== -1, toasts1[toasts1.length-1].textContent);
+  log('toast names the offending task by key', toasts1[toasts1.length-1].textContent.indexOf('SMPL-1') !== -1, toasts1[toasts1.length-1].textContent);
 
   taskCEnd.value = '2026-12-01';
   taskCEnd.dispatchEvent(new window.Event('change', { bubbles: true }));
@@ -116,12 +116,12 @@ function rowFor(doc, title){
 
   const raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   const proj = raw.projects[raw.currentProjectId];
-  const savedTaskA = Object.values(proj.tasks).find(t => t.title === 'Design data schema');
+  const savedTaskA = Object.values(proj.tasks).find(t => t.title === 'Configure project modules, columns and details');
   log('Task A priority change persisted', savedTaskA.priority === taskANewPriority.value, savedTaskA.priority);
   log('Task A business value change persisted', savedTaskA.businessValue === 999, savedTaskA.businessValue);
-  const savedTaskB = Object.values(proj.tasks).find(t => t.title === 'Set up local storage layer');
+  const savedTaskB = Object.values(proj.tasks).find(t => t.title === 'Draft project objectives');
   log('Task B column change persisted', savedTaskB.columnId === taskBNewColumn.value, savedTaskB.columnId);
-  const savedTaskC = Object.values(proj.tasks).find(t => t.title === 'Research competitor boards');
+  const savedTaskC = Object.values(proj.tasks).find(t => t.title === 'Look at Project and App Settings');
   log('Task C (fixed) date changes persisted', !!savedTaskC.startDate && !!savedTaskC.endDate, JSON.stringify({s:savedTaskC.startDate,e:savedTaskC.endDate}));
 
   // ── 9. Successful save with real changes prompts a backup ────────────────
@@ -148,7 +148,7 @@ function rowFor(doc, title){
   log('modal stays open when there is nothing to save', !doc.getElementById('bulkEditOverlay').classList.contains('hidden'));
 
   // ── 11. Cancel discards staged edits without applying them ────────────────
-  const taskDRow = rowFor(doc, 'Build drag-and-drop board UI');
+  const taskDRow = rowFor(doc, 'Set up Team members for this project');
   const taskDCost = taskDRow.querySelectorAll('input')[3];
   const originalCost = taskDCost.value;
   taskDCost.value = '1';
@@ -159,7 +159,7 @@ function rowFor(doc, title){
   await wait(10);
   log('Cancel closes the modal', doc.getElementById('bulkEditOverlay').classList.contains('hidden'));
   const rawAfterCancel = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
-  const taskDPersisted = Object.values(rawAfterCancel.projects[rawAfterCancel.currentProjectId].tasks).find(t => t.title === 'Build drag-and-drop board UI');
+  const taskDPersisted = Object.values(rawAfterCancel.projects[rawAfterCancel.currentProjectId].tasks).find(t => t.title === 'Set up Team members for this project');
   log('Cancel does NOT persist the discarded edit', String(taskDPersisted.taskCost) === originalCost, taskDPersisted.taskCost + ' vs original ' + originalCost);
 
   // ── 12. Re-opening starts with a clean slate (no leftover staged edits) ──

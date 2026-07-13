@@ -47,13 +47,13 @@ function assignTaskToRelease(doc, taskTitle, releaseName){
   doc.getElementById('releasesDoneBtn').click();
   await wait(10);
 
-  assignTaskToRelease(doc, 'Research competitor boards', 'June Release');
+  assignTaskToRelease(doc, 'Look at Project and App Settings', 'June Release');
   await wait(20);
-  assignTaskToRelease(doc, 'Design data schema', 'January Release');
+  assignTaskToRelease(doc, 'Configure project modules, columns and details', 'January Release');
   await wait(20);
-  assignTaskToRelease(doc, 'Set up local storage layer', 'March Release');
+  assignTaskToRelease(doc, 'Draft project objectives', 'March Release');
   await wait(20);
-  assignTaskToRelease(doc, 'Build drag-and-drop board UI', 'Undated Release');
+  assignTaskToRelease(doc, 'Set up Team members for this project', 'Undated Release');
   await wait(20);
 
   doc.getElementById('taskListBtn').click();
@@ -94,12 +94,12 @@ function assignTaskToRelease(doc, taskTitle, releaseName){
     return out;
   }
   const marchHeader = groupHeaders.find(h => h.textContent.indexOf('March Release') !== -1);
-  log('March Release group contains exactly its assigned task', tasksInGroup(marchHeader).includes('Set up local storage layer') && tasksInGroup(marchHeader).length === 1,
+  log('March Release group contains exactly its assigned task', tasksInGroup(marchHeader).includes('Draft project objectives') && tasksInGroup(marchHeader).length === 1,
       tasksInGroup(marchHeader));
-  log('No Release group contains the README task', tasksInGroup(noReleaseHeader).includes('Write project README'));
+  log('No Release group contains the unreleased task', tasksInGroup(noReleaseHeader).includes('Create project board'));
 
   // ── 4. Search still filters within the grouped view; empty groups vanish ──
-  doc.getElementById('taskListSearchInput').value = 'README';
+  doc.getElementById('taskListSearchInput').value = 'project board';
   doc.getElementById('taskListSearchInput').dispatchEvent(new window.Event('input', { bubbles: true }));
   await wait(10);
   const filteredHeaders = doc.querySelectorAll('.kf-tasklist-group-header');

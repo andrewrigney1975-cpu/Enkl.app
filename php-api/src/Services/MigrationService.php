@@ -34,7 +34,7 @@ final class MigrationService
             [$organisationId, $organisationCreated] = $this->resolveOrganisation((string) ($request['organisationName'] ?? ''), $callerOrgId);
 
             // Project keys are unique per-Organisation, not globally — see resolveUniqueProjectKey.
-            // Every fresh local install still seeds a project with the same "DEMO" key, so a key
+            // Every fresh local install still seeds a project with the same "SMPL" key, so a key
             // collision WITHIN the target org is an expected, common case (e.g. repeat-migrating into
             // the same org), just no longer a false collision against some unrelated org's project.
             $requestedKey = (string) ($request['project']['key'] ?? '');

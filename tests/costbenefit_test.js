@@ -15,7 +15,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   doc.getElementById('costBenefitBtn').click();
   await wait(20);
   log('chart modal opens', !doc.getElementById('costBenefitOverlay').classList.contains('hidden'));
-  log('modal title includes the project name', doc.getElementById('costBenefitTitle').textContent.indexOf('Demo Project') !== -1, doc.getElementById('costBenefitTitle').textContent);
+  log('modal title includes the project name', doc.getElementById('costBenefitTitle').textContent.indexOf('Sample Project') !== -1, doc.getElementById('costBenefitTitle').textContent);
 
   // ── 2. Chart structure: axes, quadrant lines, quadrant labels, ticks ─────
   const svg = doc.querySelector('#costBenefitInner svg');
@@ -31,9 +31,9 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   let points = doc.querySelectorAll('.kf-cb-point');
   log('5 points plotted for the 5 seeded tasks', points.length === 5, points.length);
 
-  // ── 4. Point position reflects cost/value (DEMO-2: bv=800, cost=150) ─────
-  const designPoint = Array.from(points).find(p => p.innerHTML.indexOf('DEMO-2') !== -1);
-  const researchPoint = Array.from(points).find(p => p.innerHTML.indexOf('DEMO-1') !== -1);
+  // ── 4. Point position reflects cost/value (SMPL-2: bv=800, cost=150) ─────
+  const designPoint = Array.from(points).find(p => p.innerHTML.indexOf('SMPL-2') !== -1);
+  const researchPoint = Array.from(points).find(p => p.innerHTML.indexOf('SMPL-1') !== -1);
   log('found the expected seeded points', !!designPoint && !!researchPoint);
   const designCx = parseFloat(designPoint.querySelector('circle').getAttribute('cx'));
   const researchCx = parseFloat(researchPoint.querySelector('circle').getAttribute('cx'));
@@ -45,8 +45,8 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   // ── 5. Tooltip includes key, title, cost, and value ───────────────────────
   const designTitle = designPoint.querySelector('title').textContent;
-  log('tooltip includes the task key', designTitle.indexOf('DEMO-2') !== -1, designTitle);
-  log('tooltip includes the title', designTitle.indexOf('Design data schema') !== -1, designTitle);
+  log('tooltip includes the task key', designTitle.indexOf('SMPL-2') !== -1, designTitle);
+  log('tooltip includes the title', designTitle.indexOf('Configure project modules, columns and details') !== -1, designTitle);
   log('tooltip includes Cost and Value figures', designTitle.indexOf('Cost 150') !== -1 && designTitle.indexOf('Value 800') !== -1, designTitle);
 
   // ── 6. Point dots are colored by priority accent ──────────────────────────
@@ -64,7 +64,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   designPoint.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await wait(20);
   log('clicking a point closes the chart modal', doc.getElementById('costBenefitOverlay').classList.contains('hidden'));
-  log('clicking a point opens the task modal for the right task', doc.getElementById('taskTitleInput').value === 'Design data schema', doc.getElementById('taskTitleInput').value);
+  log('clicking a point opens the task modal for the right task', doc.getElementById('taskTitleInput').value === 'Configure project modules, columns and details', doc.getElementById('taskTitleInput').value);
   doc.getElementById('taskCancelBtn').click();
   await wait(10);
 
@@ -88,7 +88,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('Escape closes the chart modal', doc.getElementById('costBenefitOverlay').classList.contains('hidden'));
 
   // ── 10. Archived tasks are excluded from the chart ────────────────────────
-  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Research competitor boards') !== -1);
+  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Look at Project and App Settings') !== -1);
   card.click();
   await wait(10);
   doc.getElementById('taskArchivedCheckbox').checked = true;
@@ -99,7 +99,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   await wait(20);
   points = doc.querySelectorAll('.kf-cb-point');
   log('archived task excluded from the chart (4 points remain)', points.length === 4, points.length);
-  log('archived task does not appear among the plotted points', !Array.from(points).some(p => p.innerHTML.indexOf('DEMO-1') !== -1));
+  log('archived task does not appear among the plotted points', !Array.from(points).some(p => p.innerHTML.indexOf('SMPL-1') !== -1));
   doc.getElementById('costBenefitClose').click();
   await wait(10);
 

@@ -26,7 +26,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   let raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   let proj = raw.projects[raw.currentProjectId];
-  log('seeded Demo Project has default task types Feature and Bug', proj.taskTypes.map(t=>t.name).join(',') === 'Feature,Bug', JSON.stringify(proj.taskTypes.map(t=>t.name)));
+  log('seeded Sample Project has default task types Feature and Bug', proj.taskTypes.map(t=>t.name).join(',') === 'Feature,Bug', JSON.stringify(proj.taskTypes.map(t=>t.name)));
 
   doc.getElementById('newProjectBtn').click();
   await wait(10);
@@ -38,9 +38,9 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   proj = raw.projects[raw.currentProjectId];
   log('a brand-new project also defaults to Feature and Bug', proj.taskTypes.map(t=>t.name).join(',') === 'Feature,Bug');
 
-  // Switch back to the Demo Project, which has actual seeded tasks to work with.
+  // Switch back to the Sample Project, which has actual seeded tasks to work with.
   const projSelect = doc.getElementById('projectSelect');
-  const demoOption = Array.from(projSelect.options).find(o => o.textContent.indexOf('Demo Project') !== -1);
+  const demoOption = Array.from(projSelect.options).find(o => o.textContent.indexOf('Sample Project') !== -1);
   projSelect.value = demoOption.value;
   projSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(20);

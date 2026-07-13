@@ -15,7 +15,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   doc.getElementById('taskListBtn').click();
   await wait(20);
   log('List View modal opens', !doc.getElementById('taskListOverlay').classList.contains('hidden'));
-  log('modal title includes the project name', doc.getElementById('taskListTitle').textContent.indexOf('Demo Project') !== -1, doc.getElementById('taskListTitle').textContent);
+  log('modal title includes the project name', doc.getElementById('taskListTitle').textContent.indexOf('Sample Project') !== -1, doc.getElementById('taskListTitle').textContent);
 
   const rows = doc.querySelectorAll('.kf-tasklist-row');
   log('lists all 5 seeded tasks', rows.length === 5, rows.length);
@@ -32,8 +32,8 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('row shows the Value Proposition pill', firstRow.querySelector('.kf-valueprop-pill') !== null);
 
   // ── 3. Value Proposition calculation is correct (businessValue / taskCost) ──
-  // DEMO-2 "Design data schema": bv=800, cost=150 -> 5.33
-  const designRow = Array.from(rows).find(r => r.textContent.indexOf('Design data schema') !== -1);
+  // SMPL-2 "Configure project modules, columns and details": bv=800, cost=150 -> 5.33
+  const designRow = Array.from(rows).find(r => r.textContent.indexOf('Configure project modules, columns and details') !== -1);
   const designPill = designRow.querySelector('.kf-valueprop-pill');
   log('Value Proposition computed correctly (800/150 = 5.33)', designPill.textContent.trim() === '5.33', designPill.textContent);
   log('Value Proposition tooltip shows the raw inputs', designPill.title.indexOf('800') !== -1 && designPill.title.indexOf('150') !== -1, designPill.title);
@@ -47,7 +47,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   chevron.click();
   await wait(10);
-  const designRowAfter = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Design data schema') !== -1);
+  const designRowAfter = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Configure project modules, columns and details') !== -1);
   const chevronAfter = designRowAfter.querySelector('.kf-tasklist-chevron');
   log('chevron shows expanded state after click', chevronAfter.classList.contains('expanded'));
   detail = designRowAfter.nextElementSibling;
@@ -55,25 +55,25 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('detail panel shows the description', detail.textContent.indexOf('Define how projects') !== -1, detail.textContent.slice(0,60));
   log('detail panel shows Business Value and Task Cost', detail.textContent.indexOf('800') !== -1 && detail.textContent.indexOf('150') !== -1);
   log('detail panel shows the Column', detail.textContent.indexOf('To Do') !== -1, detail.textContent);
-  log('detail panel shows Depends on (DEMO-1)', detail.textContent.indexOf('DEMO-1') !== -1, detail.textContent);
+  log('detail panel shows Depends on (SMPL-1)', detail.textContent.indexOf('SMPL-1') !== -1, detail.textContent);
   log('detail panel has an Edit task button', detail.querySelector('.kf-tasklist-edit-btn') !== null);
 
   // Collapse again
   chevronAfter.click();
   await wait(10);
-  const designRowCollapsed = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Design data schema') !== -1);
+  const designRowCollapsed = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Configure project modules, columns and details') !== -1);
   log('chevron collapses back', !designRowCollapsed.querySelector('.kf-tasklist-chevron').classList.contains('expanded'));
   log('detail panel removed after collapsing', !designRowCollapsed.nextElementSibling || !designRowCollapsed.nextElementSibling.classList.contains('kf-tasklist-detail'));
 
   // ── 5. "Edit task" button opens the task modal and closes the list ─────────
-  const chevron2 = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Design data schema') !== -1).querySelector('.kf-tasklist-chevron');
+  const chevron2 = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Configure project modules, columns and details') !== -1).querySelector('.kf-tasklist-chevron');
   chevron2.click();
   await wait(10);
-  const editBtn = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Design data schema') !== -1).nextElementSibling.querySelector('.kf-tasklist-edit-btn');
+  const editBtn = Array.from(doc.querySelectorAll('.kf-tasklist-row')).find(r => r.textContent.indexOf('Configure project modules, columns and details') !== -1).nextElementSibling.querySelector('.kf-tasklist-edit-btn');
   editBtn.click();
   await wait(20);
   log('clicking Edit task closes the List View', doc.getElementById('taskListOverlay').classList.contains('hidden'));
-  log('clicking Edit task opens the Task modal for the right task', doc.getElementById('taskTitleInput').value === 'Design data schema', doc.getElementById('taskTitleInput').value);
+  log('clicking Edit task opens the Task modal for the right task', doc.getElementById('taskTitleInput').value === 'Configure project modules, columns and details', doc.getElementById('taskTitleInput').value);
   doc.getElementById('taskCancelBtn').click();
   await wait(10);
 
@@ -99,10 +99,10 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   keyHeader.click();
   await wait(10);
   const keys = Array.from(doc.querySelectorAll('.kf-tasklist-key')).map(k => k.textContent);
-  log('sorting by Key gives DEMO-1..DEMO-5 in order', keys.join(',') === 'DEMO-1,DEMO-2,DEMO-3,DEMO-4,DEMO-5', keys.join(','));
+  log('sorting by Key gives SMPL-1..SMPL-5 in order', keys.join(',') === 'SMPL-1,SMPL-2,SMPL-3,SMPL-4,SMPL-5', keys.join(','));
 
   // ── 7. Search filters rows ──────────────────────────────────────────────────
-  doc.getElementById('taskListSearchInput').value = 'README';
+  doc.getElementById('taskListSearchInput').value = 'project board';
   doc.getElementById('taskListSearchInput').dispatchEvent(new window.Event('input', { bubbles: true }));
   await wait(10);
   const filteredRows = doc.querySelectorAll('.kf-tasklist-row');

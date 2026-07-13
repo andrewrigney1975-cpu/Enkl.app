@@ -576,7 +576,7 @@ export function createDefaultProject(name, key){
 }
 
 export function createSeedDB(){
-  var p = createDefaultProject('Demo Project', 'DEMO');
+  var p = createDefaultProject('Sample Project', 'SMPL');
   var weekBefore = new Date();
   weekBefore.setDate(weekBefore.getDate() - 7);
   var weekAfter = new Date();
@@ -589,9 +589,9 @@ export function createSeedDB(){
   var c4 = makeColumn('Done', true);
   p.columns = [c1, c2, c3, c4];
 
-  var riley = {id: uid('member'), name: 'Riley Chen', color: memberColorForIndex(0), role: 'Project Manager'};
-  var sam = {id: uid('member'), name: 'Sam Okafor', color: memberColorForIndex(1), role: 'Developer'};
-  p.members = [riley, sam];
+  var john = {id: uid('member'), name: 'John Brown', color: memberColorForIndex(0), role: 'Project Manager'};
+  var jan = {id: uid('member'), name: 'Jan Smith', color: memberColorForIndex(1), role: 'Developer'};
+  p.members = [john, jan];
   p.roles = ['Project Manager', 'Developer'];
 
   function addSeedTask(col, title, desc, priority, deps, assigneeId, businessValue, taskCost){
@@ -627,10 +627,10 @@ export function createSeedDB(){
     return t.id;
   }
 
-  var t1 = addSeedTask(c1, 'Research market', 'Look at sector for baselines and benchmarks.', 'low', [], null, 200, 80);
-  var t2 = addSeedTask(c2, 'Configure project modules, columns and details', 'Define how projects, columns and tasks are structured. Replace the default Tasks with real activities', 'high', [t1], riley.id, 800, 150);
-  var t3 = addSeedTask(c2, 'Draft project objectives', 'Work with sponsors to frame the goals of this project.', 'medium', [t2], sam.id, 500, 200);
-  var t4 = addSeedTask(c3, 'Set up Team members for this project', 'Assign people and roles to the project.', 'critical', [t2, t3], riley.id, 900, 400);
+  var t1 = addSeedTask(c1, 'Look at Project and App Settings', 'There are lots of options available to extend the app to make it more structured and specific to your needs. Open up Project Settings to see what elese it can do for you.', 'low', [], null, 200, 80);
+  var t2 = addSeedTask(c2, 'Configure project modules, columns and details', 'Define how projects, columns and tasks are structured. Replace these default Tasks with real activities', 'high', [t1], john.id, 800, 150);
+  var t3 = addSeedTask(c2, 'Draft project objectives', 'Set the goals of this project. Gives you milestobes and targets to reach. The extended Objectives module really helps formalise these goals.', 'medium', [t2], jan.id, 500, 200);
+  var t4 = addSeedTask(c3, 'Set up Team members for this project', 'Assign people and roles to the project.', 'critical', [t2, t3], john.id, 900, 400);
   addSeedTask(c4, 'Create project board', 'Document setup and usage instructions.', 'trivial', [], null, 100, 30);
 
   return {

@@ -37,11 +37,11 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   let proj = raw.projects[raw.currentProjectId];
   let savedDoc = proj.documents.find(d => d.title === 'Vendor Contract');
   log('document was created', !!savedDoc);
-  log('key follows the <PROJECT>-DOC-NNN format, zero-padded', savedDoc.key === 'DEMO-DOC-001', savedDoc.key);
+  log('key follows the <PROJECT>-DOC-NNN format, zero-padded', savedDoc.key === 'SMPL-DOC-001', savedDoc.key);
   log('URL gets auto-prefixed with https:// like the Task documentation field', savedDoc.url === 'https://docs.example.com/contract', savedDoc.url);
   log('saving returns to the list view', !doc.getElementById('documentsListView').classList.contains('hidden'));
   log('new document appears in the list', doc.getElementById('documentsList').textContent.indexOf('Vendor Contract') !== -1);
-  log('new document\u2019s key appears in the list row', doc.getElementById('documentsList').textContent.indexOf('DEMO-DOC-001') !== -1);
+  log('new document\u2019s key appears in the list row', doc.getElementById('documentsList').textContent.indexOf('SMPL-DOC-001') !== -1);
 
   doc.getElementById('addDocumentBtn').click();
   await wait(10);
@@ -51,7 +51,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   proj = raw.projects[raw.currentProjectId];
   const secondDoc = proj.documents.find(d => d.title === 'Architecture Diagram');
-  log('second document gets key 002', secondDoc.key === 'DEMO-DOC-002', secondDoc.key);
+  log('second document gets key 002', secondDoc.key === 'SMPL-DOC-002', secondDoc.key);
 
   const docRow = Array.from(doc.querySelectorAll('.kf-release-row')).find(r => r.textContent.indexOf('Vendor Contract') !== -1);
   docRow.click();
