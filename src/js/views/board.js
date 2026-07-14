@@ -776,13 +776,19 @@ export function renderColumn(project, col){
     return t && !t.archived;
   }).length;
 
+  // A capped column (col.cap a positive integer, -1 == uncapped) shows "current of cap" instead of
+  // just the raw count, so the badge doubles as a live at-a-glance WIP indicator — independent of
+  // whether Workflow enforcement itself is toggled on (see evaluateColumnCap in workflow-engine.js,
+  // which enforces the cap unconditionally too).
+  var countBadgeText = (col.cap != null && col.cap !== -1) ? (activeTaskCount + ' of ' + col.cap) : String(activeTaskCount);
+
   var header = document.createElement('div');
   header.className = 'kf-column-header';
   header.draggable = true;
   header.innerHTML =
     iconHTML('grip',14) +
     '<span class="kf-column-name' + (col.done ? ' done' : '') + '">' + escapeHTML(col.name) + '</span>' +
-    '<span class="kf-count-badge">' + activeTaskCount + '</span>';
+    '<span class="kf-count-badge">' + escapeHTML(countBadgeText) + '</span>';
 
   var actions = document.createElement('div');
   actions.className = 'kf-column-actions';

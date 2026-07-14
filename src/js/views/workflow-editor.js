@@ -7,6 +7,7 @@ import { isServerAuthoritative, pullWorkflowFromServer, refreshProjectFromServer
 import { updateProjectWorkflowApi, updateColumnApi } from '../api.js';
 import { escapeHTML, getColumn } from '../utils.js';
 import { clampColumnCap } from '../storage.js';
+import { renderBoard } from './board.js';
 
 function iconHTML(name, size){ return '<span class="kf-icon">'+iconSvg(name,size)+'</span>'; }
 
@@ -187,11 +188,21 @@ export function renderWorkflowEditor(){
     var pos = layout.positions[col.id];
     var label = (idx + 1) + '. ' + col.name;
     var displayLabel = label.length > 24 ? label.slice(0, 23) + '…' : label;
+    // A capped column (col.cap a positive integer, -1 == uncapped) gets a second line showing its
+    // limit — the node's hover title also switches to the fuller "<name> - Maximum capacity : <cap>"
+    // wording so it's readable even when the name itself is truncated above.
+    var hasCap = col.cap != null && col.cap !== -1;
+    var titleText = hasCap ? (col.name + ' - Maximum capacity : ' + col.cap) : label;
+    var mainLabelY = hasCap ? (WORKFLOW_NODE_H / 2 - 4) : (WORKFLOW_NODE_H / 2 + 5);
+    var capHTML = hasCap
+      ? '<text x="16" y="' + (WORKFLOW_NODE_H / 2 + 16) + '" font-size="11" style="fill:var(--kf-text-secondary);">Maximum capacity: ' + escapeHTML(String(col.cap)) + '</text>'
+      : '';
     return (
       '<g class="kf-wfnode" data-column-id="' + col.id + '" transform="translate(' + pos.x + ',' + pos.y + ')">' +
         '<rect class="kf-wfnode-box" x="0" y="0" width="' + WORKFLOW_NODE_W + '" height="' + WORKFLOW_NODE_H + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border-strong);" stroke-width="1.5"></rect>' +
         (col.done ? '<rect x="0" y="0" width="5" height="' + WORKFLOW_NODE_H + '" rx="2" fill="#22a06b"></rect>' : '') +
-        '<text x="16" y="' + (WORKFLOW_NODE_H / 2 + 5) + '" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML(label) + '</title>' + escapeHTML(displayLabel) + '</text>' +
+        '<text x="16" y="' + mainLabelY + '" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML(titleText) + '</title>' + escapeHTML(displayLabel) + '</text>' +
+        capHTML +
       '</g>'
     );
   }).join('');
@@ -732,4 +743,8 @@ export async function saveWorkflowColumnCapPopover(){
   }
   closeWorkflowColumnCapPopover();
   renderWorkflowEditor();
+  // The board's own count badge shows "<current> of <cap>" once a column is capped (see
+  // views/board.js's renderColumn) — without this, that badge kept showing whatever it last
+  // rendered until some unrelated re-render happened to run after the Workflow Manager closed.
+  renderBoard();
 }
