@@ -1,6 +1,7 @@
 "use strict";
 import { saveDB, uid, normalizeHeaderButtonVisibility } from '../storage.js';
 import { PRIORITY_ORDER, PRIORITY_META } from '../config.js';
+import { getColumn } from '../utils.js';
 
 /* =========================================================
    WORKFLOW STATE MACHINE
@@ -243,6 +244,36 @@ export function evaluateTransition(project, task, toColumnId){
     return {allowed: false, message: edge.message || WORKFLOW_DEFAULT_DENY_MESSAGE};
   }
   return {allowed: false, message: edge.message || WORKFLOW_DEFAULT_DENY_MESSAGE};
+}
+
+/* WIP-limit check for the target column — independent of isWorkflowEnabled, unlike evaluateTransition
+   above: a cap is a property of the column itself (see storage.js's makeColumn), not part of the
+   transition-rule graph, so it stays enforced even if a project's Workflow toggle is off. Only counts
+   active (non-archived) tasks currently sitting in the column, matching the same activeTaskCount the
+   board's own column-header badge already computes (views/board.js). */
+export function evaluateColumnCap(project, toColumnId){
+  var col = getColumn(project, toColumnId);
+  if(!col || col.cap == null || col.cap === -1) return {allowed: true, message: null};
+  var activeCount = col.order.filter(function(taskId){
+    var t = project.tasks[taskId];
+    return t && !t.archived;
+  }).length;
+  if(activeCount >= col.cap){
+    return {allowed: false, message: 'This column’s task limit has been reached. Move a task out before trying to add another one.'};
+  }
+  return {allowed: true, message: null};
+}
+
+/* The single entry point every caller should use to decide whether a task's column may change —
+   checks the column cap FIRST (always), then falls through to the self-gated transition-rule check.
+   Same {allowed, message} shape evaluateTransition always returned, so every existing caller (board.js's
+   drag handlers, task.js's finishSave, mutations.js's updateTask) just swaps which function produces
+   the verdict — nothing downstream (banners, toasts) needs to change. */
+export function evaluateColumnMove(project, task, toColumnId){
+  if(!task || task.columnId === toColumnId) return {allowed: true, message: null};
+  var capResult = evaluateColumnCap(project, toColumnId);
+  if(!capResult.allowed) return capResult;
+  return evaluateTransition(project, task, toColumnId);
 }
 
 /* Columns reachable in a single hop from task's current column —

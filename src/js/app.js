@@ -17,7 +17,7 @@ import { setTaskListDeps, openTaskListOverlay, closeTaskListOverlay, isTaskListO
 import { setDepMapDeps, depMapState, lastDepLayout, openDepMapOverlay, closeDepMapOverlay, isDepMapOpen, renderDependencyMap, toggleDepMapShowArchived, toggleDepMapColumnFilterPanel, closeDepMapColumnFilterPanel, setDepMapZoom, resetDepMapZoom, zoomDepMapAtPoint } from './views/dependency-map.js';
 import { setOrgChartDeps, orgChartState, lastOrgChartLayout, openOrgChartOverlay, closeOrgChartOverlay, isOrgChartOpen, toggleOrgChartFilter, setOrgChartZoom, resetOrgChartZoom, zoomOrgChartAtPoint, openOrgChartMemberPopover, closeOrgChartMemberPopover, isOrgChartMemberPopoverOpen } from './views/org-chart.js';
 import { setGovMapDeps, govMapState, lastGovMapLayout, openGovMapOverlay, closeGovMapOverlay, isGovMapOpen, toggleGovMapShowRelationships, setGovMapZoom, resetGovMapZoom, zoomGovMapAtPoint } from './views/governance-map.js';
-import { setWorkflowEditorDeps, workflowEditorState, lastWorkflowLayout, openWorkflowOverlay, closeWorkflowOverlay, isWorkflowOverlayOpen, setWorkflowMode, setWorkflowZoom, resetWorkflowZoom, zoomWorkflowAtPoint, handleWorkflowScrollMouseDown, handleWorkflowPointerMove, handleWorkflowPointerUp, handleWorkflowInnerClick, handleWorkflowReflow, updateWorkflowEdgePopoverMessageVisibility, refreshWorkflowEdgeConditionControls, handleWorkflowEdgeConditionFieldChange, saveWorkflowEdgePopover, deleteWorkflowEdgeFromPopover, closeWorkflowEdgePopover, isWorkflowEdgePopoverOpen, saveWorkflowToServer } from './views/workflow-editor.js';
+import { setWorkflowEditorDeps, workflowEditorState, lastWorkflowLayout, openWorkflowOverlay, closeWorkflowOverlay, isWorkflowOverlayOpen, setWorkflowMode, setWorkflowZoom, resetWorkflowZoom, zoomWorkflowAtPoint, handleWorkflowScrollMouseDown, handleWorkflowPointerMove, handleWorkflowPointerUp, handleWorkflowInnerClick, handleWorkflowReflow, updateWorkflowEdgePopoverMessageVisibility, refreshWorkflowEdgeConditionControls, handleWorkflowEdgeConditionFieldChange, saveWorkflowEdgePopover, deleteWorkflowEdgeFromPopover, closeWorkflowEdgePopover, isWorkflowEdgePopoverOpen, saveWorkflowToServer, saveWorkflowColumnCapPopover, closeWorkflowColumnCapPopover, isWorkflowColumnCapPopoverOpen } from './views/workflow-editor.js';
 import { setTimelineDeps, openTimelineOverlay, closeTimelineOverlay, isTimelineOverlayOpen, toggleTimelineShowArchived, renderTimeline } from './views/timeline.js';
 import { setCostBenefitDeps, cbZoomState, openCostBenefitOverlay, closeCostBenefitOverlay, isCostBenefitOverlayOpen, toggleCostBenefitShowArchived, toggleCbColumnFilterPanel, closeCbColumnFilterPanel, setCbZoom, resetCbZoom, zoomCbAtPoint } from './views/cost-benefit.js';
 
@@ -733,8 +733,11 @@ function wireEvents(){
   document.getElementById('workflowEdgeSaveBtn').addEventListener('click', saveWorkflowEdgePopover);
   document.getElementById('workflowEdgeDeleteBtn').addEventListener('click', deleteWorkflowEdgeFromPopover);
   document.getElementById('workflowEdgeCancelBtn').addEventListener('click', closeWorkflowEdgePopover);
+  document.getElementById('workflowColumnCapSaveBtn').addEventListener('click', saveWorkflowColumnCapPopover);
+  document.getElementById('workflowColumnCapCancelBtn').addEventListener('click', closeWorkflowColumnCapPopover);
   document.addEventListener('click', function(e){
     if(isWorkflowEdgePopoverOpen() && !e.target.closest('#workflowEdgePopover') && !e.target.closest('.kf-wfedge-hit')) closeWorkflowEdgePopover();
+    if(isWorkflowColumnCapPopoverOpen() && !e.target.closest('#workflowColumnCapPopover') && !e.target.closest('.kf-wfnode')) closeWorkflowColumnCapPopover();
   });
 
   var workflowScrollEl = document.getElementById('workflowScroll');
@@ -1460,6 +1463,7 @@ function wireEvents(){
     else if(isOrgChartOpen()) closeOrgChartOverlay();
     else if(isGovMapOpen()) closeGovMapOverlay();
     else if(isWorkflowEdgePopoverOpen()) closeWorkflowEdgePopover();
+    else if(isWorkflowColumnCapPopoverOpen()) closeWorkflowColumnCapPopover();
     else if(isWorkflowOverlayOpen()) closeWorkflowOverlay();
     else if(isTimelineOverlayOpen()) closeTimelineOverlay();
     else if(isCostBenefitOverlayOpen()) closeCostBenefitOverlay();

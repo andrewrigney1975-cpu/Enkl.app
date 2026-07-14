@@ -2,10 +2,11 @@
 import { getCurrentProject } from '../store.js';
 import { iconSvg } from '../icons.js';
 import { ensureProjectWorkflow, WORKFLOW_NODE_W, WORKFLOW_NODE_H, WORKFLOW_MARGIN, WORKFLOW_CONDITION_FIELDS, WORKFLOW_CONDITION_OPERATORS, WORKFLOW_DEFAULT_CONDITION, getWorkflowConditionField } from '../features/workflow-engine.js';
-import { setWorkflowNodePosition, addWorkflowEdge, updateWorkflowEdge, deleteWorkflowEdge, reflowWorkflowLayout } from '../mutations.js';
-import { isServerAuthoritative, pullWorkflowFromServer } from '../features/migration.js';
-import { updateProjectWorkflowApi } from '../api.js';
-import { escapeHTML } from '../utils.js';
+import { setWorkflowNodePosition, addWorkflowEdge, updateWorkflowEdge, deleteWorkflowEdge, reflowWorkflowLayout, setColumnCap } from '../mutations.js';
+import { isServerAuthoritative, pullWorkflowFromServer, refreshProjectFromServer } from '../features/migration.js';
+import { updateProjectWorkflowApi, updateColumnApi } from '../api.js';
+import { escapeHTML, getColumn } from '../utils.js';
+import { clampColumnCap } from '../storage.js';
 
 function iconHTML(name, size){ return '<span class="kf-icon">'+iconSvg(name,size)+'</span>'; }
 
@@ -32,6 +33,7 @@ export var workflowEditorState = {
   draggingColumnId: null, dragMoved: false, dragPointerStartX: 0, dragPointerStartY: 0, dragNodeStartX: 0, dragNodeStartY: 0,
   drawingFromColumnId: null,
   popoverEdgeId: null,
+  popoverColumnId: null,
   /* True once a local mutation has happened that "Save Workflow" hasn't pushed to the server yet —
      see updateHeaderButtonVisibilitySetting-style save flow, but batched: unlike every other entity,
      workflow edits (drag-heavy, many events/sec) stay local-only until this browser explicitly saves,
@@ -277,6 +279,7 @@ export async function openWorkflowOverlay(){
   workflowEditorState.draggingColumnId = null;
   workflowEditorState.drawingFromColumnId = null;
   closeWorkflowEdgePopover();
+  closeWorkflowColumnCapPopover();
   updateWorkflowModeButtons();
 
   // Start each session from the server's current workflow — but only when this browser has no
@@ -300,6 +303,7 @@ export function closeWorkflowOverlay(){
   workflowEditorState.draggingColumnId = null;
   workflowEditorState.drawingFromColumnId = null;
   closeWorkflowEdgePopover();
+  closeWorkflowColumnCapPopover();
   document.getElementById('workflowScroll').classList.remove('kf-depmap-panning');
 }
 export function isWorkflowOverlayOpen(){
@@ -465,13 +469,19 @@ export function handleWorkflowPointerUp(e){
     var project = getCurrentProject();
     var columnId = workflowEditorState.draggingColumnId;
     workflowEditorState.draggingColumnId = null;
-    if(project && project.workflow && project.workflow.nodes[columnId]){
+    /* Only persist + re-render when the node actually moved. A plain click (mousedown+mouseup with
+       no drag) must leave the SVG's DOM untouched — re-rendering here replaces #workflowInner's
+       innerHTML BEFORE the browser's synthetic 'click' event fires, detaching the very node that
+       was clicked and silently swallowing the click before handleWorkflowInnerClick ever sees it
+       (this is what broke the column-click Cap popover: a re-render on every click, moved or not,
+       meant the click bubbled through an already-removed subtree). */
+    if(workflowEditorState.dragMoved && project && project.workflow && project.workflow.nodes[columnId]){
       var node = project.workflow.nodes[columnId];
       setWorkflowNodePosition(project, columnId, node.x, node.y);
       workflowEditorState.dirty = true;
       updateWorkflowSaveButton();
+      renderWorkflowEditor();
     }
-    renderWorkflowEditor();
     /* dragMoved stays true through the synthetic 'click' this mouseup
        is about to trigger (so a drag that happens to release over a
        connector doesn't also pop its properties open), then clears on
@@ -516,8 +526,13 @@ export function handleWorkflowInnerClick(e){
   if(workflowEditorState.panMoved || workflowEditorState.dragMoved) return;
   if(workflowEditorState.mode !== 'select') return;
   var hit = e.target.closest ? e.target.closest('.kf-wfedge-hit') : null;
-  if(!hit) return;
-  openWorkflowEdgePopover(hit.getAttribute('data-edge-id'), e.clientX, e.clientY);
+  if(hit){
+    openWorkflowEdgePopover(hit.getAttribute('data-edge-id'), e.clientX, e.clientY);
+    return;
+  }
+  var nodeHit = e.target.closest ? e.target.closest('.kf-wfnode') : null;
+  if(!nodeHit) return;
+  openWorkflowColumnCapPopover(nodeHit.getAttribute('data-column-id'), e.clientX, e.clientY);
 }
 
 function populateWorkflowEdgeConditionFieldOptions(){
@@ -665,5 +680,56 @@ export function deleteWorkflowEdgeFromPopover(){
   workflowEditorState.dirty = true;
   updateWorkflowSaveButton();
   closeWorkflowEdgePopover();
+  renderWorkflowEditor();
+}
+
+export function openWorkflowColumnCapPopover(columnId, clientX, clientY){
+  var project = getCurrentProject();
+  var col = project ? getColumn(project, columnId) : null;
+  if(!col) return;
+  workflowEditorState.popoverColumnId = columnId;
+  document.getElementById('workflowColumnCapPopoverTitle').textContent = col.name;
+  document.getElementById('workflowColumnCapInput').value = (col.cap == null || col.cap === -1) ? '' : col.cap;
+
+  var popover = document.getElementById('workflowColumnCapPopover');
+  popover.classList.remove('hidden');
+  var popW = popover.offsetWidth || 240;
+  var left = Math.min(clientX, window.innerWidth - popW - 12);
+  left = Math.max(8, left);
+  var top = Math.min(clientY, window.innerHeight - 12);
+  popover.style.left = left + 'px';
+  popover.style.top = top + 'px';
+}
+export function closeWorkflowColumnCapPopover(){
+  document.getElementById('workflowColumnCapPopover').classList.add('hidden');
+  workflowEditorState.popoverColumnId = null;
+}
+export function isWorkflowColumnCapPopoverOpen(){
+  return !document.getElementById('workflowColumnCapPopover').classList.contains('hidden');
+}
+/* Cap lives on the Column entity itself, not the batched project.workflow blob (see the
+   Context note on this feature), so a server-authoritative project's save bypasses the
+   "Save Workflow" dirty-flag flow entirely and PUTs the column immediately. */
+export async function saveWorkflowColumnCapPopover(){
+  var project = getCurrentProject();
+  var columnId = workflowEditorState.popoverColumnId;
+  if(!project || !columnId) return;
+  var col = getColumn(project, columnId);
+  if(!col) return;
+  var cap = clampColumnCap(document.getElementById('workflowColumnCapInput').value);
+
+  if(isServerAuthoritative(project)){
+    try {
+      var order = project.columns.findIndex(function(c){ return c.id === columnId; });
+      await updateColumnApi(project.serverProjectId, columnId, col.name, col.done, col.color, order, cap);
+      await refreshProjectFromServer(project.id);
+    } catch(e){
+      _toast('Could not save the column cap on the server: ' + (e.message || 'unknown error'));
+      return;
+    }
+  } else {
+    setColumnCap(project, columnId, cap);
+  }
+  closeWorkflowColumnCapPopover();
   renderWorkflowEditor();
 }

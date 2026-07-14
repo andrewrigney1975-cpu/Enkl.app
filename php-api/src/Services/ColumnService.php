@@ -34,7 +34,7 @@ final class ColumnService
             'done' => (int) $done, 'color' => $request['color'] ?? null, 'order' => $nextOrder,
         ]);
 
-        return ['id' => $id, 'name' => $request['name'] ?? '', 'done' => $done, 'color' => $request['color'] ?? null, 'order' => $nextOrder];
+        return ['id' => $id, 'name' => $request['name'] ?? '', 'done' => $done, 'color' => $request['color'] ?? null, 'order' => $nextOrder, 'cap' => -1];
     }
 
     public function update(string $projectId, string $columnId, array $request): ?array
@@ -46,13 +46,19 @@ final class ColumnService
         }
 
         $done = (bool) ($request['done'] ?? false);
-        $stmt = $this->db->prepare('UPDATE "Columns" SET "Name" = :name, "Done" = :done, "Color" = :color, "Order" = :order WHERE "Id" = :id');
+        // -1 means uncapped; anything <1 (0, other negatives) normalizes back to -1 rather than
+        // being rejected — there's no such thing as a column that holds zero tasks — matching
+        // clampColumnCap's client-side twin (storage.js).
+        $requestedCap = (int) ($request['cap'] ?? -1);
+        $cap = $requestedCap < 1 ? -1 : $requestedCap;
+
+        $stmt = $this->db->prepare('UPDATE "Columns" SET "Name" = :name, "Done" = :done, "Color" = :color, "Order" = :order, "Cap" = :cap WHERE "Id" = :id');
         $stmt->execute([
             'name' => $request['name'] ?? '', 'done' => (int) $done,
-            'color' => $request['color'] ?? null, 'order' => (int) ($request['order'] ?? 0), 'id' => $columnId,
+            'color' => $request['color'] ?? null, 'order' => (int) ($request['order'] ?? 0), 'cap' => $cap, 'id' => $columnId,
         ]);
 
-        return ['id' => $columnId, 'name' => $request['name'] ?? '', 'done' => $done, 'color' => $request['color'] ?? null, 'order' => (int) ($request['order'] ?? 0)];
+        return ['id' => $columnId, 'name' => $request['name'] ?? '', 'done' => $done, 'color' => $request['color'] ?? null, 'order' => (int) ($request['order'] ?? 0), 'cap' => $cap];
     }
 
     public function delete(string $projectId, string $columnId): bool

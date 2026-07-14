@@ -147,7 +147,7 @@ final class ProjectService
             // orphaning itself the way a verbatim WorkflowJson copy would (see remapWorkflowColumnIds).
             $idMap = [];
             $colStmt = $this->db->prepare(
-                'INSERT INTO "Columns" ("Id", "ProjectId", "Name", "Done", "Color", "Order") VALUES (:id, :pid, :name, :done, :color, :order)'
+                'INSERT INTO "Columns" ("Id", "ProjectId", "Name", "Done", "Color", "Order", "Cap") VALUES (:id, :pid, :name, :done, :color, :order, :cap)'
             );
             foreach ($templateColumns as $col) {
                 $newId = Uuid::v4();
@@ -156,6 +156,7 @@ final class ProjectService
                 $colStmt->execute([
                     'id' => $newId, 'pid' => $projectId, 'name' => $col['name'],
                     'done' => (int) $col['done'], 'color' => $col['color'] ?? null, 'order' => $col['order'],
+                    'cap' => $col['cap'] ?? -1,
                 ]);
             }
 
@@ -369,6 +370,7 @@ final class ProjectService
         $stmt->execute(['pid' => $projectId]);
         return array_map(static fn(array $c): array => [
             'id' => $c['Id'], 'name' => $c['Name'], 'done' => (bool) $c['Done'], 'color' => $c['Color'], 'order' => (int) $c['Order'],
+            'cap' => (int) ($c['Cap'] ?? -1),
         ], $stmt->fetchAll());
     }
 

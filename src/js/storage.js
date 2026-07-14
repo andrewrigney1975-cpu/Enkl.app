@@ -471,9 +471,19 @@ export function migrateDB(){
   if(changed) saveDB();
 }
 
-export function makeColumn(name, done, color){
+/* -1 means uncapped (the default); anything blank/non-numeric/≤0 other than an explicit -1
+   normalizes back to -1 rather than being rejected outright, and any real cap is floored at 1 —
+   there's no such thing as a column that can hold zero tasks. */
+export function clampColumnCap(value){
+  if(value === -1 || value === '-1') return -1;
+  var n = Math.round(Number(value));
+  if(!isFinite(n) || n < 1) return -1;
+  return n;
+}
+
+export function makeColumn(name, done, color, cap){
   var validColor = typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color) ? color : null;
-  return {id: uid('col'), name: name, done: !!done, order: [], color: validColor};
+  return {id: uid('col'), name: name, done: !!done, order: [], color: validColor, cap: clampColumnCap(cap)};
 }
 
 export function defaultTaskTypes(){
@@ -654,7 +664,7 @@ export function createSeedDB(){
    views/workflow-editor.js) can never reach back into an already-saved template. */
 export function buildTemplateSnapshotFromProject(project){
   return {
-    columns: project.columns.map(function(c, i){ return {id: c.id, name: c.name, done: !!c.done, color: c.color || null, order: i}; }),
+    columns: project.columns.map(function(c, i){ return {id: c.id, name: c.name, done: !!c.done, color: c.color || null, order: i, cap: c.cap != null ? c.cap : -1}; }),
     taskTypes: project.taskTypes.map(function(tt){ return {name: tt.name, iconName: tt.iconName || null}; }),
     workflow: project.workflow ? JSON.parse(JSON.stringify(project.workflow)) : null,
     settings: normalizeHeaderButtonVisibility(project.headerButtonVisibility)
@@ -678,7 +688,7 @@ export function createProjectFromTemplate(name, key, template){
     var newId = uid('col');
     idMap[c.id] = newId;
     var validColor = typeof c.color === 'string' && /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : null;
-    return {id: newId, name: c.name, done: !!c.done, color: validColor, order: []};
+    return {id: newId, name: c.name, done: !!c.done, color: validColor, order: [], cap: clampColumnCap(c.cap)};
   });
 
   project.taskTypes = (template.taskTypes || []).map(function(tt){

@@ -881,6 +881,19 @@
   </div>
 </div>
 
+<!-- Workflow Column Cap Popover -->
+<div class="kf-org-member-popover kf-workflow-cap-popover hidden" id="workflowColumnCapPopover">
+  <div class="kf-org-member-popover-title" id="workflowColumnCapPopoverTitle">Column</div>
+  <div class="kf-field">
+    <label for="workflowColumnCapInput">Cap <span style="font-weight:400;text-transform:none;color:var(--kf-text-faint);">(blank = no limit)</span></label>
+    <input type="number" id="workflowColumnCapInput" min="1" step="1" placeholder="No limit">
+  </div>
+  <div class="kf-workflow-edge-popover-actions">
+    <button class="kf-btn kf-btn-secondary" id="workflowColumnCapCancelBtn">Cancel</button>
+    <button class="kf-btn kf-btn-primary" id="workflowColumnCapSaveBtn">Save</button>
+  </div>
+</div>
+
 <!-- Timeline Overlay -->
 <div class="kf-overlay hidden" id="timelineOverlay">
   <div class="kf-modal kf-modal-lg" role="dialog" aria-modal="true">

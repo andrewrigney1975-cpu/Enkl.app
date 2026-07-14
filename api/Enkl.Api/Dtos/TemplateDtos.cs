@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace Enkl.Api.Dtos;
 
 /// <summary>Id is the SOURCE project's column id, preserved so ProjectService can build an old-&gt;new id map when remapping a template's Workflow on apply (see ProjectService.CreateAsync).</summary>
-public record TemplateColumnDto(Guid Id, string Name, bool Done, string? Color, int Order);
+public record TemplateColumnDto(Guid Id, string Name, bool Done, string? Color, int Order, int Cap = -1);
 public record TemplateTaskTypeDto(string Name, string? IconName);
 
 public record ProjectTemplateSummaryDto(Guid Id, string Name, DateTime CreatedAt);

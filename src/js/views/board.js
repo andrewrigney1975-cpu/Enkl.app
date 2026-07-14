@@ -11,7 +11,7 @@ import { getPriority, currentTheme } from '../ui.js';
 import { getTeamsCommitteesForMember } from '../mutations.js';
 import { reorderColumns, deleteColumn, moveTaskToColumn, updateTask, addTask, deleteTask } from '../mutations.js';
 import { getReleaseById } from '../utils.js';
-import { isWorkflowEnabled, evaluateTransition } from '../features/workflow-engine.js';
+import { evaluateColumnMove, isWorkflowEnabled } from '../features/workflow-engine.js';
 import { isGovernanceMapEnabled } from './governance-map.js';
 import { isServerAuthoritative, isServerLoggedIn, moveTaskToColumnOnServer, refreshProjectFromServer, reorderColumnsOnServer, deleteColumnOnServer } from '../features/migration.js';
 import { updateProjectSettingsApi, isOrgAdmin, getOrgName, isApiReachable, pollApiReachability } from '../api.js';
@@ -810,13 +810,23 @@ export function renderColumn(project, col){
     if(e.dataTransfer.types.indexOf('application/x-kf-task') === -1) return;
     e.preventDefault();
     var draggedTask = ui.draggedTaskId ? project.tasks[ui.draggedTaskId] : null;
-    if(draggedTask && isWorkflowEnabled(project)){
-      var result = evaluateTransition(project, draggedTask, col.id);
+    if(draggedTask){
+      var result = evaluateColumnMove(project, draggedTask, col.id);
       section.classList.remove('kf-dragover');
-      section.classList.toggle('kf-dragover-allowed', result.allowed);
-      section.classList.toggle('kf-dragover-blocked', !result.allowed);
-      wfAlert.textContent = result.allowed ? '' : result.message;
-      wfAlert.classList.toggle('hidden', result.allowed);
+      /* A cap breach always gets the red block treatment regardless of the Workflow toggle (it's
+         enforced independently — see evaluateColumnMove), but an ALLOWED move only earns the green
+         "workflow-approved" indicator when Workflow enforcement is actually on; otherwise this is
+         just a plain, unremarkable move and should look like one (the plain blue indicator). */
+      if(result.allowed && !isWorkflowEnabled(project)){
+        section.classList.remove('kf-dragover-allowed', 'kf-dragover-blocked');
+        section.classList.add('kf-dragover');
+        wfAlert.classList.add('hidden');
+      } else {
+        section.classList.toggle('kf-dragover-allowed', result.allowed);
+        section.classList.toggle('kf-dragover-blocked', !result.allowed);
+        wfAlert.textContent = result.allowed ? '' : result.message;
+        wfAlert.classList.toggle('hidden', result.allowed);
+      }
       e.dataTransfer.dropEffect = result.allowed ? 'move' : 'none';
     } else {
       section.classList.remove('kf-dragover-allowed', 'kf-dragover-blocked');
@@ -834,8 +844,8 @@ export function renderColumn(project, col){
     var taskId = e.dataTransfer.getData('application/x-kf-task');
     if(!taskId) return;
     var draggedTask = project.tasks[taskId];
-    if(draggedTask && isWorkflowEnabled(project)){
-      var result = evaluateTransition(project, draggedTask, col.id);
+    if(draggedTask){
+      var result = evaluateColumnMove(project, draggedTask, col.id);
       if(!result.allowed){ _toast(result.message); return; }
     }
 

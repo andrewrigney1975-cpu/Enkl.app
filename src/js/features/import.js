@@ -221,7 +221,8 @@ export function buildProjectFromExportDoc(doc){
         var name = (typeof c.name === 'string' && c.name.trim()) ? c.name.trim().slice(0,40) : null;
         if(!name) return null;
         var order = (typeof c.order === 'number' && isFinite(c.order)) ? c.order : idx;
-        return {oldId: (typeof c.id === 'string' && c.id) ? c.id : null, name: name, done: !!c.done, order: order};
+        var cap = (typeof c.cap === 'number' && isFinite(c.cap)) ? c.cap : -1;
+        return {oldId: (typeof c.id === 'string' && c.id) ? c.id : null, name: name, done: !!c.done, order: order, cap: cap};
       })
       .filter(Boolean)
       .sort(function(a, b){ return a.order - b.order; });
@@ -235,7 +236,7 @@ export function buildProjectFromExportDoc(doc){
 
     if(validCols.length > 0){
       columns = validCols.map(function(c){
-        var newCol = makeColumn(c.name, c.done, c.color);
+        var newCol = makeColumn(c.name, c.done, c.color, c.cap);
         if(c.oldId) columnOldIdToNewId[c.oldId] = newCol.id;
         return newCol;
       });

@@ -19,7 +19,7 @@ public record MemberDto(Guid Id, Guid UserId, string DisplayName, string? Email,
 public record CreateMemberRequest(string Name, string? Email);
 public record UpdateMemberRequest(string Name, string? Role, int? AllocatedFraction, Guid? ReportsToId);
 
-public record ColumnDto(Guid Id, string Name, bool Done, string? Color, int Order);
+public record ColumnDto(Guid Id, string Name, bool Done, string? Color, int Order, int Cap);
 
 public record TaskAuditLogEntryDto(Guid Id, DateTime Timestamp, string Field, string? OldValue, string? NewValue, string? ChangedBy);
 
@@ -71,7 +71,7 @@ public record ProjectSettingsDto(
     bool Retrospective);
 
 public record CreateColumnRequest(string Name, bool Done, string? Color);
-public record UpdateColumnRequest(string Name, bool Done, string? Color, int Order);
+public record UpdateColumnRequest(string Name, bool Done, string? Color, int Order, int Cap);
 
 public record CreateTaskRequest(
     string Title, string? Description, string Priority, Guid ColumnId, Guid? AssigneeId,

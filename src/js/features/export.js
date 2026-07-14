@@ -116,7 +116,7 @@ export function buildExportDoc(project, exportedAt){
         dateLastModified: r.dateLastModified || null
       };
     }),
-    columns: project.columns.map(function(c, idx){ return {id: c.id, name: c.name, done: c.done, color: c.color || null, order: idx}; }),
+    columns: project.columns.map(function(c, idx){ return {id: c.id, name: c.name, done: c.done, color: c.color || null, order: idx, cap: c.cap != null ? c.cap : -1}; }),
     taskTypes: (project.taskTypes || []).map(function(tt){ return {id: tt.id, name: tt.name, iconName: tt.iconName || null}; }),
     documents: (project.documents || []).map(function(d){
       var owner = getMemberById(project, d.ownerId);

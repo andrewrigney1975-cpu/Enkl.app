@@ -46,7 +46,8 @@ export async function saveColumnFromModal(){
     try {
       if(editingId){
         var order = project.columns.findIndex(function(c){ return c.id === editingId; });
-        await updateColumnApi(project.serverProjectId, editingId, name, done, color, order);
+        var existingCol = getColumn(project, editingId);
+        await updateColumnApi(project.serverProjectId, editingId, name, done, color, order, existingCol ? existingCol.cap : -1);
       } else {
         await addColumnApi(project.serverProjectId, name, done, color);
       }

@@ -28,7 +28,7 @@ public class ColumnService
         };
         _db.Columns.Add(column);
         await _db.SaveChangesAsync();
-        return new ColumnDto(column.Id, column.Name, column.Done, column.Color, column.Order);
+        return new ColumnDto(column.Id, column.Name, column.Done, column.Color, column.Order, column.Cap);
     }
 
     public async Task<ColumnDto?> UpdateAsync(Guid projectId, Guid columnId, UpdateColumnRequest request)
@@ -40,8 +40,12 @@ public class ColumnService
         column.Done = request.Done;
         column.Color = request.Color;
         column.Order = request.Order;
+        // -1 means uncapped; anything <1 (0, other negatives) normalizes back to -1 rather than
+        // being rejected — there's no such thing as a column that holds zero tasks — matching
+        // clampColumnCap's client-side twin (storage.js).
+        column.Cap = request.Cap < 1 ? -1 : request.Cap;
         await _db.SaveChangesAsync();
-        return new ColumnDto(column.Id, column.Name, column.Done, column.Color, column.Order);
+        return new ColumnDto(column.Id, column.Name, column.Done, column.Color, column.Order, column.Cap);
     }
 
     public async Task<bool> DeleteAsync(Guid projectId, Guid columnId)

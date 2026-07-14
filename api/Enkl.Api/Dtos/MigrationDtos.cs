@@ -11,7 +11,7 @@ namespace Enkl.Api.Dtos;
 
 public record ImportProjectDto(string Name, string Key);
 public record ImportMemberDto(string Id, string Name, string Color, string? Role, string? ReportsToId, string? Email = null, int? AllocatedFraction = null);
-public record ImportColumnDto(string Id, string Name, bool Done, string? Color, int Order);
+public record ImportColumnDto(string Id, string Name, bool Done, string? Color, int Order, int Cap = -1);
 public record ImportReleaseDto(string Id, string Name, string Status, string? OwnerId, string? StartDate, string? EndDate, string? DateCreated, string? DateLastModified);
 public record ImportTaskTypeDto(string Id, string Name, string? IconName);
 public record ImportPrincipleDto(string Id, string Key, string Title, string? Description, string? DocumentUrl, string? DateCreated, string? DateLastModified);

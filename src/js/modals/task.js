@@ -9,7 +9,7 @@ import { escapeHTML, renderBoard } from '../views/board.js';
 import { addTask, updateTask, deleteTask, normalizeDocumentationUrl, getAuditFieldLabel, setTaskSubtasks } from '../mutations.js';
 import { normalizeHeaderButtonVisibility, isSubTasksEnabled } from '../storage.js';
 import { confirmDialog } from './confirm.js';
-import { getReachableColumnIds, evaluateTransition } from '../features/workflow-engine.js';
+import { getReachableColumnIds, evaluateColumnMove } from '../features/workflow-engine.js';
 import { encryptText } from '../features/crypto.js';
 import { openSetPrivateKeyModal } from './private-key-set.js';
 import { openUnlockPrivateTaskModal } from './private-key-unlock.js';
@@ -625,7 +625,7 @@ async function finishSave(project, data){
 
   if(isServerAuthoritative(project) && !isPrivateInvolved){
     if(existingTask && data.columnId !== existingTask.columnId){
-      var transition = evaluateTransition(project, existingTask, data.columnId);
+      var transition = evaluateColumnMove(project, existingTask, data.columnId);
       if(!transition.allowed){ toast(transition.message); return; }
     }
     try {
