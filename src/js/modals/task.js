@@ -5,7 +5,7 @@ import { getTasksArray, getDescendants, wouldCreateCycle, getColumn, getMemberBy
 import { clampTaskScore, clampProgress, clampEffortHours, utcISOToLocalDateValue, utcISOToLocalDisplayDate, utcISOToLocalDisplayDateTime, localDateValueToUTCISO, defaultStartDateValue, defaultEndDateValue, isoToServerDateOnly } from '../date-utils.js';
 import { iconSvg } from '../icons.js';
 import { PRIORITY_ORDER } from '../config.js';
-import { escapeHTML, renderBoard } from '../views/board.js';
+import { escapeHTML, renderBoard, fitBoardForTaskModal, restoreBoardAfterTaskModal } from '../views/board.js';
 import { addTask, updateTask, deleteTask, normalizeDocumentationUrl, getAuditFieldLabel, setTaskSubtasks } from '../mutations.js';
 import { normalizeHeaderButtonVisibility, isSubTasksEnabled } from '../storage.js';
 import { confirmDialog } from './confirm.js';
@@ -91,6 +91,7 @@ export function openTaskModal(taskId, defaultColumnId){
         document.getElementById('taskPrivateReducedTitle').textContent = task.title;
         document.getElementById('taskDeleteBtn').classList.add('kf-vis-hidden');
         document.getElementById('taskOverlay').classList.remove('hidden');
+        fitBoardForTaskModal();
         setTaskHash(task.key);
       } else { // 'unlocked'
         ui.taskModalUnlockedDerivedBits = result.derivedBits;
@@ -216,6 +217,7 @@ function populateFullForm(project, task, descriptionValue){
   renderDependencyPicker();
   renderAuditTrail(project, task);
   document.getElementById('taskOverlay').classList.remove('hidden');
+  fitBoardForTaskModal();
   document.getElementById('taskTitleInput').focus();
   if(task) setTaskHash(task.key);
 }
@@ -513,6 +515,7 @@ export function closeTaskModal(){
   document.getElementById('taskOverlay').classList.add('hidden');
   ui.editingTaskId = null;
   ui.taskModalUnlockedDerivedBits = null;
+  restoreBoardAfterTaskModal();
   clearTaskHash();
 }
 

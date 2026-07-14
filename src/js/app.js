@@ -12,7 +12,7 @@ import { reportPageLoadTiming } from './features/page-load-telemetry.js';
 import { deleteProject, closeAllTaskTypeIconPanels, setMutationsToast } from './mutations.js';
 
 /* ---- Views ---- */
-import { renderAll, renderBoard, renderToolbar, setBoardDeps, closeTeamFilterPanel, closeAssigneeFilterPanel, closeTaskTypeFilterPanel, toggleTeamFilterPanel, toggleAssigneeFilterPanel, toggleTaskTypeFilterPanel, openAppSettingsOverlay, closeAppSettingsOverlay, isAppSettingsOverlayOpen, updateHeaderButtonVisibilitySetting, renderPriorityFilterChips } from './views/board.js';
+import { renderAll, renderBoard, renderToolbar, setBoardDeps, closeTeamFilterPanel, closeAssigneeFilterPanel, closeTaskTypeFilterPanel, toggleTeamFilterPanel, toggleAssigneeFilterPanel, toggleTaskTypeFilterPanel, openAppSettingsOverlay, closeAppSettingsOverlay, isAppSettingsOverlayOpen, updateHeaderButtonVisibilitySetting, renderPriorityFilterChips, refitBoardForOpenTaskModal } from './views/board.js';
 import { setTaskListDeps, openTaskListOverlay, closeTaskListOverlay, isTaskListOpen, renderTaskListBody, collapseAllTaskListGroups, expandAllTaskListGroups, exportTaskListAsCsv } from './views/task-list.js';
 import { setDepMapDeps, depMapState, lastDepLayout, openDepMapOverlay, closeDepMapOverlay, isDepMapOpen, renderDependencyMap, toggleDepMapShowArchived, toggleDepMapColumnFilterPanel, closeDepMapColumnFilterPanel, setDepMapZoom, resetDepMapZoom, zoomDepMapAtPoint } from './views/dependency-map.js';
 import { setOrgChartDeps, orgChartState, lastOrgChartLayout, openOrgChartOverlay, closeOrgChartOverlay, isOrgChartOpen, toggleOrgChartFilter, setOrgChartZoom, resetOrgChartZoom, zoomOrgChartAtPoint, openOrgChartMemberPopover, closeOrgChartMemberPopover, isOrgChartMemberPopoverOpen } from './views/org-chart.js';
@@ -1275,6 +1275,7 @@ function wireEvents(){
   window.addEventListener('resize', function(){
     relocateViewButtonsForViewport();
     if(window.innerWidth > 1024) closeMobileDrawer();
+    refitBoardForOpenTaskModal();
   });
   window.addEventListener('hashchange', openTaskFromHashIfPresent);
 

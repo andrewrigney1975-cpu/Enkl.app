@@ -3188,6 +3188,38 @@
     }
   }
 
+  /* Task modal only, ultra-wide screens: docked to the right edge as a full-height panel instead of
+     a centered floating modal — at 2560px+ a centered 700px modal leaves so much dead backdrop on
+     both sides that it reads more like a sidebar than a dialog, so it's pinned flush to the right
+     and stretched top-to-bottom instead. .kf-modal-body's existing flex:1/overflow-y:auto (used for
+     the 88vh centered case) already absorbs the extra height with no further changes needed.
+
+     It's meant to read as a persistent inspector pane, not a dialog, so the dimming backdrop is
+     removed and the overlay itself stops intercepting clicks entirely (pointer-events:none) — only
+     the modal panel re-enables them (pointer-events:auto). Two things fall out of that for free,
+     with no JS changes: (1) the board stays fully lit and clickable underneath rather than dimmed
+     and inert, and (2) app.js's existing "mousedown on #taskOverlay itself closes the modal"
+     click-outside handler can never fire here, since a click over the backdrop area now passes
+     straight through to whatever board element is actually underneath it instead of ever landing on
+     #taskOverlay — so clicking another task card opens THAT task in the same pane (board.js's normal
+     card click handler calls openTaskModal again, which just re-populates the already-open form)
+     instead of closing the current one first. */
+  @media (min-width: 2560px) {
+    #taskOverlay {
+      justify-content: flex-end;
+      align-items: stretch;
+      padding: 0;
+      background: transparent;
+      pointer-events: none;
+    }
+    #taskOverlay .kf-modal {
+      height: 100vh;
+      max-height: 100vh;
+      border-radius: 0;
+      pointer-events: auto;
+    }
+  }
+
   .kf-modal-header {
     display: flex;
     align-items: center;
