@@ -305,15 +305,20 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   max-height: 86vh;
 }
 
-/* Scoped to this one modal (not a general .kf-modal-body change, which would disrupt the plain
+/* Scoped to these two modals (not a general .kf-modal-body change, which would disrupt the plain
    scrolling-form layout the License/Contract modals rely on) — makes the chart stretch to fill the
    modal's full available vertical space instead of sitting at its small inline fixed height. The
-   legend keeps its natural height; #dbLatencyModalChartInner takes whatever's left. */
-#dbLatencyModalOverlay .kf-modal-body {
+   legend keeps its natural height; the chart inner div takes whatever's left. webappLatencyModal
+   shares the exact same rule as dbLatencyModal — see webapp-latency-monitor.js's equivalent
+   "Unhide BEFORE measuring" comment, whose fillHeight math only has real height to measure once
+   the container is actually stretched by this. */
+#dbLatencyModalOverlay .kf-modal-body,
+#webappLatencyModalOverlay .kf-modal-body {
   display: flex;
   flex-direction: column;
 }
-#dbLatencyModalChartInner {
+#dbLatencyModalChartInner,
+#webappLatencyModalChartInner {
   flex: 1;
   min-height: 0;
 }
