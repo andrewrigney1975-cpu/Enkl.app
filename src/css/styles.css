@@ -3467,17 +3467,22 @@
   }
 
   .kf-field input[type=range]::-webkit-slider-runnable-track {
-    height: 6px;
-    border-radius: 3px;
+    height: 10px;
+    border-radius: 5px;
     background: var(--kf-border);
   }
 
+  /* WebKit positions the thumb's top edge at the track's top edge by default, then applies
+     margin-top as an adjustment — it does NOT auto-center like Firefox does (see the -moz-range-thumb
+     rule below, which needs no margin at all). Centering a 22px thumb over a track of height T means
+     shifting it up by (22 - T) / 2 — keep this margin-top in sync with the runnable-track's height
+     above if either one changes again. */
   .kf-field input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 22px;
     height: 22px;
-    margin-top: -8px;
+    margin-top: -6px;
     border-radius: 50%;
     background: var(--kf-blue);
     border: none;
@@ -3485,8 +3490,8 @@
   }
 
   .kf-field input[type=range]::-moz-range-track {
-    height: 6px;
-    border-radius: 3px;
+    height: 10px;
+    border-radius: 5px;
     background: var(--kf-border);
   }
 
