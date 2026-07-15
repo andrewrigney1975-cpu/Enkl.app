@@ -6,6 +6,17 @@ import { addProject, renameProject } from '../mutations.js';
 import { renderAll, escapeHTML } from '../views/board.js';
 import { checkProjectAlerts } from '../features/session-alerts.js';
 import { isServerAuthoritative, isServerLoggedIn, createProjectOnServer, updateProjectOnServer, fetchTemplatesFromServer } from '../features/migration.js';
+import { createRichTextEditor } from '../rich-text/editor.js';
+
+// Lazily created on first openProjectModal() call and reused for the whole app session — same
+// pattern as modals/task.js's taskDescEditor.
+var projectDescEditor = null;
+function getProjectDescEditor(){
+  if(!projectDescEditor){
+    projectDescEditor = createRichTextEditor(document.getElementById('projectDescEditor'), document.getElementById('projectDescToolbar'), { maxLength: 4000 });
+  }
+  return projectDescEditor;
+}
 
 export function openProjectModal(mode){
   ui.editingProjectId = mode === 'edit' ? state.db.currentProjectId : null;
@@ -16,6 +27,7 @@ export function openProjectModal(mode){
   document.getElementById('projectKeyInput').value = project ? project.key : '';
   document.getElementById('projectStartDateInput').value = project ? utcISOToLocalDateValue(project.startDate) : '';
   document.getElementById('projectEndDateInput').value = project ? utcISOToLocalDateValue(project.endDate) : '';
+  getProjectDescEditor().setMarkdown(project ? project.description : '');
   document.getElementById('projectTemplateField').classList.toggle('hidden', !isNew);
   if(isNew) populateProjectTemplateSelect();
   document.getElementById('projectOverlay').classList.remove('hidden');
@@ -55,6 +67,7 @@ export async function saveProjectFromModal(){
     toast('End date cannot be before the start date.');
     return;
   }
+  var description = getProjectDescEditor().getMarkdown();
 
   var isNewProject = !ui.editingProjectId;
   var editingProject = ui.editingProjectId ? state.db.projects[ui.editingProjectId] : null;
@@ -62,7 +75,7 @@ export async function saveProjectFromModal(){
 
   if(!isNewProject && isServerAuthoritative(editingProject)){
     try {
-      await updateProjectOnServer(editingProject, name, key, startISO, endISO);
+      await updateProjectOnServer(editingProject, name, key, startISO, endISO, description);
       closeProjectModal();
       renderAll();
       toast('Project updated.');
@@ -77,7 +90,7 @@ export async function saveProjectFromModal(){
   // the user go through the extra local-then-Migrate-to-Server round trip.
   if(isNewProject && isServerLoggedIn()){
     try {
-      var result = await createProjectOnServer(name, key, startISO, endISO, templateId);
+      var result = await createProjectOnServer(name, key, startISO, endISO, templateId, description);
       resetFilters();
       closeProjectModal();
       renderAll();
@@ -90,10 +103,10 @@ export async function saveProjectFromModal(){
   }
 
   if(ui.editingProjectId){
-    renameProject(ui.editingProjectId, name, key, startISO, endISO);
+    renameProject(ui.editingProjectId, name, key, startISO, endISO, description);
     toast('Project updated.');
   } else {
-    addProject(name, key, startISO, endISO, templateId);
+    addProject(name, key, startISO, endISO, templateId, description);
     resetFilters();
     toast('Project created.');
   }

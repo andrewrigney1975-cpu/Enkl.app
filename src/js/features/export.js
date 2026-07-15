@@ -94,6 +94,7 @@ export function buildExportDoc(project, exportedAt){
       key: project.key,
       startDate: project.startDate || null,
       endDate: project.endDate || null,
+      description: project.description || null,
       dateCreated: project.dateCreated || null,
       dateLastModified: project.dateLastModified || null,
       dateLastExported: exportedAt

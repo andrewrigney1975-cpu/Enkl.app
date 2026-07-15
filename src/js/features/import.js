@@ -306,6 +306,7 @@ export function buildProjectFromExportDoc(doc){
     headerButtonVisibility: normalizeHeaderButtonVisibility(doc.headerButtonVisibility),
     startDate: (doc.project && isValidISODateString(doc.project.startDate)) ? doc.project.startDate : null,
     endDate: (doc.project && isValidISODateString(doc.project.endDate)) ? doc.project.endDate : null,
+    description: (doc.project && typeof doc.project.description === 'string') ? doc.project.description.slice(0,4000) : '',
     dateCreated: (doc.project && typeof doc.project.dateCreated === 'string') ? doc.project.dateCreated : importedAt,
     dateLastModified: (doc.project && typeof doc.project.dateLastModified === 'string') ? doc.project.dateLastModified : importedAt,
     dateLastExported: (doc.project && typeof doc.project.dateLastExported === 'string') ? doc.project.dateLastExported : null

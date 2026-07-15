@@ -3562,6 +3562,22 @@
     margin-bottom: 20px;
   }
 
+  .kf-report-project-description {
+    margin-bottom: 20px;
+  }
+
+  /* Justified body text (project description + every entity's own description) reads better across
+     a full-width printed page than ragged-right — text-justify: auto lets the browser pick its own
+     justification algorithm rather than forcing a specific one (e.g. inter-word). Scoped to the
+     report overlay only, not .kf-richtext-content globally, since Task/Document/Risk/etc.'s own
+     description fields elsewhere in the app aren't part of this request. */
+  #reportOverlay .kf-richtext-content p,
+  #reportOverlay .kf-richtext-content li,
+  #reportOverlay .kf-richtext-content blockquote {
+    text-align: justify;
+    text-justify: auto;
+  }
+
   .kf-report-section {
     margin-bottom: 28px;
   }
@@ -3574,16 +3590,21 @@
     border-bottom: 2px solid var(--kf-border-strong);
   }
 
+  /* Two-column layout (fills top-to-bottom in the first column, then the second) for better use of
+     page width than one long single-column list — column-count, not flex/grid, since it's the one
+     layout mode that reflows to a single column automatically on a narrow screen/print page without
+     any extra media query. */
   .kf-report-member-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    column-count: 2;
+    column-gap: 24px;
   }
 
   .kf-report-member-row {
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-bottom: 8px;
+    break-inside: avoid;
   }
 
   .kf-report-member-name {
@@ -3723,17 +3744,50 @@
      overlay/nav/header is hidden so the printed page is just the report's own title + items,
      with the Print/Close buttons themselves omitted since they're not part of the report content. */
   @media print {
+    /* body's own background (--kf-bg, a light grey) would otherwise show through #reportOverlay's
+       inherited 20px centering padding below — force both to white so nothing grey is left behind
+       the report content once it's flattened out of the normal dimmed-modal-backdrop layout. */
+    body {
+      background: #fff !important;
+    }
+
     body > *:not(#reportOverlay) {
       display: none !important;
     }
 
+    /* Forces the whole report subtree onto light-theme colors regardless of the app's actual theme
+       — every report/richtext/badge rule below reads its colors from these same custom properties
+       (var(--kf-text), var(--kf-good-fg), etc., including inside the embedded Risk Matrix SVG, which
+       inherits custom properties from its DOM ancestors same as any other element), so redefining
+       them here once is enough to keep light-on-white text from disappearing for a dark-theme user
+       printing — just forcing the background to white without this would make their unchanged
+       light-theme text colors illegible against it. */
     #reportOverlay {
       position: static !important;
       display: block !important;
-      background: none !important;
+      background: #fff !important;
+      padding: 0 !important;
+      /* Plain text with no explicit color: rule (e.g. .kf-richtext-content p) inherits body's
+         ALREADY-COMPUTED color, not a fresh var(--kf-text) lookup — redeclaring color here (after
+         the custom property overrides below) gives every such descendant a new, light-theme-correct
+         value to inherit from, instead of the dark-theme value body already resolved it to. */
+      color: #172b4d !important;
+      --kf-text: #172b4d;
+      --kf-text-secondary: #6b778c;
+      --kf-text-faint: #8993a4;
+      --kf-border: #dfe1e6;
+      --kf-border-strong: #c1c7d0;
+      --kf-blue: #0c66e4;
+      --kf-good-fg: #216e4e;
+      --kf-good-bg: #dcfff1;
+      --kf-overdue-fg: #974f0c;
+      --kf-overdue-bg: #fff0b3;
+      --kf-blocked-fg: #ae2e24;
+      --kf-blocked-bg: #ffebe6;
     }
 
     #reportOverlay .kf-modal {
+      background: #fff !important;
       box-shadow: none !important;
       height: auto !important;
       max-height: none !important;

@@ -3,8 +3,8 @@ using System.Text.Json;
 namespace Enkl.Api.Dtos;
 
 public record ProjectSummaryDto(Guid Id, string Name, string Key);
-public record CreateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate, Guid? TemplateId = null);
-public record UpdateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate);
+public record CreateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate, Guid? TemplateId = null, string? Description = null);
+public record UpdateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate, string? Description = null);
 
 /// <summary>
 /// Creating a project changes who the caller has access to — but membership is embedded in the JWT
@@ -55,7 +55,7 @@ public record ProjectDetailDto(
     List<TeamCommitteeDto> TeamsCommittees, List<DecisionDto> Decisions,
     List<RetrospectiveDto> Retrospectives,
     ProjectSettingsDto HeaderButtonVisibility, JsonElement? Workflow,
-    DateOnly? StartDate, DateOnly? EndDate);
+    DateOnly? StartDate, DateOnly? EndDate, string? Description);
 
 /// <summary>
 /// The 11 opt-in/opt-out feature-flag booleans shown in the "App Settings" modal

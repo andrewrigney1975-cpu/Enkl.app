@@ -71,6 +71,7 @@ final class ProjectService
             'workflow' => $project['WorkflowJson'] !== null ? json_decode($project['WorkflowJson']) : null,
             'startDate' => $project['StartDate'],
             'endDate' => $project['EndDate'],
+            'description' => $project['Description'],
         ];
     }
 
@@ -119,8 +120,8 @@ final class ProjectService
         $projectId = Uuid::v4();
         $settingsJson = $template !== null ? $template['SettingsJson'] : '{}';
         $stmt = $this->db->prepare(<<<SQL
-            INSERT INTO "Projects" ("Id", "OrganisationId", "Name", "Key", "StartDate", "EndDate", "DateCreated", "DateLastModified", "TaskCounter", "HeaderButtonVisibilityJson")
-            VALUES (:id, :orgId, :name, :key, :start, :end, now(), now(), 1, :settings)
+            INSERT INTO "Projects" ("Id", "OrganisationId", "Name", "Key", "StartDate", "EndDate", "Description", "DateCreated", "DateLastModified", "TaskCounter", "HeaderButtonVisibilityJson")
+            VALUES (:id, :orgId, :name, :key, :start, :end, :description, now(), now(), 1, :settings)
         SQL);
         $stmt->execute([
             'id' => $projectId,
@@ -129,6 +130,7 @@ final class ProjectService
             'key' => $uniqueKey,
             'start' => $request['startDate'] ?? null,
             'end' => $request['endDate'] ?? null,
+            'description' => isset($request['description']) ? trim((string) $request['description']) : null,
             'settings' => $settingsJson,
         ]);
 
@@ -220,12 +222,13 @@ final class ProjectService
 
         $stmt = $this->db->prepare(<<<SQL
             UPDATE "Projects"
-            SET "Name" = :name, "Key" = :key, "StartDate" = :start, "EndDate" = :end, "DateLastModified" = now()
+            SET "Name" = :name, "Key" = :key, "StartDate" = :start, "EndDate" = :end, "Description" = :description, "DateLastModified" = now()
             WHERE "Id" = :id
         SQL);
         $stmt->execute([
             'name' => $name, 'key' => $key,
             'start' => $request['startDate'] ?? null, 'end' => $request['endDate'] ?? null,
+            'description' => isset($request['description']) ? trim((string) $request['description']) : null,
             'id' => $projectId,
         ]);
 

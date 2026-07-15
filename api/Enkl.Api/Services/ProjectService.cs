@@ -90,7 +90,7 @@ public class ProjectService
             project.Retrospectives.Select(ToRetrospectiveDto).ToList(),
             ProjectSettingsSerializer.Parse(project.HeaderButtonVisibilityJson),
             ParseWorkflow(project.WorkflowJson),
-            project.StartDate, project.EndDate);
+            project.StartDate, project.EndDate, project.Description);
     }
 
     /// <summary>
@@ -130,6 +130,7 @@ public class ProjectService
             Key = uniqueKey,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
+            Description = request.Description?.Trim(),
             DateCreated = now,
             DateLastModified = now,
             TaskCounter = 1
@@ -193,6 +194,7 @@ public class ProjectService
         project.Name = name;
         project.StartDate = request.StartDate;
         project.EndDate = request.EndDate;
+        project.Description = request.Description?.Trim();
         project.DateLastModified = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 

@@ -9,23 +9,25 @@ import { iconSvg } from './icons.js';
 var _toast = function(msg){ console.error(msg); };
 export function setMutationsToast(fn){ _toast = fn; }
 
-export function addProject(name, key, startDate, endDate, templateId){
+export function addProject(name, key, startDate, endDate, templateId, description){
   var template = templateId ? state.db.templates.filter(function(t){ return t.id === templateId; })[0] : null;
   var p = template ? createProjectFromTemplate(name, key, template) : createDefaultProject(name, key);
   p.startDate = startDate || null;
   p.endDate = endDate || null;
+  p.description = (description || '').trim().slice(0, 4000);
   state.db.projects[p.id] = p;
   state.db.projectOrder.push(p.id);
   state.db.currentProjectId = p.id;
   saveDB();
 }
-export function renameProject(projectId, name, key, startDate, endDate){
+export function renameProject(projectId, name, key, startDate, endDate, description){
   var p = state.db.projects[projectId];
   if(!p) return;
   p.name = name;
   p.key = (key || p.key).toUpperCase().slice(0,6);
   p.startDate = startDate || null;
   p.endDate = endDate || null;
+  p.description = (description || '').trim().slice(0, 4000);
   p.dateLastModified = new Date().toISOString();
   saveDB();
 }

@@ -292,11 +292,12 @@ export async function refreshProjectFromServer(localProjectId){
    CreateProjectResponseDto's own comment for why the response carries a fresh JWT: this browser's
    current token predates the project's existence, so it isn't in the token's project-membership
    claims yet, and every subsequent server-authoritative call for this project needs it to be. */
-export async function createProjectOnServer(name, key, startISO, endISO, templateId){
+export async function createProjectOnServer(name, key, startISO, endISO, templateId, description){
   var response = await createProjectApi({
     name: name, key: key,
     startDate: isoToServerDateOnly(startISO), endDate: isoToServerDateOnly(endISO),
-    templateId: templateId || null
+    templateId: templateId || null,
+    description: description || null
   });
   setToken(response.token);
   var localProject = buildLocalProjectFromServerDetail(response.project, undefined);
@@ -307,10 +308,11 @@ export async function createProjectOnServer(name, key, startISO, endISO, templat
   return {project: localProject, warning: response.warning || null};
 }
 
-export async function updateProjectOnServer(project, name, key, startISO, endISO){
+export async function updateProjectOnServer(project, name, key, startISO, endISO, description){
   await updateProjectApi(project.serverProjectId, {
     name: name, key: key,
-    startDate: isoToServerDateOnly(startISO), endDate: isoToServerDateOnly(endISO)
+    startDate: isoToServerDateOnly(startISO), endDate: isoToServerDateOnly(endISO),
+    description: description || null
   });
   return refreshProjectFromServer(project.id);
 }
@@ -488,6 +490,7 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
     key: detail.key,
     startDate: serverDateOnlyToIso(detail.startDate),
     endDate: serverDateOnlyToIso(detail.endDate),
+    description: detail.description || '',
     taskCounter: preserved.taskCounter || maxTaskCounterFrom(detail.tasks),
     columns: columns,
     tasks: tasks,

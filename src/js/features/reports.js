@@ -161,8 +161,12 @@ export function printReport(){
 function renderProjectHeader(project){
   var startLabel = project.startDate ? utcISOToLocalDisplayDate(project.startDate) : '—';
   var endLabel = project.endDate ? utcISOToLocalDisplayDate(project.endDate) : '—';
+  var descHTML = project.description
+    ? '<div class="kf-richtext-content kf-report-project-description">' + markdownToHtml(project.description) + '</div>'
+    : '';
   return '<h1 class="kf-report-page-title">' + escapeHTML(project.name) + ' (' + escapeHTML(project.key) + ')</h1>' +
-    '<div class="kf-report-project-dates">Start: ' + escapeHTML(startLabel) + '&nbsp;&nbsp;·&nbsp;&nbsp;End: ' + escapeHTML(endLabel) + '</div>';
+    '<div class="kf-report-project-dates">Start: ' + escapeHTML(startLabel) + '&nbsp;&nbsp;·&nbsp;&nbsp;End: ' + escapeHTML(endLabel) + '</div>' +
+    descHTML;
 }
 
 /* "Project team members and their roles, derived from the Team hierarchy structure" — walks the

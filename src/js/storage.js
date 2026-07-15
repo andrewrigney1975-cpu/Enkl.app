@@ -183,6 +183,7 @@ export function migrateDB(){
     if(!p.dateLastExported){ p.dateLastExported = null; changed = true; }
     if(p.startDate === undefined){ p.startDate = null; changed = true; }
     if(p.endDate === undefined){ p.endDate = null; changed = true; }
+    if(p.description === undefined){ p.description = ''; changed = true; }
     var validReleaseIds = {};
     p.releases.forEach(function(r){ validReleaseIds[r.id] = true; });
     var validTaskTypeIds = {};
@@ -579,6 +580,7 @@ export function createDefaultProject(name, key){
     headerButtonVisibility: {documents: true, risks: true, decisions: true},
     startDate: null,
     endDate: null,
+    description: '',
     dateCreated: now,
     dateLastModified: now,
     dateLastExported: null

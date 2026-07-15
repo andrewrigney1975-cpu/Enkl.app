@@ -9,6 +9,7 @@ public class Project
     public string Key { get; set; } = "";
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
+    public string? Description { get; set; }
 
     /// <summary>True for normal working projects (default for Projects &gt; New Project). False for
     /// placeholder projects created via the Portfolio Planner, until an Org Admin explicitly activates
