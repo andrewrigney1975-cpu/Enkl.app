@@ -2391,6 +2391,18 @@
     flex-wrap: wrap;
   }
 
+  /* .kf-dep-key's own rule (styles.css, shared with the Dependency Map/alert rows) has no fixed
+     width — it's sized to each key's own text, so a 3-char key and a 10-char key left different
+     projects' names starting at different x positions across category bands. A fixed min-width here
+     (scoped to just this row, not the shared class) makes every key column the same width so names
+     line up vertically regardless of category or key length; flex-shrink:0 stops it from being
+     squeezed by the name span's own flex:1 1 160px when the row wraps on a narrow modal. */
+  .kf-portfolio-planner-project-row .kf-dep-key {
+    display: inline-block;
+    min-width: 56px;
+    flex-shrink: 0;
+  }
+
   .kf-portfolio-planner-project-name {
     font-size: 13px;
     color: var(--kf-text);
@@ -2424,6 +2436,14 @@
 
   .kf-portfolio-planner-svg {
     user-select: none;
+  }
+
+  .kf-portfolio-planner-timeline-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
   }
 
   .kf-btn-sm {

@@ -1,5 +1,5 @@
 "use strict";
-import { toast } from '../ui.js';
+import { toast, getPriority } from '../ui.js';
 import { escapeHTML } from '../views/board.js';
 import { portfolioApi, isOrgAdmin, getMyOrganisationApi } from '../api.js';
 import { PRIORITY_META, PRIORITY_ORDER } from '../config.js';
@@ -19,7 +19,6 @@ import { iconSvg } from '../icons.js';
    time the overlay opens), not persisted.
    ========================================================= */
 
-var PLANNER_BAR_COLOR = '#0c66e4';
 var PLANNER_HANDLE_WIDTH = 8;
 var PLANNER_DRAG_CLICK_THRESHOLD = 4;
 
@@ -28,6 +27,22 @@ var _allProjects = [];
 var _collapsedCategoryIds = new Set();
 var _plannerState = {granularity: 'month', start: null, end: null};
 var _addProjectCategoryId = null;
+
+// Same chip-toggle idiom as the Board's ui.activePriorities (views/board.js's
+// renderPriorityFilterChips), but kept as its own Set rather than sharing that one — this filters
+// the org-wide Timeline chart below, not any single project's board, so conflating the two would mean
+// toggling a priority here unexpectedly also filtered whichever project's board the user came from.
+// Empty set = no filter = every project shown, same convention as the Board's.
+var _plannerActivePriorities = new Set();
+
+// Same multi-select dropdown idiom as the Board's ui.activeAssignees (views/board.js's
+// renderAssigneeFilterChips) — a real category's own id, or '' as the Uncategorised catch-all
+// sentinel (matching groupProjectsByCategory's own key convention for that pseudo-group, same as
+// _collapsedCategoryIds above), mirroring how Assignee's Set holds either a real member id or the
+// UNASSIGNED_FILTER_KEY sentinel. Unlike the priority filter (which drops non-matching PROJECTS out
+// of every band), this drops whole non-matching BANDS — selecting a category means "show only that
+// swimlane", not "show only same-priority projects within every swimlane".
+var _plannerActiveCategories = new Set();
 
 // Cached from the most recent renderPortfolioPlannerChart() — see the identical pattern/comment on
 // _timelineLayout in portfolio-dashboard.js.
@@ -75,10 +90,120 @@ function toServerDateOnly(date){
 function renderPortfolioPlannerAll(){
   renderPortfolioPlannerGroups();
   renderPortfolioPlannerControls();
+  renderPortfolioPlannerPriorityFilterChips();
+  renderPortfolioPlannerCategoryFilterChips();
   renderPortfolioPlannerChart();
 }
 
-/* Real categories (sorted by SortOrder) first, then a fixed trailing "Uncategorized" pseudo-group
+/* Identical chip markup/behavior to the Board's renderPriorityFilterChips (views/board.js) — toggles
+   membership in _plannerActivePriorities and re-renders just the chips + chart, not the Categories
+   panel above, which isn't priority-filtered. Filters BOTH active and inactive projects alike, since
+   this is a portfolio-wide scheduling view, not a "what's live" view. */
+function renderPortfolioPlannerPriorityFilterChips(){
+  var wrap = document.getElementById('portfolioPlannerPriorityFilterChips');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  PRIORITY_ORDER.forEach(function(key){
+    var conf = getPriority(key);
+    var chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'kf-chip-filter' + (_plannerActivePriorities.has(key) ? ' active' : '');
+    chip.setAttribute('data-priority', key);
+    chip.innerHTML = '<span class="kf-dot" style="background:' + conf.accent + '"></span>' + conf.label;
+    chip.addEventListener('click', function(){
+      if(_plannerActivePriorities.has(key)) _plannerActivePriorities.delete(key);
+      else _plannerActivePriorities.add(key);
+      renderPortfolioPlannerPriorityFilterChips();
+      renderPortfolioPlannerChart();
+    });
+    wrap.appendChild(chip);
+  });
+}
+
+/* Same button-label/panel/clear-selection shape as the Board's renderAssigneeFilterChips
+   (views/board.js), including a trailing catch-all row for items with no real id (Assignee's
+   "Unassigned", here "Uncategorised"). Rows have no color dot — unlike a Member, a PortfolioCategory
+   carries no color field to show one for (same reasoning as the Board's Team filter, which is also
+   dot-less for the same reason). */
+function renderPortfolioPlannerCategoryFilterChips(){
+  var wrap = document.getElementById('portfolioPlannerCategoryFilterWrap');
+  var panel = document.getElementById('portfolioPlannerCategoryFilterPanel');
+  var label = document.getElementById('portfolioPlannerCategoryFilterLabel');
+  if(!wrap) return;
+
+  var sortedCategories = _categories.slice().sort(function(a, b){ return a.sortOrder - b.sortOrder; });
+
+  var n = _plannerActiveCategories.size;
+  if(n === 0){
+    label.textContent = 'Category';
+  } else if(n === 1){
+    var onlyKey = _plannerActiveCategories.values().next().value;
+    if(onlyKey === ''){
+      label.textContent = 'Uncategorised';
+    } else {
+      var onlyCategory = sortedCategories.filter(function(c){ return c.id === onlyKey; })[0];
+      label.textContent = onlyCategory ? onlyCategory.name : 'Category';
+    }
+  } else {
+    label.textContent = n + ' categories';
+  }
+  wrap.classList.toggle('active', n > 0);
+
+  panel.innerHTML = '';
+  sortedCategories.forEach(function(c){
+    var row = document.createElement('label');
+    row.className = 'kf-dropdown-filter-row';
+    var checked = _plannerActiveCategories.has(c.id);
+    row.innerHTML =
+      '<input type="checkbox" ' + (checked ? 'checked' : '') + '>' +
+      '<span class="kf-dropdown-filter-name">' + escapeHTML(c.name) + '</span>';
+    row.querySelector('input').addEventListener('change', function(e){
+      if(e.target.checked) _plannerActiveCategories.add(c.id);
+      else _plannerActiveCategories.delete(c.id);
+      renderPortfolioPlannerCategoryFilterChips();
+      renderPortfolioPlannerChart();
+    });
+    panel.appendChild(row);
+  });
+
+  var uncategorizedRow = document.createElement('label');
+  uncategorizedRow.className = 'kf-dropdown-filter-row';
+  var uncategorizedChecked = _plannerActiveCategories.has('');
+  uncategorizedRow.innerHTML =
+    '<input type="checkbox" ' + (uncategorizedChecked ? 'checked' : '') + '>' +
+    '<span class="kf-dropdown-filter-name">Uncategorised</span>';
+  uncategorizedRow.querySelector('input').addEventListener('change', function(e){
+    if(e.target.checked) _plannerActiveCategories.add('');
+    else _plannerActiveCategories.delete('');
+    renderPortfolioPlannerCategoryFilterChips();
+    renderPortfolioPlannerChart();
+  });
+  panel.appendChild(uncategorizedRow);
+
+  if(n > 0){
+    var divider = document.createElement('div');
+    divider.className = 'kf-dropdown-filter-divider';
+    panel.appendChild(divider);
+    var clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'kf-dropdown-filter-clear';
+    clearBtn.textContent = 'Clear selection';
+    clearBtn.addEventListener('click', function(){
+      _plannerActiveCategories.clear();
+      renderPortfolioPlannerCategoryFilterChips();
+      renderPortfolioPlannerChart();
+    });
+    panel.appendChild(clearBtn);
+  }
+}
+export function togglePortfolioPlannerCategoryFilterPanel(){
+  document.getElementById('portfolioPlannerCategoryFilterPanel').classList.toggle('hidden');
+}
+export function closePortfolioPlannerCategoryFilterPanel(){
+  document.getElementById('portfolioPlannerCategoryFilterPanel').classList.add('hidden');
+}
+
+/* Real categories (sorted by SortOrder) first, then a fixed trailing "Uncategorised" pseudo-group
    for CategoryId === null — `key` is the empty string for that pseudo-group (never a real category
    id) so data-category-id="" reads back as `null` at every call site below. */
 function groupProjectsByCategory(){
@@ -86,7 +211,7 @@ function groupProjectsByCategory(){
   var groups = sorted.map(function(c){
     return {key: c.id, label: c.name, isRealCategory: true, projects: []};
   });
-  var uncategorized = {key: '', label: 'Uncategorized', isRealCategory: false, projects: []};
+  var uncategorized = {key: '', label: 'Uncategorised', isRealCategory: false, projects: []};
   _allProjects.forEach(function(p){
     var group = p.categoryId ? groups.filter(function(g){ return g.key === p.categoryId; })[0] : null;
     (group || uncategorized).projects.push(p);
@@ -108,7 +233,7 @@ export function expandAllPortfolioPlannerCategories(){
 }
 export function collapseAllPortfolioPlannerCategories(){
   // Same key convention as groupProjectsByCategory/toggle-collapse — real category ids plus the
-  // empty-string sentinel for the trailing Uncategorized group.
+  // empty-string sentinel for the trailing Uncategorised group.
   _collapsedCategoryIds = new Set(_categories.map(function(c){ return c.id; }).concat(['']));
   renderPortfolioPlannerGroups();
 }
@@ -151,7 +276,7 @@ function renderPortfolioPlannerGroups(){
 
 function renderPortfolioPlannerProjectRow(p){
   var hasDates = !!(p.startDate && p.endDate);
-  var categoryOptionsHTML = '<option value="">Uncategorized</option>' + _categories.slice()
+  var categoryOptionsHTML = '<option value="">Uncategorised</option>' + _categories.slice()
     .sort(function(a, b){ return a.sortOrder - b.sortOrder; })
     .map(function(c){ return '<option value="' + c.id + '"' + (p.categoryId === c.id ? ' selected' : '') + '>' + escapeHTML(c.name) + '</option>'; })
     .join('');
@@ -181,6 +306,7 @@ export function onPortfolioPlannerNewCategoryFromInput(){
     _categories.push(category);
     input.value = '';
     renderPortfolioPlannerGroups();
+    renderPortfolioPlannerCategoryFilterChips();
     renderPortfolioPlannerChart();
   }, function(){
     toast('Could not create category.');
@@ -210,11 +336,13 @@ export function onPortfolioPlannerGroupsClick(e){
   } else if(action === 'delete-category'){
     var category = _categories.filter(function(c){ return c.id === categoryId; })[0];
     if(!category) return;
-    confirmDialog('Delete "' + category.name + '"?', 'Projects in this category will become Uncategorized — they will not be deleted.', function(){
+    confirmDialog('Delete "' + category.name + '"?', 'Projects in this category will become Uncategorised — they will not be deleted.', function(){
       portfolioApi.deleteCategory(categoryId).then(function(){
         _categories = _categories.filter(function(c){ return c.id !== categoryId; });
         _allProjects = _allProjects.map(function(p){ return p.categoryId === categoryId ? Object.assign({}, p, {categoryId: null}) : p; });
+        _plannerActiveCategories.delete(categoryId);
         renderPortfolioPlannerGroups();
+        renderPortfolioPlannerCategoryFilterChips();
         renderPortfolioPlannerChart();
       }, function(){
         toast('Could not delete category.');
@@ -253,6 +381,7 @@ function moveCategory(categoryId, direction){
       return c;
     });
     renderPortfolioPlannerGroups();
+    renderPortfolioPlannerCategoryFilterChips();
     renderPortfolioPlannerChart();
   }, function(){
     toast('Could not reorder categories.');
@@ -269,6 +398,7 @@ export function onPortfolioPlannerGroupsChange(e){
     portfolioApi.updateCategory(categoryId, newName).then(function(updated){
       _categories = _categories.map(function(c){ return c.id === categoryId ? Object.assign({}, c, {name: updated.name}) : c; });
       renderPortfolioPlannerGroups();
+      renderPortfolioPlannerCategoryFilterChips();
       renderPortfolioPlannerChart();
     }, function(){
       toast('Could not rename category.');
@@ -572,7 +702,7 @@ export function onPortfolioPlannerResourcesListChange(e){
 
 /* =========================================================
    TIMELINE CHART — a single Gantt chart spanning every project, banded into swimlanes (one per
-   category, in the same order as the category groups above, plus a trailing Uncategorized band).
+   category, in the same order as the category groups above, plus a trailing Uncategorised band).
    Reuses the exact same buildTimelineColumns/tlDateToPixel/tlPixelToDate + projectBarSVG the
    Portfolio Dashboard's own Timeline chart uses, so drag-to-reschedule behaves identically here.
    Unlike the Dashboard, an undated/click-only bar has no click-to-edit modal in the Planner — dates
@@ -640,8 +770,19 @@ function renderPortfolioPlannerChart(){
 
   // Collapse state never affects the chart — it's a visualization of the whole portfolio, not the
   // Categories management panel above, so every band always renders its full row set here regardless
-  // of whether that category happens to be collapsed in the list.
+  // of whether that category happens to be collapsed in the list. The priority and category filters,
+  // unlike collapse state, DO apply here (and only here, not the Categories panel) — an empty Set
+  // means no filter, same convention as the Board's chips. Category filtering drops whole non-matching
+  // bands first; priority filtering then thins the projects within whatever bands remain.
   var groups = groupProjectsByCategory();
+  if(_plannerActiveCategories.size > 0){
+    groups = groups.filter(function(g){ return _plannerActiveCategories.has(g.key); });
+  }
+  if(_plannerActivePriorities.size > 0){
+    groups = groups.map(function(g){
+      return {key: g.key, label: g.label, isRealCategory: g.isRealCategory, projects: g.projects.filter(function(p){ return _plannerActivePriorities.has(p.priority); })};
+    });
+  }
   var y = marginTop;
   var bandBounds = groups.map(function(g){
     var bandStart = y;
@@ -669,27 +810,43 @@ function renderPortfolioPlannerChart(){
     return '<rect x="0" y="' + b.start + '" width="' + width + '" height="' + (b.end - b.start) + '" fill="' + (gi % 2 === 0 ? 'var(--kf-column-bg)' : 'transparent') + '" opacity="0.5"></rect>';
   }).join('');
 
+  // Swimlane dividers: one dotted horizontal line above and below every project row, in the same
+  // style as the vertical calendar-division lines above, so each project's lane is visually bracketed.
+  var rowLinesHTML = groups.map(function(g, gi){
+    var b = bandBounds[gi];
+    var rowCount = Math.max(g.projects.length, 1);
+    var lines = '';
+    for(var pi = 0; pi <= rowCount; pi++){
+      var lineY = b.start + bandHeaderHeight + pi * rowHeight;
+      lines += '<line x1="0" y1="' + lineY + '" x2="' + width + '" y2="' + lineY + '" stroke="var(--kf-border)" stroke-width="1" stroke-dasharray="2,3"/>';
+    }
+    return lines;
+  }).join('');
+
+  // Font-size/weight match the Category section above exactly — .kf-portfolio-planner-category-name
+  // (13px/600) for a band's label, .kf-portfolio-planner-project-name (13px/400, no bold) for a
+  // project's — so labels read as one consistent system rather than a smaller/bolder chart-only style.
   var rowsHTML = groups.map(function(g, gi){
     var b = bandBounds[gi];
-    var labelHTML = '<text x="8" y="' + (b.start + 16) + '" font-size="12" font-weight="700" fill="var(--kf-text)">' + escapeHTML(g.label) + '</text>';
+    var labelHTML = '<text x="8" y="' + (b.start + 16) + '" font-size="13" font-weight="600" fill="var(--kf-text)">' + escapeHTML(g.label) + '</text>';
     if(g.projects.length === 0){
       return labelHTML + '<text x="8" y="' + (b.start + bandHeaderHeight + rowHeight / 2 + 4) + '" font-size="11" fill="var(--kf-text-secondary)">No projects</text>';
     }
     return labelHTML + g.projects.map(function(p, pi){
       var rowY = b.start + bandHeaderHeight + pi * rowHeight;
       var barY = rowY + 6, barHeight = rowHeight - 14;
-      var nameHTML = '<text x="8" y="' + (rowY + rowHeight / 2 + 4) + '" font-size="11" font-weight="600" fill="var(--kf-text)">' + escapeHTML(p.key) + '</text>';
+      var nameHTML = '<text x="8" y="' + (rowY + rowHeight / 2 + 4) + '" font-size="13" font-weight="400" fill="var(--kf-text)">' + escapeHTML(p.key) + '</text>';
       if(!p.startDate || !p.endDate){
-        return nameHTML + projectBarSVG(p, nameColWidth, barY, scaledTrackWidth, barHeight, PLANNER_BAR_COLOR, PLANNER_HANDLE_WIDTH);
+        return nameHTML + projectBarSVG(p, nameColWidth, barY, scaledTrackWidth, barHeight, null, PLANNER_HANDLE_WIDTH, true);
       }
       var barStartX = nameColWidth + tlDateToPixel(new Date(p.startDate), scaledColumns);
       var barEndX = nameColWidth + tlDateToPixel(new Date(p.endDate), scaledColumns);
       var barWidth = Math.max(4, barEndX - barStartX);
-      return nameHTML + projectBarSVG(p, barStartX, barY, barWidth, barHeight, PLANNER_BAR_COLOR, PLANNER_HANDLE_WIDTH);
+      return nameHTML + projectBarSVG(p, barStartX, barY, barWidth, barHeight, null, PLANNER_HANDLE_WIDTH, true);
     }).join('');
   }).join('');
 
-  chartEl.innerHTML = '<svg viewBox="0 0 ' + width + ' ' + height + '" width="100%" class="kf-portfolio-planner-svg">' + defsHTML + bandsHTML + headerHTML + rowsHTML + '</svg>';
+  chartEl.innerHTML = '<svg viewBox="0 0 ' + width + ' ' + height + '" width="100%" class="kf-portfolio-planner-svg">' + defsHTML + bandsHTML + rowLinesHTML + headerHTML + rowsHTML + '</svg>';
 }
 
 export function onPortfolioPlannerBarPointerDown(e){

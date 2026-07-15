@@ -44,25 +44,34 @@ export function priorityMarkerSVG(priority, cx, cy){
  * a plain grey outline, not layered with it, so "administratively inactive" and "not yet scheduled"
  * never read as one ambiguous glyph. An undated placeholder always gets a solid chart-background fill
  * either way (hatched when active, plain when inactive) rather than fill:none, since it spans the
- * full track width and any unfilled part of it would read as empty space nobody would click. Every
- * project — active or not, dated or not — gets the priority
- * marker.
+ * full track width and any unfilled part of it would read as empty space nobody would click.
+ *
+ * `priorityColored` (the Portfolio Planner's own mode — the Dashboard's Timeline chart leaves it
+ * falsy and keeps its original per-project hash-color + always-visible-marker look) switches a DATED
+ * bar's fill/border to the project's own priority color instead of the caller-supplied `color`: full
+ * opacity fill+border for an active project, a 15%-opacity fill with a full-opacity border of the same
+ * color for an inactive one. Since the bar's own color already encodes priority in this mode, the
+ * marker becomes redundant for an active project and is dropped; an inactive project's fill is only
+ * a faint tint, so the marker is kept there as the clearer priority cue. Outside this mode, every
+ * project — active or not, dated or not — still gets the marker, unchanged from before.
  */
-export function projectBarSVG(p, x, y, width, height, color, handleWidth){
+export function projectBarSVG(p, x, y, width, height, color, handleWidth, priorityColored){
   var hasDates = !!(p.startDate && p.endDate);
   var isActive = p.isActive !== false;
   var hw = handleWidth || 8;
+  var prio = getPriority(p.priority);
 
   // fill="transparent", not "none" — SVG's default pointer-events (visiblePainted) only hit-tests a
   // shape's fill if it's actually painted; "none" means the shape's interior is a permanent click-
   // through hole (only its 1.5px stroke would be draggable/clickable), while a transparent color still
   // counts as painted, keeping the whole bar body clickable/draggable with the identical no-fill look.
   var inactiveAttrs = 'fill="transparent" stroke="var(--kf-text-faint)" stroke-width="1.5"';
+  var showMarker = !priorityColored || !isActive;
   // Centered vertically (cy = y + height/2) AND horizontally offset by that same height/2 — with the
   // marker's own radius subtracted, that makes the gap from the bar's left edge to the marker exactly
   // equal to the gap from the bar's top edge to the marker (both = height/2 - r), rather than an
   // arbitrary fixed left inset that wouldn't line up with the vertical centering.
-  var markerHTML = priorityMarkerSVG(p.priority, x + height / 2, y + height / 2);
+  var markerHTML = showMarker ? priorityMarkerSVG(p.priority, x + height / 2, y + height / 2) : '';
 
   if(!hasDates){
     // Always a solid fill (chart-background hatch for active, plain chart-background for inactive)
@@ -78,7 +87,11 @@ export function projectBarSVG(p, x, y, width, height, color, handleWidth){
   }
 
   var barEndX = x + width;
-  var barAttrs = isActive ? 'fill="' + color + '"' : inactiveAttrs;
+  var barAttrs = priorityColored
+    ? (isActive
+        ? 'fill="' + prio.accent + '" stroke="' + prio.accent + '" stroke-width="1.5"'
+        : 'fill="' + prio.accent + '" fill-opacity="0.15" stroke="' + prio.accent + '" stroke-width="1.5"')
+    : (isActive ? 'fill="' + color + '"' : inactiveAttrs);
   return '<g class="kf-portfolio-timeline-row">' +
     '<rect class="kf-portfolio-timeline-bar" data-project-id="' + p.id + '" data-role="move" ' +
     'x="' + x + '" y="' + y + '" width="' + width + '" height="' + height + '" rx="4" ' + barAttrs + '>' +

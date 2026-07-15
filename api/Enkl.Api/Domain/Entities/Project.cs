@@ -19,7 +19,7 @@ public class Project
     /// <summary>trivial|low|medium|high|critical — same unconstrained-string convention as TaskItem.Priority.</summary>
     public string Priority { get; set; } = "medium";
 
-    /// <summary>Org-scoped Portfolio Planner grouping ("Must Have", "Nice to Have", etc.) — null means Uncategorized.</summary>
+    /// <summary>Org-scoped Portfolio Planner grouping ("Must Have", "Nice to Have", etc.) — null means Uncategorised.</summary>
     public Guid? CategoryId { get; set; }
     public PortfolioCategory? Category { get; set; }
 
