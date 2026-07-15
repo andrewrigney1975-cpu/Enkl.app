@@ -73,7 +73,7 @@ function cardTitlesInColumn(doc, columnName){
   const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Finished first') !== -1);
   card.click();
   await wait(10);
-  doc.getElementById('taskDescInput').value = 'touched again';
+  doc.getElementById('taskDescEditor').textContent = 'touched again';
   doc.getElementById('taskSaveBtn').click();
   await wait(20);
   const doneTitlesAfterEdit = cardTitlesInColumn(doc, 'Done');

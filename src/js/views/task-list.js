@@ -7,6 +7,7 @@ import { iconSvg } from '../icons.js';
 import { utcISOToLocalDisplayDate, utcISOToLocalDateValue, clampTaskScore, clampProgress, memberInitials } from '../date-utils.js';
 import { PRIORITY_ORDER, PRIORITY_META } from '../config.js';
 import { isTimeTrackingEnabled } from '../storage.js';
+import { markdownToHtml } from '../rich-text/markdown.js';
 
 var _toast = function(msg){ console.error(msg); };
 var _openTaskModal = function(){};
@@ -466,7 +467,7 @@ export function renderTaskListDetail(project, t){
   var detail = document.createElement('div');
   detail.className = 'kf-tasklist-detail';
   detail.innerHTML =
-    (t.description ? '<div>' + escapeHTML(t.description) + '</div>' : '<div style="color:var(--kf-text-faint);">No description.</div>') +
+    (t.description ? '<div class="kf-richtext-content">' + markdownToHtml(t.description) + '</div>' : '<div style="color:var(--kf-text-faint);">No description.</div>') +
     (badgesHTML ? '<div style="margin-top:8px;display:flex;gap:6px;">' + badgesHTML + '</div>' : '') +
     '<div class="kf-tasklist-detail-grid">' +
       '<div><div class="kf-tasklist-detail-label">Column</div><div class="kf-tasklist-detail-value">' + escapeHTML(col ? col.name : '—') + '</div></div>' +

@@ -16,6 +16,20 @@ import { openUnlockPrivateTaskModal } from './private-key-unlock.js';
 import { setTaskHash, clearTaskHash } from '../features/hash-router.js';
 import { taskApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+import { createRichTextEditor } from '../rich-text/editor.js';
+
+// Lazily created on first populateFullForm() call and reused for the whole app session — the task
+// modal's DOM subtree is static (closeTaskModal only toggles #taskOverlay's hidden class, it never
+// removes/replaces the modal), so #taskDescEditor is a persistent element across every open/close,
+// including the private-task double-populate path (populateFullForm called once post-unlock, once
+// for the normal path — both just need a fresh setMarkdown() on this one live instance).
+var taskDescEditor = null;
+function getTaskDescEditor(){
+  if(!taskDescEditor){
+    taskDescEditor = createRichTextEditor(document.getElementById('taskDescEditor'), document.getElementById('taskDescToolbar'), { maxLength: 4000 });
+  }
+  return taskDescEditor;
+}
 
 function buildServerTaskBody(data){
   return {
@@ -132,7 +146,7 @@ function populateFullForm(project, task, descriptionValue){
   });
 
   document.getElementById('taskTitleInput').value = task ? task.title : '';
-  document.getElementById('taskDescInput').value = descriptionValue || '';
+  getTaskDescEditor().setMarkdown(descriptionValue || '');
   document.getElementById('taskDocUrlInput').value = task && task.documentationUrl ? task.documentationUrl : '';
   updateDocUrlOpenButtonVisibility();
   document.getElementById('taskPrioritySelect').value = task ? task.priority : 'medium';
@@ -540,7 +554,7 @@ export async function saveTaskFromModal(){
 
   var data = {
     title: title,
-    description: document.getElementById('taskDescInput').value.trim(),
+    description: getTaskDescEditor().getMarkdown().trim(),
     priority: document.getElementById('taskPrioritySelect').value,
     columnId: document.getElementById('taskColumnSelect').value,
     assigneeId: document.getElementById('taskAssigneeSelect').value || null,

@@ -32,7 +32,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('task modal has a Documentation field', doc.getElementById('taskDocUrlInput') !== null);
 
   const fieldsInOrder = Array.from(doc.querySelectorAll('.kf-modal-body .kf-field, .kf-modal-body .kf-field-row'));
-  const descIdx = fieldsInOrder.findIndex(el => el.querySelector && el.querySelector('#taskDescInput'));
+  const descIdx = fieldsInOrder.findIndex(el => el.querySelector && el.querySelector('#taskDescEditor'));
   const docIdx = fieldsInOrder.findIndex(el => el.querySelector && el.querySelector('#taskDocUrlInput'));
   log('Documentation field appears immediately after Description', docIdx === descIdx + 1, `desc=${descIdx} doc=${docIdx}`);
 

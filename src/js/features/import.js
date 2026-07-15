@@ -37,7 +37,7 @@ export function flattenImportedHierarchy(nodes, out){
         originalId: n.id,
         key: typeof n.key === 'string' ? n.key : null,
         title: (typeof n.title === 'string' && n.title.trim()) ? n.title.trim().slice(0,120) : 'Untitled task',
-        description: typeof n.description === 'string' ? n.description.slice(0,2000) : '',
+        description: typeof n.description === 'string' ? n.description.slice(0,4000) : '',
         priority: PRIORITY_META.hasOwnProperty(n.priority) ? n.priority : 'medium',
         columnName: (typeof n.column === 'string' && n.column.trim()) ? n.column.trim().slice(0,40) : 'To Do',
         assigneeIdRaw: typeof n.assigneeId === 'string' ? n.assigneeId : null,

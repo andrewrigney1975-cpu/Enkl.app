@@ -246,8 +246,19 @@
         <input type="text" id="taskTitleInput" maxlength="120" placeholder="e.g. Set up CI pipeline">
       </div>
       <div class="kf-field">
-        <label for="taskDescInput">Description</label>
-        <textarea id="taskDescInput" maxlength="2000" placeholder="Add more detail..."></textarea>
+        <label for="taskDescEditor">Description</label>
+        <div class="kf-richtext-toolbar" id="taskDescToolbar">
+          <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h1" title="Heading 1">H1</button>
+          <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h2" title="Heading 2">H2</button>
+          <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h3" title="Heading 3">H3</button>
+          <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+          <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+          <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ul" title="Bullet list">&bull;</button>
+          <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ol" title="Numbered list">1.</button>
+          <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="quote" title="Blockquote">&rdquo;</button>
+          <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="link" title="Link"><span class="kf-icon" data-icon="link" data-size="14"></span></button>
+        </div>
+        <div class="kf-richtext-editor" id="taskDescEditor" contenteditable="true" data-placeholder="Add more detail..."></div>
       </div>
       <div class="kf-field">
         <label for="taskDocUrlInput">Documentation</label>

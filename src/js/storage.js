@@ -639,7 +639,7 @@ export function createSeedDB(){
 
   var t1 = addSeedTask(c1, 'Look at Project and App Settings', 'There are lots of options available to extend the app to make it more structured and specific to your needs. Open up Project Settings to see what elese it can do for you.', 'low', [], null, 200, 80);
   var t2 = addSeedTask(c2, 'Configure project modules, columns and details', 'Define how projects, columns and tasks are structured. Replace these default Tasks with real activities', 'high', [t1], john.id, 800, 150);
-  var t3 = addSeedTask(c2, 'Draft project objectives', 'Set the goals of this project. Gives you milestobes and targets to reach. The extended Objectives module really helps formalise these goals.', 'medium', [t2], jan.id, 500, 200);
+  var t3 = addSeedTask(c2, 'Draft project objectives', 'Set the goals of this project. Gives you milestones and targets to reach. The extended Objectives module really helps formalise these goals.', 'medium', [t2], jan.id, 500, 200);
   var t4 = addSeedTask(c3, 'Set up Team members for this project', 'Assign people and roles to the project.', 'critical', [t2, t3], john.id, 900, 400);
   addSeedTask(c4, 'Create project board', 'Document setup and usage instructions.', 'trivial', [], null, 100, 30);
 

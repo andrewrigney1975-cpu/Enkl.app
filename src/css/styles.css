@@ -3459,6 +3459,95 @@
     min-height: 70px;
   }
 
+  /* Rich-text editor (src/js/rich-text/editor.js) — the toolbar row plus the contenteditable
+     surface it controls. The surface's border/padding/background match .kf-field textarea above
+     exactly (it's a <div>, not one of the input types that shared selector list already covers, so
+     it needs its own explicit rule) so swapping a plain textarea for this doesn't visually stand out. */
+  .kf-richtext-toolbar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+
+  .kf-richtext-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .kf-richtext-btn.active {
+    background: var(--kf-chip-active-bg);
+    color: #fff;
+  }
+
+  .kf-richtext-editor {
+    width: 100%;
+    border: 2px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 8px 10px;
+    color: var(--kf-text);
+    background: var(--kf-input-bg);
+    min-height: 70px;
+  }
+
+  .kf-richtext-editor:focus {
+    outline: none;
+    border-color: var(--kf-blue);
+    background: var(--kf-input-bg-focus);
+  }
+
+  .kf-richtext-editor:empty::before {
+    content: attr(data-placeholder);
+    color: var(--kf-text-faint);
+  }
+
+  .kf-richtext-editor p {
+    margin: 0 0 8px;
+  }
+
+  .kf-richtext-editor p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Scoped read-only rendering of stored Markdown (e.g. views/task-list.js's row-expand detail
+     view) — every nested selector is scoped under this one class so heading/list/blockquote/link
+     styling never leaks onto an unrelated <ul>/<ol>/<a> elsewhere in the app. */
+  .kf-richtext-content h1, .kf-richtext-content h2, .kf-richtext-content h3 {
+    margin: 8px 0 4px;
+    font-weight: 600;
+    color: var(--kf-text);
+  }
+
+  .kf-richtext-content h1 { font-size: 18px; }
+  .kf-richtext-content h2 { font-size: 16px; }
+  .kf-richtext-content h3 { font-size: 14px; }
+
+  .kf-richtext-content p {
+    margin: 0 0 8px;
+  }
+
+  .kf-richtext-content ul, .kf-richtext-content ol {
+    margin: 0 0 8px;
+    padding-left: 20px;
+  }
+
+  .kf-richtext-content blockquote {
+    margin: 0 0 8px;
+    padding-left: 10px;
+    border-left: 3px solid var(--kf-border-strong);
+    color: var(--kf-text-secondary);
+  }
+
+  .kf-richtext-content a {
+    color: var(--kf-blue);
+  }
+
+  .kf-richtext-content h1:last-child, .kf-richtext-content h2:last-child, .kf-richtext-content h3:last-child,
+  .kf-richtext-content p:last-child, .kf-richtext-content ul:last-child,
+  .kf-richtext-content ol:last-child, .kf-richtext-content blockquote:last-child {
+    margin-bottom: 0;
+  }
+
   .kf-field input[type=range] {
     width: 100%;
     display: block;

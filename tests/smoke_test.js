@@ -61,7 +61,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   addTaskBtns[0].click();
   await wait(20);
   doc.getElementById('taskTitleInput').value = 'First task';
-  doc.getElementById('taskDescInput').value = 'Some description';
+  doc.getElementById('taskDescEditor').textContent = 'Some description';
   doc.getElementById('taskPrioritySelect').value = 'high';
   doc.getElementById('taskSaveBtn').click();
   await wait(20);

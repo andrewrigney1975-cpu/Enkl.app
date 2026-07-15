@@ -91,7 +91,7 @@ function isISO(v){ return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)
   await wait(5);
   const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Date field test task') !== -1);
   card.click(); await wait(10);
-  doc.getElementById('taskDescInput').value = 'Updated description';
+  doc.getElementById('taskDescEditor').textContent = 'Updated description';
   doc.getElementById('taskSaveBtn').click(); await wait(20);
 
   const raw5 = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));

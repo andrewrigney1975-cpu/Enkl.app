@@ -44,7 +44,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   card.click();
   await wait(10);
   const taskTitle = doc.getElementById('taskTitleInput').value;
-  const originalDescription = doc.getElementById('taskDescInput').value;
+  const originalDescription = doc.getElementById('taskDescEditor').textContent;
   log('picked a seeded task with a non-empty description', originalDescription.length > 0, JSON.stringify({taskTitle, originalDescription}));
   log('Private checkbox exists and starts unchecked', doc.getElementById('taskPrivateCheckbox') !== null && doc.getElementById('taskPrivateCheckbox').checked === false);
 
@@ -96,7 +96,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   await wait(600);
   log('correct key closes the unlock modal and opens the full task form', doc.getElementById('unlockPrivateTaskOverlay').classList.contains('hidden') && !doc.getElementById('taskOverlay').classList.contains('hidden'));
   log('full fields are visible and reduced view is hidden', !doc.getElementById('taskFullFields').classList.contains('hidden') && doc.getElementById('taskPrivateReducedView').classList.contains('hidden'));
-  log('decrypted description matches the original exactly', doc.getElementById('taskDescInput').value === originalDescription, doc.getElementById('taskDescInput').value);
+  log('decrypted description matches the original exactly', doc.getElementById('taskDescEditor').textContent === originalDescription, doc.getElementById('taskDescEditor').textContent);
 
   doc.getElementById('taskCancelBtn').click();
   await wait(10);
