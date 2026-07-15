@@ -37,13 +37,13 @@ function installFakeFileReader(window){
   await wait(10);
   log('clicking "Projects..." opens the panel', !doc.getElementById('projectsMenuPanel').classList.contains('hidden'));
 
-  // "Migrate to Server" and "Save as Template..." were added to this panel later — it's 5 links
-  // now, not the original 3.
+  // "Migrate to Server", "Project Management Report", and "Save as Template..." were added to
+  // this panel later — it's 6 links now, not the original 3.
   const links = Array.from(doc.querySelectorAll('#projectsMenuPanel a'));
   const linkTexts = links.map(a => a.textContent);
-  log('panel contains exactly 5 links', links.length === 5, linkTexts.join(','));
-  log('links are New Project, Import Project, Export Project, Migrate to Server, Save as Template..., as plain <a> text links (not buttons)',
-      linkTexts.join(',') === 'New Project,Import Project,Export Project,Migrate to Server,Save as Template...' && links.every(a => a.tagName === 'A'),
+  log('panel contains exactly 6 links', links.length === 6, linkTexts.join(','));
+  log('links are New Project, Import Project, Export Project, Project Management Report, Migrate to Server, Save as Template..., as plain <a> text links (not buttons)',
+      linkTexts.join(',') === 'New Project,Import Project,Export Project,Project Management Report,Migrate to Server,Save as Template...' && links.every(a => a.tagName === 'A'),
       linkTexts.join(','));
   log('links use the same text-link styling class as the other More-menu links (consistent visual language)',
       links.every(a => a.classList.contains('kf-header-more-link')));
@@ -102,9 +102,9 @@ function installFakeFileReader(window){
   const projectActionRuleBody = projectActionSelectorMatch
     ? style.slice(projectActionSelectorMatch.index, style.indexOf('}', projectActionSelectorMatch.index))
     : '';
-  log('the 3 project-action buttons are hidden by default (desktop), BEFORE the media query (correct source order)',
+  log('the 4 project-action buttons are hidden by default (desktop), BEFORE the media query (correct source order)',
       /display:none/.test(projectActionRuleBody) && projectActionSelectorMatch.index < mediaStart);
-  log('mobile CSS restores the 3 original buttons to visible', /\.kf-header-nav-projectaction\{display:\s*flex/.test(mobileBlock));
+  log('mobile CSS restores the 4 original buttons to visible', /\.kf-header-nav-projectaction\{display:\s*flex/.test(mobileBlock));
   // #projectsMenuWrap's actual class is the shared, generic ".kf-desktop-menu-wrap" (also used by
   // the Account menu) — there's no dedicated ".kf-projects-menu-wrap" class anywhere in the markup.
   log('mobile CSS hides the desktop Projects dropdown', /\.kf-header-controls \.kf-desktop-menu-wrap\{display:\s*none/.test(mobileBlock));

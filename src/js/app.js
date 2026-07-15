@@ -57,7 +57,7 @@ import { openDecisionsOverlay, closeDecisionsOverlay, isDecisionsOverlayOpen, sh
 import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen, showPrinciplesFormView, showPrinciplesListView, renderPrinciplesList, savePrincipleFromModal, deletePrincipleFromModal, switchPrinciplesTab, updatePrincipleShareFromModal } from './modals/principles.js';
 import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen, showObjectivesFormView, showObjectivesListView, renderObjectivesList, saveObjectiveFromModal, deleteObjectiveFromModal } from './modals/objectives.js';
 import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitteesOverlayOpen, showTeamCommitteeFormView, showTeamsCommitteesListView, renderTeamsCommitteesList, saveTeamCommitteeFromModal, deleteTeamCommitteeFromModal } from './modals/teams-committees.js';
-import { openReportOverlay, closeReportOverlay, isReportOverlayOpen, printReport } from './features/reports.js';
+import { openReportOverlay, closeReportOverlay, isReportOverlayOpen, printReport, openProjectManagementReportOverlay } from './features/reports.js';
 import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick } from './modals/project-search.js';
 import { openAboutModal, closeAboutModal, isAboutModalOpen } from './modals/about.js';
 import { openUfoModal, closeUfoModal, isUfoModalOpen } from './modals/ufo.js';
@@ -1027,6 +1027,11 @@ function wireEvents(){
     if(!p){ toast('No project to export.'); return; }
     if(Object.keys(p.tasks).length === 0){ toast('This project has no tasks to export.'); return; }
     exportProjectJSON(p);
+  });
+
+  document.getElementById('projectMgmtReportBtn').addEventListener('click', function(){
+    if(!getCurrentProject()){ toast('No project selected.'); return; }
+    openProjectManagementReportOverlay();
   });
 
   document.getElementById('migrateToServerBtn').addEventListener('click', function(){
