@@ -395,7 +395,7 @@ export function addDocument(project, data){
     key: nextDocKey(project),
     title: (data.title || '').trim().slice(0, 120) || 'Untitled document',
     url: normalizeDocumentationUrl(data.url),
-    description: (data.description || '').trim().slice(0, 500),
+    description: (data.description || '').trim().slice(0, 1000),
     ownerId: data.ownerId || null,
     taskId: data.taskId || null,
     relatedDocumentIds: Array.isArray(data.relatedDocumentIds) ? data.relatedDocumentIds.slice() : [],
@@ -412,7 +412,7 @@ export function updateDocument(project, docId, data){
   var title = (data.title || '').trim().slice(0, 120);
   doc.title = title || doc.title;
   doc.url = normalizeDocumentationUrl(data.url);
-  doc.description = (data.description || '').trim().slice(0, 500);
+  doc.description = (data.description || '').trim().slice(0, 1000);
   doc.ownerId = data.ownerId || null;
   doc.taskId = data.taskId || null;
   /* A document can never relate to itself — filtered defensively here
@@ -488,7 +488,7 @@ export function addRisk(project, data){
     id: uid('risk'),
     key: nextRiskKey(project),
     title: (data.title || '').trim().slice(0, 120) || 'Untitled risk',
-    description: (data.description || '').trim().slice(0, 2000),
+    description: (data.description || '').trim().slice(0, 4000),
     likelihood: clampRiskScoreValue(data.likelihood),
     impact: clampRiskScoreValue(data.impact),
     mitigations: (data.mitigations || '').trim().slice(0, 2000),
@@ -512,7 +512,7 @@ export function updateRisk(project, riskId, data){
   if(!risk) return;
   var title = (data.title || '').trim().slice(0, 120);
   risk.title = title || risk.title;
-  risk.description = (data.description || '').trim().slice(0, 2000);
+  risk.description = (data.description || '').trim().slice(0, 4000);
   risk.likelihood = clampRiskScoreValue(data.likelihood);
   risk.impact = clampRiskScoreValue(data.impact);
   risk.mitigations = (data.mitigations || '').trim().slice(0, 2000);
@@ -591,7 +591,7 @@ export function addDecision(project, data){
     id: uid('dec'),
     key: nextDecisionKey(project),
     title: (data.title || '').trim().slice(0, 120) || 'Untitled decision',
-    description: (data.description || '').trim().slice(0, 2000),
+    description: (data.description || '').trim().slice(0, 4000),
     type: normalizeDecisionType(data.type),
     status: normalizeDecisionStatus(data.status),
     outcome: (data.outcome || '').trim().slice(0, 2000),
@@ -614,7 +614,7 @@ export function updateDecision(project, decisionId, data){
   if(!decision) return;
   var title = (data.title || '').trim().slice(0, 120);
   decision.title = title || decision.title;
-  decision.description = (data.description || '').trim().slice(0, 2000);
+  decision.description = (data.description || '').trim().slice(0, 4000);
   decision.type = normalizeDecisionType(data.type);
   decision.status = normalizeDecisionStatus(data.status);
   decision.outcome = (data.outcome || '').trim().slice(0, 2000);
@@ -652,7 +652,7 @@ export function addPrinciple(project, data){
     id: uid('prin'),
     key: nextPrincipleKey(project),
     title: (data.title || '').trim().slice(0, 120) || 'Untitled principle',
-    description: (data.description || '').trim().slice(0, 2000),
+    description: (data.description || '').trim().slice(0, 4000),
     documentUrl: normalizeDocumentationUrl(data.documentUrl),
     /* Organisation Library sharing is a server-only concept (see modals/principles.js's Share
        checkbox, only ever shown for a server-authoritative project) — always false for a freshly
@@ -670,7 +670,7 @@ export function updatePrinciple(project, principleId, data){
   if(!principle) return;
   var title = (data.title || '').trim().slice(0, 120);
   principle.title = title || principle.title;
-  principle.description = (data.description || '').trim().slice(0, 2000);
+  principle.description = (data.description || '').trim().slice(0, 4000);
   principle.documentUrl = normalizeDocumentationUrl(data.documentUrl);
   principle.dateLastModified = new Date().toISOString();
   saveDB();
@@ -718,7 +718,7 @@ export function addObjective(project, data){
     id: uid('obj'),
     key: nextObjectiveKey(project),
     title: (data.title || '').trim().slice(0, 120) || 'Untitled objective',
-    description: (data.description || '').trim().slice(0, 2000),
+    description: (data.description || '').trim().slice(0, 4000),
     principleIds: Array.isArray(data.principleIds) ? data.principleIds.slice() : [],
     dateCreated: now,
     dateLastModified: now
@@ -732,7 +732,7 @@ export function updateObjective(project, objectiveId, data){
   if(!objective) return;
   var title = (data.title || '').trim().slice(0, 120);
   objective.title = title || objective.title;
-  objective.description = (data.description || '').trim().slice(0, 2000);
+  objective.description = (data.description || '').trim().slice(0, 4000);
   objective.principleIds = Array.isArray(data.principleIds) ? data.principleIds.slice() : [];
   objective.dateLastModified = new Date().toISOString();
   saveDB();
@@ -938,7 +938,7 @@ export function addTeamCommittee(project, data){
     id: uid('tc'),
     key: nextTeamCommitteeKey(project, type),
     name: (data.name || '').trim().slice(0, 120) || 'Untitled team',
-    description: (data.description || '').trim().slice(0, 2000),
+    description: (data.description || '').trim().slice(0, 4000),
     type: type,
     parentId: parentId,
     memberIds: Array.isArray(data.memberIds) ? data.memberIds.slice() : [],
@@ -962,7 +962,7 @@ export function updateTeamCommittee(project, id, data){
     }
   }
   tc.name = name || tc.name;
-  tc.description = (data.description || '').trim().slice(0, 2000);
+  tc.description = (data.description || '').trim().slice(0, 4000);
   tc.type = normalizeTeamCommitteeType(data.type);
   tc.parentId = proposedParentId;
   tc.memberIds = Array.isArray(data.memberIds) ? data.memberIds.slice() : [];

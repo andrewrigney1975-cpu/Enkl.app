@@ -41,7 +41,7 @@ function installFakeFileReader(window){
   doc.getElementById('addPrincipleBtn').click();
   await wait(10);
   doc.getElementById('principleTitleInput').value = 'Simplicity First';
-  doc.getElementById('principleDescriptionInput').value = 'Prefer the simplest solution that works.';
+  doc.getElementById('principleDescEditor').textContent = 'Prefer the simplest solution that works.';
   doc.getElementById('principleDocUrlInput').value = 'docs.example.com/principle1';
   doc.getElementById('principleFormSaveBtn').click();
   await wait(20);
@@ -83,7 +83,7 @@ function installFakeFileReader(window){
   log('picker lists both existing principles', objPrincipleCheckboxes.length === 2, objPrincipleCheckboxes.length);
 
   doc.getElementById('objectiveTitleInput').value = 'Ship a secure, simple MVP';
-  doc.getElementById('objectiveDescriptionInput').value = 'Deliver the core flow without unnecessary complexity.';
+  doc.getElementById('objectiveDescEditor').textContent = 'Deliver the core flow without unnecessary complexity.';
   objPrincipleCheckboxes.forEach(cb => { cb.checked = true; });
   doc.getElementById('objectiveFormSaveBtn').click();
   await wait(20);

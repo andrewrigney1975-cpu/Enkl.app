@@ -235,7 +235,7 @@ function wireEvents(){
   document.getElementById('documentTitleInput').addEventListener('input', function(){
     scheduleDocumentSuggestions(getCurrentProject(), ui.editingDocumentId);
   });
-  document.getElementById('documentDescriptionInput').addEventListener('input', function(){
+  document.getElementById('documentDescEditor').addEventListener('input', function(){
     scheduleDocumentSuggestions(getCurrentProject(), ui.editingDocumentId);
   });
   document.getElementById('documentsMapExportAsBtn').addEventListener('click', function(e){

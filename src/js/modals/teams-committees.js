@@ -11,6 +11,17 @@ import { renderMemberPickerInto, getCheckedItemIdsFrom } from './pickers.js';
 import { confirmDialog } from './confirm.js';
 import { teamCommitteeApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+import { createRichTextEditor } from '../rich-text/editor.js';
+
+// Lazily created on first showTeamCommitteeFormView() call and reused for the whole app session —
+// same pattern as modals/task.js's taskDescEditor.
+var tcDescEditor = null;
+function getTcDescEditor(){
+  if(!tcDescEditor){
+    tcDescEditor = createRichTextEditor(document.getElementById('tcDescEditor'), document.getElementById('tcDescToolbar'), { maxLength: 4000 });
+  }
+  return tcDescEditor;
+}
 
 export function openTeamsCommitteesOverlay(){
   var project = getCurrentProject();
@@ -155,7 +166,7 @@ export function showTeamCommitteeFormView(id){
   document.getElementById('deleteTeamCommitteeBtn').classList.toggle('hidden', !tc);
 
   document.getElementById('tcNameInput').value = tc ? tc.name : '';
-  document.getElementById('tcDescriptionInput').value = tc ? tc.description : '';
+  getTcDescEditor().setMarkdown(tc ? tc.description : '');
   document.getElementById('tcTypeSelect').value = tc ? tc.type : 'team';
   populateTcParentSelect(project, tc ? tc.id : null);
   document.getElementById('tcParentSelect').value = tc && tc.parentId ? tc.parentId : '';
@@ -181,7 +192,7 @@ export async function saveTeamCommitteeFromModal(){
 
   var data = {
     name: name,
-    description: document.getElementById('tcDescriptionInput').value,
+    description: getTcDescEditor().getMarkdown(),
     type: document.getElementById('tcTypeSelect').value,
     parentId: document.getElementById('tcParentSelect').value || null,
     memberIds: getCheckedItemIdsFrom('tcMemberPicker')

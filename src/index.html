@@ -1363,8 +1363,19 @@
           </div>
         </div>
         <div class="kf-field">
-          <label for="documentDescriptionInput">Description</label>
-          <textarea id="documentDescriptionInput" maxlength="500" placeholder="Brief description of this document..." style="min-height:60px;"></textarea>
+          <label for="documentDescEditor">Description</label>
+          <div class="kf-richtext-toolbar" id="documentDescToolbar">
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h1" title="Heading 1">H1</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h2" title="Heading 2">H2</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h3" title="Heading 3">H3</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ul" title="Bullet list">&bull;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ol" title="Numbered list">1.</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="quote" title="Blockquote">&rdquo;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="link" title="Link"><span class="kf-icon" data-icon="link" data-size="14"></span></button>
+          </div>
+          <div class="kf-richtext-editor" id="documentDescEditor" contenteditable="true" data-placeholder="Brief description of this document..." style="min-height:60px;"></div>
         </div>
         <div class="kf-field-row">
           <div class="kf-field">
@@ -1449,8 +1460,19 @@
           <input type="text" id="riskTitleInput" maxlength="120" placeholder="e.g. Key vendor may miss delivery date">
         </div>
         <div class="kf-field">
-          <label for="riskDescriptionInput">Description</label>
-          <textarea id="riskDescriptionInput" maxlength="2000" placeholder="Describe the risk in detail..."></textarea>
+          <label for="riskDescEditor">Description</label>
+          <div class="kf-richtext-toolbar" id="riskDescToolbar">
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h1" title="Heading 1">H1</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h2" title="Heading 2">H2</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h3" title="Heading 3">H3</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ul" title="Bullet list">&bull;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ol" title="Numbered list">1.</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="quote" title="Blockquote">&rdquo;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="link" title="Link"><span class="kf-icon" data-icon="link" data-size="14"></span></button>
+          </div>
+          <div class="kf-richtext-editor" id="riskDescEditor" contenteditable="true" data-placeholder="Describe the risk in detail..."></div>
         </div>
         <div class="kf-field-row">
           <div class="kf-field">
@@ -1563,8 +1585,19 @@
           <input type="text" id="decisionTitleInput" maxlength="120" placeholder="e.g. Adopt PostgreSQL for the new service">
         </div>
         <div class="kf-field">
-          <label for="decisionDescriptionInput">Description</label>
-          <textarea id="decisionDescriptionInput" maxlength="2000" placeholder="Describe the decision and its rationale..."></textarea>
+          <label for="decisionDescEditor">Description</label>
+          <div class="kf-richtext-toolbar" id="decisionDescToolbar">
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h1" title="Heading 1">H1</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h2" title="Heading 2">H2</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h3" title="Heading 3">H3</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ul" title="Bullet list">&bull;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ol" title="Numbered list">1.</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="quote" title="Blockquote">&rdquo;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="link" title="Link"><span class="kf-icon" data-icon="link" data-size="14"></span></button>
+          </div>
+          <div class="kf-richtext-editor" id="decisionDescEditor" contenteditable="true" data-placeholder="Describe the decision and its rationale..."></div>
         </div>
         <div class="kf-field-row">
           <div class="kf-field">
@@ -2231,8 +2264,19 @@
           <input type="text" id="principleTitleInput" maxlength="120" placeholder="e.g. Prefer simplicity over cleverness">
         </div>
         <div class="kf-field">
-          <label for="principleDescriptionInput">Description</label>
-          <textarea id="principleDescriptionInput" maxlength="2000" placeholder="Describe this principle..."></textarea>
+          <label for="principleDescEditor">Description</label>
+          <div class="kf-richtext-toolbar" id="principleDescToolbar">
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h1" title="Heading 1">H1</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h2" title="Heading 2">H2</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h3" title="Heading 3">H3</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ul" title="Bullet list">&bull;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ol" title="Numbered list">1.</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="quote" title="Blockquote">&rdquo;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="link" title="Link"><span class="kf-icon" data-icon="link" data-size="14"></span></button>
+          </div>
+          <div class="kf-richtext-editor" id="principleDescEditor" contenteditable="true" data-placeholder="Describe this principle..."></div>
         </div>
         <div class="kf-field">
           <label for="principleDocUrlInput">External document link</label>
@@ -2288,8 +2332,19 @@
           <input type="text" id="objectiveTitleInput" maxlength="120" placeholder="e.g. Reduce onboarding time by 50%">
         </div>
         <div class="kf-field">
-          <label for="objectiveDescriptionInput">Description</label>
-          <textarea id="objectiveDescriptionInput" maxlength="2000" placeholder="Describe this objective..."></textarea>
+          <label for="objectiveDescEditor">Description</label>
+          <div class="kf-richtext-toolbar" id="objectiveDescToolbar">
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h1" title="Heading 1">H1</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h2" title="Heading 2">H2</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h3" title="Heading 3">H3</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ul" title="Bullet list">&bull;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ol" title="Numbered list">1.</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="quote" title="Blockquote">&rdquo;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="link" title="Link"><span class="kf-icon" data-icon="link" data-size="14"></span></button>
+          </div>
+          <div class="kf-richtext-editor" id="objectiveDescEditor" contenteditable="true" data-placeholder="Describe this objective..."></div>
         </div>
         <div class="kf-field">
           <label>Bound by these Principles</label>
@@ -2358,8 +2413,19 @@
           <input type="text" id="tcNameInput" maxlength="120" placeholder="e.g. Engineering">
         </div>
         <div class="kf-field">
-          <label for="tcDescriptionInput">Description</label>
-          <textarea id="tcDescriptionInput" maxlength="2000" placeholder="Describe this team or committee..."></textarea>
+          <label for="tcDescEditor">Description</label>
+          <div class="kf-richtext-toolbar" id="tcDescToolbar">
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h1" title="Heading 1">H1</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h2" title="Heading 2">H2</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="h3" title="Heading 3">H3</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ul" title="Bullet list">&bull;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="ol" title="Numbered list">1.</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="quote" title="Blockquote">&rdquo;</button>
+            <button type="button" class="kf-btn kf-btn-ghost kf-richtext-btn" data-cmd="link" title="Link"><span class="kf-icon" data-icon="link" data-size="14"></span></button>
+          </div>
+          <div class="kf-richtext-editor" id="tcDescEditor" contenteditable="true" data-placeholder="Describe this team or committee..."></div>
         </div>
         <div class="kf-field">
           <label for="tcTypeSelect">Type</label>

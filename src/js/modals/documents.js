@@ -11,6 +11,18 @@ import { confirmDialog } from './confirm.js';
 import { scheduleDocumentSuggestions, disposeDocumentSuggestionWorker } from '../features/document-suggestions.js';
 import { documentApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+import { createRichTextEditor } from '../rich-text/editor.js';
+
+// Lazily created on first showDocumentsFormView() call and reused for the whole app session — same
+// pattern as modals/task.js's taskDescEditor (see its comment for why "create once, reuse via
+// setMarkdown()" is safe here too: this modal's DOM subtree is static, never removed/replaced).
+var documentDescEditor = null;
+function getDocumentDescEditor(){
+  if(!documentDescEditor){
+    documentDescEditor = createRichTextEditor(document.getElementById('documentDescEditor'), document.getElementById('documentDescToolbar'), { maxLength: 1000 });
+  }
+  return documentDescEditor;
+}
 
 /* =========================================================
    DOCUMENT RELATIONSHIP MAP
@@ -315,7 +327,7 @@ export function showDocumentsFormView(docId){
   document.getElementById('documentTitleInput').value = doc ? doc.title : '';
   document.getElementById('documentUrlInput').value = doc && doc.url ? doc.url : '';
   updateDocUrlOpenButtonVisibilityFor('documentUrlInput', 'documentUrlOpenBtn');
-  document.getElementById('documentDescriptionInput').value = doc ? doc.description : '';
+  getDocumentDescEditor().setMarkdown(doc ? doc.description : '');
   populateOwnerSelect(document.getElementById('documentOwnerSelect'), project, doc ? doc.ownerId : null);
   populateTaskSelect(document.getElementById('documentTaskSelect'), project, doc ? doc.taskId : null);
   renderDocumentPickerInto('documentRelatedPicker', project, doc ? doc.relatedDocumentIds : [], docId || null);
@@ -414,7 +426,7 @@ export async function saveDocumentFromModal(){
   var data = {
     title: title,
     url: document.getElementById('documentUrlInput').value,
-    description: document.getElementById('documentDescriptionInput').value,
+    description: getDocumentDescEditor().getMarkdown(),
     ownerId: document.getElementById('documentOwnerSelect').value || null,
     taskId: document.getElementById('documentTaskSelect').value || null,
     relatedDocumentIds: getCheckedDocumentIdsFrom('documentRelatedPicker')

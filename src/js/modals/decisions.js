@@ -11,6 +11,17 @@ import { populateVocabularyDatalist } from './team.js';
 import { confirmDialog } from './confirm.js';
 import { decisionApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+import { createRichTextEditor } from '../rich-text/editor.js';
+
+// Lazily created on first showDecisionsFormView() call and reused for the whole app session — same
+// pattern as modals/task.js's taskDescEditor.
+var decisionDescEditor = null;
+function getDecisionDescEditor(){
+  if(!decisionDescEditor){
+    decisionDescEditor = createRichTextEditor(document.getElementById('decisionDescEditor'), document.getElementById('decisionDescToolbar'), { maxLength: 4000 });
+  }
+  return decisionDescEditor;
+}
 
 export function populateApproverOptions(project){
   var committeeNames = (project.teamsCommittees || [])
@@ -71,7 +82,7 @@ export function showDecisionsFormView(decisionId){
   document.getElementById('deleteDecisionBtn').classList.toggle('hidden', !decision);
 
   document.getElementById('decisionTitleInput').value = decision ? decision.title : '';
-  document.getElementById('decisionDescriptionInput').value = decision ? decision.description : '';
+  getDecisionDescEditor().setMarkdown(decision ? decision.description : '');
   populateDecisionTypeSelect(decision ? decision.type : 'strategy');
   document.getElementById('decisionStatusSelect').value = decision ? normalizeDecisionStatus(decision.status) : 'open';
   populateOwnerSelect(document.getElementById('decisionOwnerSelect'), project, decision ? decision.ownerId : null);
@@ -185,7 +196,7 @@ export async function saveDecisionFromModal(){
 
   var data = {
     title: title,
-    description: document.getElementById('decisionDescriptionInput').value,
+    description: getDecisionDescEditor().getMarkdown(),
     type: document.getElementById('decisionTypeSelect').value,
     status: document.getElementById('decisionStatusSelect').value,
     outcome: document.getElementById('decisionOutcomeInput').value,

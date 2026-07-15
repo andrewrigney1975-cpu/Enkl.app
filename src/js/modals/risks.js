@@ -11,6 +11,17 @@ import { populateOwnerSelect, populateTaskSelect } from './documents.js';
 import { confirmDialog } from './confirm.js';
 import { riskApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+import { createRichTextEditor } from '../rich-text/editor.js';
+
+// Lazily created on first showRisksFormView() call and reused for the whole app session — same
+// pattern as modals/task.js's taskDescEditor.
+var riskDescEditor = null;
+function getRiskDescEditor(){
+  if(!riskDescEditor){
+    riskDescEditor = createRichTextEditor(document.getElementById('riskDescEditor'), document.getElementById('riskDescToolbar'), { maxLength: 4000 });
+  }
+  return riskDescEditor;
+}
 
 export function populateRiskScoreSelect(selectEl, meta, currentValue){
   selectEl.innerHTML = '';
@@ -83,7 +94,7 @@ export function showRisksFormView(riskId){
   document.getElementById('deleteRiskBtn').classList.toggle('hidden', !risk);
 
   document.getElementById('riskTitleInput').value = risk ? risk.title : '';
-  document.getElementById('riskDescriptionInput').value = risk ? risk.description : '';
+  getRiskDescEditor().setMarkdown(risk ? risk.description : '');
   populateRiskScoreSelect(document.getElementById('riskLikelihoodSelect'), RISK_LIKELIHOOD_META, risk ? risk.likelihood : 1);
   populateRiskScoreSelect(document.getElementById('riskImpactSelect'), RISK_IMPACT_META, risk ? risk.impact : 1);
   updateRiskScorePreview();
@@ -217,7 +228,7 @@ export async function saveRiskFromModal(){
 
   var data = {
     title: title,
-    description: document.getElementById('riskDescriptionInput').value,
+    description: getRiskDescEditor().getMarkdown(),
     likelihood: document.getElementById('riskLikelihoodSelect').value,
     impact: document.getElementById('riskImpactSelect').value,
     mitigations: document.getElementById('riskMitigationsInput').value,

@@ -1,4 +1,5 @@
 "use strict";
+import { htmlToMarkdown } from '../rich-text/markdown.js';
 
 /* =========================================================
    RELATED-DOCUMENT SUGGESTIONS
@@ -77,7 +78,7 @@ export function scheduleDocumentSuggestions(project, excludeDocId){
   debounceTimeoutId = setTimeout(function(){
     debounceTimeoutId = null;
     var title = (document.getElementById('documentTitleInput').value || '').trim();
-    var description = (document.getElementById('documentDescriptionInput').value || '').trim();
+    var description = htmlToMarkdown(document.getElementById('documentDescEditor')).trim();
     if(!title || !description) return;
 
     var kw = getKeywordWorker();

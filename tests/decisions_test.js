@@ -47,7 +47,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('document picker shows the document\u2019s title', doc.getElementById('decisionDocumentPicker').textContent.indexOf('Tech Spec') !== -1);
 
   doc.getElementById('decisionTitleInput').value = 'Adopt PostgreSQL';
-  doc.getElementById('decisionDescriptionInput').value = 'Chosen over MySQL for better JSON support.';
+  doc.getElementById('decisionDescEditor').textContent = 'Chosen over MySQL for better JSON support.';
   doc.getElementById('decisionTypeSelect').value = 'technical';
   const taskOpt = doc.getElementById('decisionTaskSelect').options[1];
   doc.getElementById('decisionTaskSelect').value = taskOpt.value;

@@ -70,7 +70,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('document picker shows the document\u2019s key and title', doc.getElementById('riskDocumentPicker').textContent.indexOf('Mitigation Plan') !== -1);
 
   doc.getElementById('riskTitleInput').value = 'Key vendor may miss delivery date';
-  doc.getElementById('riskDescriptionInput').value = 'The primary hosting vendor has a history of delayed delivery.';
+  doc.getElementById('riskDescEditor').textContent = 'The primary hosting vendor has a history of delayed delivery.';
   doc.getElementById('riskLikelihoodSelect').value = '3';
   doc.getElementById('riskImpactSelect').value = '4';
   doc.getElementById('riskMitigationsInput').value = 'Maintain a backup vendor relationship.';

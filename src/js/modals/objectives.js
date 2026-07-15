@@ -9,6 +9,17 @@ import { renderItemPickerInto, getCheckedItemIdsFrom } from './pickers.js';
 import { confirmDialog } from './confirm.js';
 import { objectiveApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+import { createRichTextEditor } from '../rich-text/editor.js';
+
+// Lazily created on first showObjectivesFormView() call and reused for the whole app session — same
+// pattern as modals/task.js's taskDescEditor.
+var objectiveDescEditor = null;
+function getObjectiveDescEditor(){
+  if(!objectiveDescEditor){
+    objectiveDescEditor = createRichTextEditor(document.getElementById('objectiveDescEditor'), document.getElementById('objectiveDescToolbar'), { maxLength: 4000 });
+  }
+  return objectiveDescEditor;
+}
 
 export function openObjectivesOverlay(){
   var project = getCurrentProject();
@@ -49,7 +60,7 @@ export function showObjectivesFormView(objectiveId){
   document.getElementById('deleteObjectiveBtn').classList.toggle('hidden', !objective);
 
   document.getElementById('objectiveTitleInput').value = objective ? objective.title : '';
-  document.getElementById('objectiveDescriptionInput').value = objective ? objective.description : '';
+  getObjectiveDescEditor().setMarkdown(objective ? objective.description : '');
   renderItemPickerInto('objectivePrinciplePicker', project.principles || [], objective ? objective.principleIds : [], 'No principles in this project yet.');
 
   var metaEl = document.getElementById('objectiveMetaDates');
@@ -120,7 +131,7 @@ export async function saveObjectiveFromModal(){
 
   var data = {
     title: title,
-    description: document.getElementById('objectiveDescriptionInput').value,
+    description: getObjectiveDescEditor().getMarkdown(),
     principleIds: getCheckedItemIdsFrom('objectivePrinciplePicker')
   };
 

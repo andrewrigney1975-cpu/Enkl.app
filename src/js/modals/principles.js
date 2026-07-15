@@ -10,6 +10,17 @@ import { updateDocUrlOpenButtonVisibilityFor, openUrlInputInNewTab } from './doc
 import { confirmDialog } from './confirm.js';
 import { principleApi, organisationPrincipleApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+import { createRichTextEditor } from '../rich-text/editor.js';
+
+// Lazily created on first showPrinciplesFormView() call and reused for the whole app session — same
+// pattern as modals/task.js's taskDescEditor.
+var principleDescEditor = null;
+function getPrincipleDescEditor(){
+  if(!principleDescEditor){
+    principleDescEditor = createRichTextEditor(document.getElementById('principleDescEditor'), document.getElementById('principleDescToolbar'), { maxLength: 4000 });
+  }
+  return principleDescEditor;
+}
 
 export function openPrinciplesOverlay(){
   var project = getCurrentProject();
@@ -55,7 +66,7 @@ export function showPrinciplesFormView(principleId, prefillTitle){
   document.getElementById('deletePrincipleBtn').classList.toggle('hidden', !principle);
 
   document.getElementById('principleTitleInput').value = principle ? principle.title : (prefillTitle || '');
-  document.getElementById('principleDescriptionInput').value = principle ? principle.description : '';
+  getPrincipleDescEditor().setMarkdown(principle ? principle.description : '');
   document.getElementById('principleDocUrlInput').value = principle && principle.documentUrl ? principle.documentUrl : '';
   updateDocUrlOpenButtonVisibilityFor('principleDocUrlInput', 'principleDocUrlOpenBtn');
 
@@ -301,7 +312,7 @@ export async function savePrincipleFromModal(){
 
   var data = {
     title: title,
-    description: document.getElementById('principleDescriptionInput').value,
+    description: getPrincipleDescEditor().getMarkdown(),
     documentUrl: document.getElementById('principleDocUrlInput').value
   };
 

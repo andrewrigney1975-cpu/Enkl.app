@@ -29,7 +29,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   doc.getElementById('documentTitleInput').value = 'Vendor Contract';
   doc.getElementById('documentUrlInput').value = 'docs.example.com/contract';
-  doc.getElementById('documentDescriptionInput').value = 'Signed agreement with the hosting vendor.';
+  doc.getElementById('documentDescEditor').textContent = 'Signed agreement with the hosting vendor.';
   doc.getElementById('documentFormSaveBtn').click();
   await wait(20);
 
