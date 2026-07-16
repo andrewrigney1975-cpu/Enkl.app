@@ -29,4 +29,13 @@ public static class ClaimsPrincipalExtensions
     /// mapping always applies).</summary>
     public static Guid UserId(this ClaimsPrincipal user) =>
         Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub")!);
+
+    /// <summary>Same as <see cref="UserId"/> but null instead of throwing when the claim is absent or
+    /// unparsable — for callers (e.g. ProjectMemberAuthorizationHandler) that must fail closed rather
+    /// than throw on a malformed/incomplete token.</summary>
+    public static Guid? TryUserId(this ClaimsPrincipal user)
+    {
+        var claim = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+        return claim is not null && Guid.TryParse(claim, out var id) ? id : null;
+    }
 }

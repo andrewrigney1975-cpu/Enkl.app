@@ -1,45 +1,61 @@
-using System.Text.Json;
+using Enkl.Api.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enkl.Api.Auth;
 
 /// <summary>
-/// Reads the route's {projectId} and checks it against the JWT's "projects" claim, decoded once per
-/// request. Membership is embedded in the token rather than re-queried from the DB — see the plan's
-/// note on the re-issue-on-membership-change trade-off this implies.
+/// ARCHITECTURE-REVIEW.md finding 2.4: reads the route's {projectId} and checks it against a LIVE
+/// "ProjectMembers" row, not the JWT's baked-in "projects" claim — that claim is minted once at
+/// login and never re-queried, so removing a user from a project used to have no effect until their
+/// token expired/they logged in again (up to the full 8h JWT lifetime), a real staleness window for
+/// a governance tool where offboarding access changes are sometimes urgent. This mirrors the same
+/// "server-side re-validation, never trust the client's embedded claim" idiom §1/§4 already establish
+/// for cross-org isolation — the JWT is still trusted for WHO the caller is (userId/orgId claims,
+/// checked elsewhere), just not for what they're currently a member of.
+///
+/// Registered as a Singleton (Program.cs — IAuthorizationHandler instances are shared across
+/// requests), so AppDbContext (scoped) can't be constructor-injected directly; IServiceScopeFactory
+/// resolves a fresh scoped instance per check instead, matching the standard ASP.NET Core pattern for
+/// a singleton service needing a scoped dependency.
 /// </summary>
 public class ProjectMemberAuthorizationHandler : AuthorizationHandler<ProjectMemberRequirement>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public ProjectMemberAuthorizationHandler(IHttpContextAccessor httpContextAccessor)
+    public ProjectMemberAuthorizationHandler(IHttpContextAccessor httpContextAccessor, IServiceScopeFactory scopeFactory)
     {
         _httpContextAccessor = httpContextAccessor;
+        _scopeFactory = scopeFactory;
     }
 
-    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, ProjectMemberRequirement requirement)
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, ProjectMemberRequirement requirement)
     {
         var httpContext = _httpContextAccessor.HttpContext;
         var routeProjectId = httpContext?.Request.RouteValues["projectId"] as string;
 
         if (routeProjectId is null || !Guid.TryParse(routeProjectId, out var projectId))
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        var projectsClaim = context.User.FindFirst("projects")?.Value;
-        if (projectsClaim is null)
+        var userId = context.User.TryUserId();
+        if (userId is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        var memberships = JsonSerializer.Deserialize<List<ProjectClaim>>(projectsClaim) ?? new();
-        if (memberships.Any(m => m.ProjectId == projectId))
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var isMember = await db.ProjectMembers
+            .AsNoTracking()
+            .AnyAsync(m => m.ProjectId == projectId && m.UserId == userId);
+
+        if (isMember)
         {
             context.Succeed(requirement);
         }
-
-        return Task.CompletedTask;
     }
 }

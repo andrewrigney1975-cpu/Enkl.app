@@ -221,4 +221,49 @@ public class AuthTests
         var response = await client.GetAsync($"/api/projects/{projectId}");
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    // ARCHITECTURE-REVIEW.md finding 2.4, directly exercised: a project membership removed AFTER a
+    // token was minted must stop granting access immediately — not just at next login/token expiry.
+    // ProjectMemberAuthorizationHandler now checks a live "ProjectMembers" row instead of trusting the
+    // JWT's baked-in "projects" claim, which still reflects membership as of login time throughout.
+    [Fact]
+    public async Task ProjectMemberPolicy_RejectsTokenWhoseMembershipWasRemovedAfterMint()
+    {
+        var org = TestDataHelper.Unique("org");
+        var user = TestDataHelper.Unique("user");
+        var projectKey = TestDataHelper.Unique("PRJ");
+        Guid projectId;
+        Guid userId;
+        using (var scope = _fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (seededOrg, seededUser) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user);
+            userId = seededUser.Id;
+            var project = await TestDataHelper.SeedProjectAsync(db, seededOrg.Id, projectKey, member: seededUser);
+            projectId = project.Id;
+        }
+
+        var client = _fixture.Factory.CreateClient();
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(user, TestDataHelper.DefaultPassword));
+        var login = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login!.Token);
+
+        // The token's "projects" claim now includes this membership — confirm access works first.
+        var beforeRemoval = await client.GetAsync($"/api/projects/{projectId}");
+        Assert.Equal(HttpStatusCode.OK, beforeRemoval.StatusCode);
+
+        // Remove the membership directly (e.g. an admin removing them from the project) without
+        // touching the already-issued token at all — SecurityStamp is untouched, so H2's revocation
+        // check alone would NOT catch this; only a live membership check does.
+        using (var scope = _fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var membership = await db.ProjectMembers.SingleAsync(m => m.ProjectId == projectId && m.UserId == userId);
+            db.ProjectMembers.Remove(membership);
+            await db.SaveChangesAsync();
+        }
+
+        var afterRemoval = await client.GetAsync($"/api/projects/{projectId}");
+        Assert.Equal(HttpStatusCode.Forbidden, afterRemoval.StatusCode);
+    }
 }

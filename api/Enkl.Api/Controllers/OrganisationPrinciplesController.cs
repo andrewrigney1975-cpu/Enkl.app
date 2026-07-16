@@ -1,9 +1,10 @@
-using System.Text.Json;
 using Enkl.Api.Auth;
+using Enkl.Api.Data;
 using Enkl.Api.Dtos;
 using Enkl.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enkl.Api.Controllers;
 
@@ -14,8 +15,10 @@ namespace Enkl.Api.Controllers;
 /// unlike the read-only endpoints above, it also requires the caller to actually be a member of the
 /// target project (security review finding M9) — this route isn't under a {projectId} route segment
 /// (TargetProjectId lives in the request body instead), so the usual [Authorize(Policy =
-/// "ProjectMember")] route-based check (ProjectMemberAuthorizationHandler) can't apply here; the
-/// same "projects" JWT claim it reads is checked manually below instead.
+/// "ProjectMember")] route-based check (ProjectMemberAuthorizationHandler) can't apply here; a live
+/// DB check (ARCHITECTURE-REVIEW.md finding 2.4 — see ProjectMemberAuthorizationHandler's own doc
+/// comment for why a live check replaced the stale JWT "projects" claim) is done manually below
+/// instead, same reasoning, just without a route-based handler to hook into.
 /// </summary>
 [ApiController]
 [Authorize]
@@ -23,10 +26,12 @@ namespace Enkl.Api.Controllers;
 public class OrganisationPrinciplesController : ControllerBase
 {
     private readonly PrincipleService _principles;
+    private readonly AppDbContext _db;
 
-    public OrganisationPrinciplesController(PrincipleService principles)
+    public OrganisationPrinciplesController(PrincipleService principles, AppDbContext db)
     {
         _principles = principles;
+        _db = db;
     }
 
     [HttpGet]
@@ -44,7 +49,7 @@ public class OrganisationPrinciplesController : ControllerBase
     [HttpPost("{principleId:guid}/copy")]
     public async Task<IActionResult> Copy(Guid principleId, CopyPrincipleRequest request)
     {
-        if (!CallerIsMemberOf(request.TargetProjectId))
+        if (!await CallerIsMemberOfAsync(request.TargetProjectId))
         {
             return Forbid();
         }
@@ -53,12 +58,6 @@ public class OrganisationPrinciplesController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
-    private bool CallerIsMemberOf(Guid projectId)
-    {
-        var projectsClaim = User.FindFirst("projects")?.Value;
-        if (projectsClaim is null) return false;
-
-        var memberships = JsonSerializer.Deserialize<List<ProjectClaim>>(projectsClaim) ?? new();
-        return memberships.Any(m => m.ProjectId == projectId);
-    }
+    private async Task<bool> CallerIsMemberOfAsync(Guid projectId) =>
+        await _db.ProjectMembers.AsNoTracking().AnyAsync(m => m.ProjectId == projectId && m.UserId == User.UserId());
 }
