@@ -61,17 +61,27 @@ function registerRoutes(App $app): void
 
     // ---- Auth (all rate-limited — security review finding H1 — mirroring exactly which .NET
     // actions carry [EnableRateLimiting("auth")], see Program.cs's "auth" policy) ----
-    $app->post('/api/auth/login', [AuthController::class, 'login'])->add(RateLimitMiddleware::class);
+    // Contract-parity harness finding (contract-tests/, 2026-07-16): bare `RateLimitMiddleware::class`
+    // is BROKEN for any middleware whose constructor has a required-in-effect typed first parameter.
+    // Slim's container-less CallableResolver::resolveSlimNotation() always calls
+    // `new $class($this->container)` for a plain class-string (see vendor/slim/slim/Slim/
+    // CallableResolver.php) — with no DI container configured anywhere in this app, that's
+    // `new RateLimitMiddleware(null)`, which crashes against `string $policyName = 'auth'` (null
+    // isn't assignable to a non-nullable string param, so the default never kicks in). Every route
+    // below 500'd on every request until this was caught. Always pass a constructed instance instead
+    // — `new RateLimitMiddleware()` for the default "auth" policy, exactly like the telemetry route
+    // below already does for its own named policy.
+    $app->post('/api/auth/login', [AuthController::class, 'login'])->add(new RateLimitMiddleware());
     // sso-lookup/sso-exchange are anonymous like login itself — see AuthController.php's own notes
     // on each (minimal-disclosure org discovery; single-use SAML exchange-code redemption).
-    $app->get('/api/auth/sso-lookup', [AuthController::class, 'ssoLookup'])->add(RateLimitMiddleware::class);
-    $app->post('/api/auth/sso-exchange', [AuthController::class, 'ssoExchange'])->add(RateLimitMiddleware::class);
+    $app->get('/api/auth/sso-lookup', [AuthController::class, 'ssoLookup'])->add(new RateLimitMiddleware());
+    $app->post('/api/auth/sso-exchange', [AuthController::class, 'ssoExchange'])->add(new RateLimitMiddleware());
     $app->post('/api/auth/change-password', [AuthController::class, 'changePassword'])
-        ->add(RequireAuthMiddleware::class)->add(RateLimitMiddleware::class);
+        ->add(RequireAuthMiddleware::class)->add(new RateLimitMiddleware());
 
     // ---- Migration (deliberately anonymous — bootstrapping, see MigrationController.cs's own note;
     // rate-limited — H1 — since it was also a plausible unauthenticated resource-exhaustion target) ----
-    $app->post('/api/migration/projects', [MigrationController::class, 'migrate'])->add(RateLimitMiddleware::class);
+    $app->post('/api/migration/projects', [MigrationController::class, 'migrate'])->add(new RateLimitMiddleware());
 
     // ---- Telemetry (deliberately anonymous — a fire-and-forget RUM beacon from every page load,
     // signed in or not; its own "telemetry" rate-limit policy, more generous than "auth"'s

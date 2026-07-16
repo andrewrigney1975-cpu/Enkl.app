@@ -1,0 +1,10 @@
+{
+  "name": "enkl-contract-tests",
+  "version": "1.0.0",
+  "description": "Cross-tier contract-parity harness — fires the same requests at api/Enkl.Api and php-api and diffs status/JSON shape",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node run-parity.js"
+  }
+}

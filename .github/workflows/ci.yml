@@ -53,3 +53,105 @@ jobs:
       - name: Run test suite
         working-directory: tests
         run: node run_all_tests.js
+
+  contract-parity:
+    name: Cross-tier contract parity
+    runs-on: ubuntu-latest
+    services:
+      db-net:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: enkl
+          POSTGRES_USER: enkl
+          POSTGRES_PASSWORD: enkl_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U enkl"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      db-php:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: enkl_php
+          POSTGRES_USER: enkl
+          POSTGRES_PASSWORD: enkl_dev_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U enkl"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pgsql
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Composer install (php-api)
+        working-directory: php-api
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # Both tiers run in Development/development mode — the same "zero-setup local run" exemption
+      # both already document, which skips the production-secrets guard entirely rather than fighting
+      # it with fake-but-real-looking values. .NET's default appsettings.json connection string
+      # already points at localhost:5432/enkl, matching db-net, so no extra env vars are needed there
+      # beyond the URL.
+      - name: Start .NET API tier (background)
+        working-directory: api/Enkl.Api
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://localhost:8080
+        run: nohup dotnet run --no-launch-profile > /tmp/net-parity.log 2>&1 &
+
+      - name: Start PHP API tier (background)
+        working-directory: php-api
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5433
+          DB_NAME: enkl_php
+          DB_USER: enkl
+          DB_PASSWORD: enkl_dev_password
+          # Placeholder from .env.example — fine functionally, the guard that rejects it is skipped
+          # entirely in APP_ENV=development.
+          JWT_SIGNING_KEY: change-me-to-a-random-32-plus-character-string
+          JWT_ISSUER: Enkl.Api
+          JWT_AUDIENCE: Enkl.App
+          JWT_EXPIRY_HOURS: '8'
+          RUN_MIGRATIONS_ON_STARTUP: 'true'
+          APP_ENV: development
+          PUBLIC_BASE_URL: http://localhost:8081
+        run: nohup php -S localhost:8081 -t public > /tmp/php-parity.log 2>&1 &
+
+      - name: Wait for both tiers to be healthy
+        run: |
+          # Generous timeout: a cold `dotnet run` (fresh NuGet restore + build, no cache configured
+          # in this job) can take a while before it starts listening.
+          for url in http://localhost:8080/health http://localhost:8081/health; do
+            echo "Waiting for $url..."
+            for i in $(seq 1 60); do
+              if curl -sf "$url" >/dev/null; then echo "$url is up"; break; fi
+              if [ "$i" -eq 60 ]; then echo "$url never came up"; exit 1; fi
+              sleep 3
+            done
+          done
+
+      - name: Run contract-parity harness
+        working-directory: contract-tests
+        env:
+          NET_BASE_URL: http://localhost:8080
+          PHP_BASE_URL: http://localhost:8081
+        run: node run-parity.js
+
+      - name: Dump backend logs
+        if: always()
+        run: |
+          echo "===== .NET tier log ====="
+          cat /tmp/net-parity.log || true
+          echo "===== PHP tier log ====="
+          cat /tmp/php-parity.log || true
