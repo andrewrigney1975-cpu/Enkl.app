@@ -36,29 +36,58 @@ final class RateLimitMiddleware implements MiddlewareInterface
     ) {
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.2 (second half): a full-table prune on every single
+    // rate-limited request is wasted write amplification on a hot path — 1-in-20 is frequent enough
+    // that RateLimitHits never grows unbounded between prunes (every partition gets checked at least
+    // every ~20 requests across the WHOLE table, not per-partition), while cutting prune-DELETE volume
+    // ~95%. The DELETE itself needs no lock — it's a pure timestamp filter with no check-then-act
+    // race, unlike the count-then-insert below.
+    private const PRUNE_PROBABILITY_DENOMINATOR = 20;
+
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $partitionKey = $this->policyName . ':' . $this->clientIp($request);
         $db = Database::connection();
 
-        // Opportunistic prune, same lazy-prune convention as ExchangeCodes/SsoExchangeCodeService —
-        // no separate cron/cleanup job needed for a table that's naturally self-limiting in size.
-        $db->prepare('DELETE FROM "RateLimitHits" WHERE "OccurredAt" < now() - make_interval(secs => :window)')
-            ->execute(['window' => self::WINDOW_SECONDS]);
-
-        $countStmt = $db->prepare(
-            'SELECT COUNT(*) FROM "RateLimitHits" WHERE "PartitionKey" = :key AND "OccurredAt" > now() - make_interval(secs => :window)'
-        );
-        $countStmt->execute(['key' => $partitionKey, 'window' => self::WINDOW_SECONDS]);
-        $count = (int) $countStmt->fetchColumn();
-
-        if ($count >= $this->permitLimit) {
-            $response = new Response(429);
-            $response->getBody()->write(json_encode(['message' => 'Too many attempts. Please wait a moment and try again.']));
-            return $response->withHeader('Content-Type', 'application/json');
+        if (random_int(1, self::PRUNE_PROBABILITY_DENOMINATOR) === 1) {
+            $db->prepare('DELETE FROM "RateLimitHits" WHERE "OccurredAt" < now() - make_interval(secs => :window)')
+                ->execute(['window' => self::WINDOW_SECONDS]);
         }
 
-        $db->prepare('INSERT INTO "RateLimitHits" ("PartitionKey") VALUES (:key)')->execute(['key' => $partitionKey]);
+        // ARCHITECTURE-REVIEW.md finding 3.2 (first half, the real bug): the previous count-then-insert
+        // was two separate round trips with no lock between them — two concurrent requests from the
+        // same partition key could both read count < limit before either's INSERT was visible to the
+        // other, letting the effective limit be exceeded under exactly the multi-worker PHP-FPM
+        // concurrency this table exists to handle. pg_advisory_xact_lock(hashtext(:key)) serializes
+        // the count+insert for THIS partition key only (auto-released at commit/rollback, no explicit
+        // unlock call needed) — a different partition key (different IP/policy) never contends with
+        // this one, so normal traffic sees no added latency, only concurrent requests from the same
+        // abusive client do (which is exactly the case this lock needs to slow down).
+        $db->beginTransaction();
+        try {
+            $db->prepare('SELECT pg_advisory_xact_lock(hashtext(:key))')->execute(['key' => $partitionKey]);
+
+            $countStmt = $db->prepare(
+                'SELECT COUNT(*) FROM "RateLimitHits" WHERE "PartitionKey" = :key AND "OccurredAt" > now() - make_interval(secs => :window)'
+            );
+            $countStmt->execute(['key' => $partitionKey, 'window' => self::WINDOW_SECONDS]);
+            $count = (int) $countStmt->fetchColumn();
+
+            if ($count >= $this->permitLimit) {
+                $db->rollBack();
+                $response = new Response(429);
+                $response->getBody()->write(json_encode(['message' => 'Too many attempts. Please wait a moment and try again.']));
+                return $response->withHeader('Content-Type', 'application/json');
+            }
+
+            $db->prepare('INSERT INTO "RateLimitHits" ("PartitionKey") VALUES (:key)')->execute(['key' => $partitionKey]);
+            $db->commit();
+        } catch (\Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            throw $e;
+        }
 
         return $handler->handle($request);
     }

@@ -14,7 +14,25 @@ final class ObjectiveService
     {
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the Objectives row and setPrinciples()'s junction-table
+    // INSERTs used to be separately auto-committed — a failure in the link-writing left an Objective
+    // created with none of its Principle cross-references, silently.
     public function create(string $projectId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->createInTransaction($projectId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function createInTransaction(string $projectId, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT "Key" FROM "Projects" WHERE "Id" = :id');
         $stmt->execute(['id' => $projectId]);
@@ -32,7 +50,24 @@ final class ObjectiveService
         return $this->toDto($id);
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the Objectives UPDATE, the ObjectivePrinciple DELETE, and
+    // setPrinciples()'s re-INSERTs used to be separately auto-committed.
     public function update(string $projectId, string $objectiveId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->updateInTransaction($projectId, $objectiveId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function updateInTransaction(string $projectId, string $objectiveId, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT 1 FROM "Objectives" WHERE "Id" = :id AND "ProjectId" = :pid');
         $stmt->execute(['id' => $objectiveId, 'pid' => $projectId]);

@@ -14,7 +14,25 @@ final class DocumentService
     {
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the Documents row and setRelatedDocuments()'s junction-
+    // table INSERTs used to be separately auto-committed — a failure in the link-writing left a
+    // Document created with none of its related-document cross-references, silently.
     public function create(string $projectId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->createInTransaction($projectId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function createInTransaction(string $projectId, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT "Key" FROM "Projects" WHERE "Id" = :id');
         $stmt->execute(['id' => $projectId]);
@@ -38,7 +56,24 @@ final class DocumentService
         return $this->toDto($id);
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the Documents UPDATE, the DocumentRelation DELETE, and
+    // setRelatedDocuments()'s re-INSERTs used to be separately auto-committed.
     public function update(string $projectId, string $documentId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->updateInTransaction($projectId, $documentId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function updateInTransaction(string $projectId, string $documentId, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT 1 FROM "Documents" WHERE "Id" = :id AND "ProjectId" = :pid');
         $stmt->execute(['id' => $documentId, 'pid' => $projectId]);

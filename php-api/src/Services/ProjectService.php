@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Enkl\Api\Services;
 
 use Enkl\Api\Auth\JwtService;
+use Enkl\Api\Support\MemberPalette;
 use Enkl\Api\Support\Uuid;
 use Enkl\Api\Validation\ApiValidationException;
 use PDO;
@@ -17,10 +18,6 @@ use PDO;
  */
 final class ProjectService
 {
-    // Must match MemberService::MEMBER_PALETTE[0] — a brand new project's sole member (its creator)
-    // gets the same first-slot color a migrated project's first member would.
-    private const FIRST_MEMBER_COLOR = '#0052CC';
-
     public function __construct(private readonly PDO $db)
     {
     }
@@ -82,7 +79,28 @@ final class ProjectService
      * project, since the request's own token predates this project's existence and wouldn't grant
      * access to it otherwise (JWT membership claims are only refreshed at login — see JwtService).
      */
+    // ARCHITECTURE-REVIEW.md finding 3.1, the review's own named example: this used to run INSERT
+    // Project -> INSERT ProjectMember -> several INSERT Column/TaskType -> optional UPDATE Workflow
+    // as separately auto-committed statements under PDO's default autocommit mode — a mid-sequence
+    // failure (e.g. a constraint violation on the Nth column) left a partially-created project (a
+    // Project row with no columns/task types, or worse, no ProjectMember row at all, orphaning it
+    // from the caller who just "created" it). Wrapped exactly like MigrationService::migrate() does.
     public function create(string $callerUserId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->createInTransaction($callerUserId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function createInTransaction(string $callerUserId, array $request): ?array
     {
         $stmt = $this->db->prepare(<<<SQL
             SELECT u.*, o."Name" AS "OrganisationName" FROM "Users" u
@@ -137,7 +155,7 @@ final class ProjectService
         $stmt = $this->db->prepare(
             'INSERT INTO "ProjectMembers" ("Id", "ProjectId", "UserId", "Color") VALUES (:id, :pid, :uid, :color)'
         );
-        $stmt->execute(['id' => Uuid::v4(), 'pid' => $projectId, 'uid' => $callerUserId, 'color' => self::FIRST_MEMBER_COLOR]);
+        $stmt->execute(['id' => Uuid::v4(), 'pid' => $projectId, 'uid' => $callerUserId, 'color' => MemberPalette::COLORS[0]]);
 
         if ($template !== null) {
             $templateColumns = json_decode($template['ColumnsJson'], true) ?? [];

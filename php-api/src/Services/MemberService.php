@@ -6,6 +6,7 @@ namespace Enkl\Api\Services;
 
 use Enkl\Api\Auth\PasswordHasher;
 use Enkl\Api\Auth\UsernameNormalizer;
+use Enkl\Api\Support\MemberPalette;
 use Enkl\Api\Support\Uuid;
 use Enkl\Api\Validation\ApiValidationException;
 use PDO;
@@ -18,18 +19,30 @@ use PDO;
  */
 final class MemberService
 {
-    // Mirrors MEMBER_PALETTE in src/js/config.js exactly, so a member added from a browser and one
-    // added via a fresh migration land on the same color for the same position.
-    private const MEMBER_PALETTE = [
-        '#0052CC', '#00875A', '#FF8B00', '#974DE2', '#DE350B',
-        '#006644', '#5243AA', '#B04632', '#1B5E20', '#8777D9',
-    ];
-
     public function __construct(private readonly PDO $db)
     {
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the User insert (new-user branch) and the ProjectMember
+    // insert used to be two separately auto-committed statements — a failure on the second left a
+    // real User account behind with no ProjectMember row at all, invisible on the project but still
+    // occupying that username/email.
     public function create(string $projectId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->createInTransaction($projectId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function createInTransaction(string $projectId, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT "OrganisationId" FROM "Projects" WHERE "Id" = :id');
         $stmt->execute(['id' => $projectId]);
@@ -102,7 +115,7 @@ final class MemberService
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM "ProjectMembers" WHERE "ProjectId" = :pid');
         $stmt->execute(['pid' => $projectId]);
         $memberCount = (int) $stmt->fetchColumn();
-        $color = self::MEMBER_PALETTE[$memberCount % count(self::MEMBER_PALETTE)];
+        $color = MemberPalette::colorForIndex($memberCount);
 
         $memberId = Uuid::v4();
         $this->db->prepare('INSERT INTO "ProjectMembers" ("Id", "ProjectId", "UserId", "Color") VALUES (:id, :pid, :uid, :color)')
@@ -111,7 +124,26 @@ final class MemberService
         return ['id' => $memberId, 'userId' => $user['Id'], 'displayName' => $user['DisplayName'], 'email' => $user['EmailAddress'] ?? null, 'color' => $color, 'role' => null, 'allocatedFraction' => null, 'reportsToId' => null];
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the conditional Users.DisplayName update and the
+    // unconditional ProjectMembers update used to be two separately auto-committed statements — a
+    // failure on the second left the User's display name changed with the ProjectMembers row (role/
+    // allocation/reportsTo) never actually updated to match what the caller asked for.
     public function update(string $projectId, string $memberId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->updateInTransaction($projectId, $memberId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function updateInTransaction(string $projectId, string $memberId, array $request): ?array
     {
         $stmt = $this->db->prepare(<<<SQL
             SELECT m.*, u."DisplayName" AS "UserDisplayName", u."EmailAddress" AS "UserEmailAddress" FROM "ProjectMembers" m
@@ -162,7 +194,25 @@ final class MemberService
         return ['id' => $memberId, 'userId' => $member['UserId'], 'displayName' => $displayName, 'email' => $member['UserEmailAddress'], 'color' => $member['Color'], 'role' => $role, 'allocatedFraction' => $allocatedFraction, 'reportsToId' => $reportsToId];
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: unlinking ReportsTo and deleting the member row used to be
+    // two separately auto-committed statements — a failure on the DELETE left ReportsTo already
+    // cleared for anyone who reported to this (still-existing) member, a confusing partial state.
     public function delete(string $projectId, string $memberId): bool
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->deleteInTransaction($projectId, $memberId);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function deleteInTransaction(string $projectId, string $memberId): bool
     {
         $stmt = $this->db->prepare('SELECT 1 FROM "ProjectMembers" WHERE "Id" = :id AND "ProjectId" = :pid');
         $stmt->execute(['id' => $memberId, 'pid' => $projectId]);

@@ -17,7 +17,25 @@ final class RetrospectiveService
     {
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the Retrospectives row and applyParticipants()'s writes
+    // used to be separately auto-committed — a failure in the participants step left a Retrospective
+    // created with none of its participants, silently.
     public function create(string $projectId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->createInTransaction($projectId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function createInTransaction(string $projectId, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT "Key" FROM "Projects" WHERE "Id" = :id');
         $stmt->execute(['id' => $projectId]);
@@ -42,7 +60,24 @@ final class RetrospectiveService
         return $this->getFullDto($projectId, $id);
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the optional timer UPDATE, the main row UPDATE, and
+    // applyParticipants()'s writes used to be separately auto-committed.
     public function update(string $projectId, string $retrospectiveId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->updateInTransaction($projectId, $retrospectiveId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function updateInTransaction(string $projectId, string $retrospectiveId, array $request): ?array
     {
         if (!$this->retrospectiveExists($projectId, $retrospectiveId)) {
             return null;
@@ -136,7 +171,27 @@ final class RetrospectiveService
      * shared org-wide Principle library sees it too), then links the item back to the new Principle
      * so the UI can show it as already promoted.
      */
+    // ARCHITECTURE-REVIEW.md finding 3.1 (mirrors the .NET tier's own equivalent fix,
+    // ARCHITECTURE-REVIEW.md finding 2.2 on that side): $this->principles->create() commits its own
+    // INSERT immediately, then this method does a SECOND, separately auto-committed UPDATE to link
+    // "PromotedPrincipleId" — a failure on the second statement left a real, unlinked Principle behind
+    // while the retrospective item never shows as promoted.
     public function promoteItem(string $projectId, string $retrospectiveId, string $itemId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->promoteItemInTransaction($projectId, $retrospectiveId, $itemId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function promoteItemInTransaction(string $projectId, string $retrospectiveId, string $itemId, array $request): ?array
     {
         if (!$this->itemOwned($projectId, $retrospectiveId, $itemId)) {
             return null;

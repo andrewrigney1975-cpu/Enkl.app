@@ -22,7 +22,28 @@ final class TaskService
     {
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the Task INSERT, the Projects.TaskCounter increment, and
+    // the TaskDependencies INSERTs used to be separately auto-committed — a failure after the Task
+    // insert but before the counter increment leaves the NEXT created task in this project reusing
+    // the same Key (duplicate task keys, likely a confusing unique-constraint failure on the next
+    // create instead of this one); a failure mid-dependency-loop leaves a task created with an
+    // incomplete dependency list and no error surfaced about it.
     public function create(string $projectId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->createInTransaction($projectId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function createInTransaction(string $projectId, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM "Projects" WHERE "Id" = :id');
         $stmt->execute(['id' => $projectId]);
@@ -79,7 +100,26 @@ final class TaskService
         return $this->toTaskDto($taskId);
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the Task UPDATE, the TaskDependencies DELETE+re-INSERT, and
+    // recordAuditEntries()'s own INSERTs used to be separately auto-committed — a failure mid-sequence
+    // left the task's fields updated but its dependency list half-cleared, or audit history missing
+    // for a change that did actually take effect.
     public function update(string $projectId, string $taskId, array $request, ?string $changedByDisplayName): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->updateInTransaction($projectId, $taskId, $request, $changedByDisplayName);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function updateInTransaction(string $projectId, string $taskId, array $request, ?string $changedByDisplayName): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM "Tasks" WHERE "Id" = :id AND "ProjectId" = :pid');
         $stmt->execute(['id' => $taskId, 'pid' => $projectId]);
@@ -176,7 +216,25 @@ final class TaskService
         return $row === false ? null : ['taskId' => $row['Id'], 'key' => $row['Key'], 'title' => $row['Title']];
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: orphaning sub-tasks and deleting the task used to be two
+    // separately auto-committed statements — a failure on the DELETE left sub-tasks already
+    // unlinked from a parent that still exists.
     public function delete(string $projectId, string $taskId): bool
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->deleteInTransaction($projectId, $taskId);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function deleteInTransaction(string $projectId, string $taskId): bool
     {
         $stmt = $this->db->prepare('SELECT 1 FROM "Tasks" WHERE "Id" = :id AND "ProjectId" = :pid');
         $stmt->execute(['id' => $taskId, 'pid' => $projectId]);

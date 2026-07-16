@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Enkl\Api\Services;
 
+use Enkl\Api\Support\MemberPalette;
 use Enkl\Api\Support\Uuid;
 use Enkl\Api\Validation\ApiValidationException;
 use Enkl\Api\Validation\CycleDetection;
@@ -13,13 +14,6 @@ use PDO;
 final class TeamCommitteeService
 {
     private const VALID_TYPES = ['team', 'committee'];
-
-    // Mirrors MEMBER_PALETTE in MemberService.php/src/js/config.js — reused here because applyOrgTeam
-    // can create brand-new ProjectMembers for OrgTeam members who aren't on the project yet.
-    private const MEMBER_PALETTE = [
-        '#0052CC', '#00875A', '#FF8B00', '#974DE2', '#DE350B',
-        '#006644', '#5243AA', '#B04632', '#1B5E20', '#8777D9',
-    ];
 
     public function __construct(private readonly PDO $db)
     {
@@ -58,7 +52,25 @@ final class TeamCommitteeService
         return $this->toDto($id);
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: the row UPDATE, the member-list DELETE, and setMembers()'s
+    // own INSERTs used to be separately auto-committed — a failure partway through could leave the
+    // team's fields updated but its membership list half-cleared, half-repopulated.
     public function update(string $projectId, string $id, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->updateInTransaction($projectId, $id, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function updateInTransaction(string $projectId, string $id, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT 1 FROM "TeamsCommittees" WHERE "Id" = :id AND "ProjectId" = :pid');
         $stmt->execute(['id' => $id, 'pid' => $projectId]);
@@ -95,7 +107,25 @@ final class TeamCommitteeService
         return $this->toDto($id);
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: orphaning children and deleting the row used to be two
+    // separately auto-committed statements — a failure on the DELETE left children already unlinked
+    // from a parent that still exists.
     public function delete(string $projectId, string $id): bool
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->deleteInTransaction($projectId, $id);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function deleteInTransaction(string $projectId, string $id): bool
     {
         $stmt = $this->db->prepare('SELECT 1 FROM "TeamsCommittees" WHERE "Id" = :id AND "ProjectId" = :pid');
         $stmt->execute(['id' => $id, 'pid' => $projectId]);
@@ -120,7 +150,29 @@ final class TeamCommitteeService
      * migration comment for why a rename wouldn't fool this). Ported from TeamCommitteeService.cs's
      * ApplyOrgTeamAsync.
      */
+    // ARCHITECTURE-REVIEW.md finding 3.1: creating/updating the TeamCommittee row, creating any
+    // missing ProjectMembers, and linking them all used to be N separately auto-committed statements
+    // — a mid-loop failure left some OrgTeam members added as ProjectMembers/linked and others not,
+    // silently defeating the "safe to re-run repeatedly" guarantee this method's own doc comment
+    // promises (a re-run after a partial failure could double-process the ones that already succeeded
+    // differently than intended, since the whole point of idempotent re-running is that each run
+    // either fully applies or doesn't touch the DB at all).
     public function applyOrgTeam(string $projectId, string $orgTeamId): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->applyOrgTeamInTransaction($projectId, $orgTeamId);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function applyOrgTeamInTransaction(string $projectId, string $orgTeamId): ?array
     {
         $stmt = $this->db->prepare('SELECT "Id", "Key", "OrganisationId" FROM "Projects" WHERE "Id" = :id');
         $stmt->execute(['id' => $projectId]);
@@ -172,7 +224,7 @@ final class TeamCommitteeService
 
             if ($projectMember === false) {
                 $projectMemberId = Uuid::v4();
-                $color = self::MEMBER_PALETTE[$memberCount % count(self::MEMBER_PALETTE)];
+                $color = MemberPalette::colorForIndex($memberCount);
                 $this->db->prepare('INSERT INTO "ProjectMembers" ("Id", "ProjectId", "UserId", "Color") VALUES (:id, :pid, :userId, :color)')
                     ->execute(['id' => $projectMemberId, 'pid' => $projectId, 'userId' => $userId, 'color' => $color]);
                 $memberCount++;

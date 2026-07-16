@@ -78,7 +78,25 @@ final class ScimGroupService
     }
 
     /** @param array<string,mixed> $request */
+    // ARCHITECTURE-REVIEW.md finding 3.1: the OrgTeams INSERT and addMembers()'s per-member INSERTs
+    // used to be separately auto-committed — a failure partway through addMembers left a team created
+    // with only some of the members an IdP's provisioning request actually specified.
     public function create(string $orgId, array $request): array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->createInTransaction($orgId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function createInTransaction(string $orgId, array $request): array
     {
         $teamId = Uuid::v4();
         $name = self::normalizeName($request['displayName'] ?? null);
@@ -99,7 +117,25 @@ final class ScimGroupService
     /** PUT replaces the whole membership list, per SCIM full-resource-replace semantics — unlike
      * PATCH's add/remove operations below, which touch only the members named.
      * @param array<string,mixed> $request */
+    // ARCHITECTURE-REVIEW.md finding 3.1: the Name UPDATE, the membership DELETE, and addMembers()'s
+    // re-INSERTs used to be separately auto-committed — a mid-sequence failure could leave the team
+    // renamed but its membership list half-cleared, half-repopulated.
     public function replace(string $orgId, string $groupId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->replaceInTransaction($orgId, $groupId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function replaceInTransaction(string $orgId, string $groupId, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT 1 FROM "OrgTeams" WHERE "Id" = :id AND "OrganisationId" = :orgId');
         $stmt->execute(['id' => $groupId, 'orgId' => $orgId]);
@@ -127,7 +163,25 @@ final class ScimGroupService
      * ScimUserService::applyFieldChange.
      * @param array<string,mixed> $request
      */
+    // ARCHITECTURE-REVIEW.md finding 3.1: a SCIM PATCH can carry several Operations in one request,
+    // each its own separately auto-committed UPDATE/DELETE/INSERT — a failure partway through the
+    // loop left some operations applied and others not, with no way for the IdP to know which.
     public function patch(string $orgId, string $groupId, array $request): ?array
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->patchInTransaction($orgId, $groupId, $request);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function patchInTransaction(string $orgId, string $groupId, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT 1 FROM "OrgTeams" WHERE "Id" = :id AND "OrganisationId" = :orgId');
         $stmt->execute(['id' => $groupId, 'orgId' => $orgId]);

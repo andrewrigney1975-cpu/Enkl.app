@@ -61,7 +61,27 @@ final class ColumnService
         return ['id' => $columnId, 'name' => $request['name'] ?? '', 'done' => $done, 'color' => $request['color'] ?? null, 'order' => (int) ($request['order'] ?? 0), 'cap' => $cap];
     }
 
+    // ARCHITECTURE-REVIEW.md finding 3.1: unlink ParentTaskId -> delete TaskDependencies -> delete
+    // Tasks -> delete Column used to run as four separately auto-committed statements — a
+    // mid-sequence failure (e.g. the TaskDependencies delete) left orphaned rows referencing tasks
+    // that either still exist with a dangling dependency, or were about to be deleted, either way an
+    // inconsistent state no retry could cleanly recover from.
     public function delete(string $projectId, string $columnId): bool
+    {
+        $this->db->beginTransaction();
+        try {
+            $result = $this->deleteInTransaction($projectId, $columnId);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function deleteInTransaction(string $projectId, string $columnId): bool
     {
         $stmt = $this->db->prepare('SELECT 1 FROM "Columns" WHERE "Id" = :id AND "ProjectId" = :pid');
         $stmt->execute(['id' => $columnId, 'pid' => $projectId]);
