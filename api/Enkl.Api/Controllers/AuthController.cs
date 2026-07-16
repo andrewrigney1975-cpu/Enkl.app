@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.Text.Json;
 using Enkl.Api.Auth;
 using Enkl.Api.Data;
@@ -124,7 +123,7 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "New password must be at least 8 characters." });
         }
 
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+        var userId = User.UserId();
         var user = await _db.Users.Include(u => u.Organisation).FirstOrDefaultAsync(u => u.Id == userId);
         if (user is null || user.PasswordHash is null || !PasswordHasher.Verify(request.CurrentPassword, user.PasswordHash))
         {

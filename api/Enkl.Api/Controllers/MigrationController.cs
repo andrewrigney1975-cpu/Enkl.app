@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using Enkl.Api.Auth;
 using Enkl.Api.Dtos;
 using Enkl.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -34,12 +34,7 @@ public class MigrationController : ControllerBase
     [HttpPost("projects")]
     public async Task<IActionResult> MigrateProject(MigrationImportRequest request)
     {
-        Guid? callerOrgId = null;
-        if (User.Identity?.IsAuthenticated == true)
-        {
-            var orgIdClaim = User.FindFirstValue("orgId");
-            if (orgIdClaim is not null) callerOrgId = Guid.Parse(orgIdClaim);
-        }
+        var callerOrgId = User.Identity?.IsAuthenticated == true ? User.TryOrgId() : null;
 
         // ApiValidationException (cycle checks, etc.) is mapped to 400 by the global exception
         // handler in Program.cs — no per-controller try/catch needed.

@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using Enkl.Api.Auth;
 using Enkl.Api.Dtos;
 using Enkl.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -28,7 +28,7 @@ public class PortfolioController : ControllerBase
     [HttpGet("projects")]
     public async Task<IActionResult> ListProjects()
     {
-        return Ok(await _portfolio.ListProjectsAsync(CallerOrgId()));
+        return Ok(await _portfolio.ListProjectsAsync(User.OrgId()));
     }
 
     // A genuine mutation (creates a row), so this stays POST — unlike ListProjects/GetAggregate/
@@ -36,7 +36,7 @@ public class PortfolioController : ControllerBase
     [HttpPost("projects")]
     public async Task<IActionResult> CreateProject(CreatePortfolioProjectRequest request)
     {
-        return Ok(await _portfolio.CreateProjectAsync(CallerOrgId(), request));
+        return Ok(await _portfolio.CreateProjectAsync(User.OrgId(), request));
     }
 
     // GET (not POST) even though this returns a computed, possibly-large payload: it's a pure read
@@ -49,7 +49,7 @@ public class PortfolioController : ControllerBase
     [HttpGet("aggregate")]
     public async Task<IActionResult> GetAggregate([FromQuery] string? projectIds)
     {
-        return Ok(await _portfolio.GetAggregateAsync(CallerOrgId(), ParseProjectIds(projectIds)));
+        return Ok(await _portfolio.GetAggregateAsync(User.OrgId(), ParseProjectIds(projectIds)));
     }
 
     // projectIds is a single comma-joined string, not a repeated/indexed query param — ASP.NET Core
@@ -59,7 +59,7 @@ public class PortfolioController : ControllerBase
     [HttpGet("activity")]
     public async Task<IActionResult> GetActivity([FromQuery] string? projectIds, [FromQuery] DateOnly start, [FromQuery] DateOnly end)
     {
-        return Ok(await _portfolio.GetActivityAsync(CallerOrgId(), ParseProjectIds(projectIds), start, end));
+        return Ok(await _portfolio.GetActivityAsync(User.OrgId(), ParseProjectIds(projectIds), start, end));
     }
 
     // A genuine mutation (unlike GetAggregate/GetActivity above), so this deliberately stays PUT —
@@ -67,7 +67,7 @@ public class PortfolioController : ControllerBase
     [HttpPut("projects/{projectId:guid}/dates")]
     public async Task<IActionResult> UpdateProjectDates(Guid projectId, UpdatePortfolioProjectDatesRequest request)
     {
-        var updated = await _portfolio.UpdateProjectDatesAsync(CallerOrgId(), projectId, request.StartDate, request.EndDate);
+        var updated = await _portfolio.UpdateProjectDatesAsync(User.OrgId(), projectId, request.StartDate, request.EndDate);
         if (!updated) return NotFound();
         return NoContent();
     }
@@ -75,7 +75,7 @@ public class PortfolioController : ControllerBase
     [HttpPut("projects/{projectId:guid}/active")]
     public async Task<IActionResult> UpdateProjectActive(Guid projectId, UpdatePortfolioProjectActiveRequest request)
     {
-        var result = await _portfolio.UpdateProjectActiveAsync(CallerOrgId(), projectId, request.IsActive);
+        var result = await _portfolio.UpdateProjectActiveAsync(User.OrgId(), projectId, request.IsActive);
         return result switch
         {
             PortfolioActivationResult.NotFound => NotFound(),
@@ -87,7 +87,7 @@ public class PortfolioController : ControllerBase
     [HttpPut("projects/{projectId:guid}/category")]
     public async Task<IActionResult> UpdateProjectCategory(Guid projectId, UpdatePortfolioProjectCategoryRequest request)
     {
-        var updated = await _portfolio.UpdateProjectCategoryAsync(CallerOrgId(), projectId, request.CategoryId);
+        var updated = await _portfolio.UpdateProjectCategoryAsync(User.OrgId(), projectId, request.CategoryId);
         if (!updated) return NotFound();
         return NoContent();
     }
@@ -95,19 +95,19 @@ public class PortfolioController : ControllerBase
     [HttpGet("categories")]
     public async Task<IActionResult> ListCategories()
     {
-        return Ok(await _portfolio.ListCategoriesAsync(CallerOrgId()));
+        return Ok(await _portfolio.ListCategoriesAsync(User.OrgId()));
     }
 
     [HttpPost("categories")]
     public async Task<IActionResult> CreateCategory(CreatePortfolioCategoryRequest request)
     {
-        return Ok(await _portfolio.CreateCategoryAsync(CallerOrgId(), request.Name));
+        return Ok(await _portfolio.CreateCategoryAsync(User.OrgId(), request.Name));
     }
 
     [HttpPut("categories/{categoryId:guid}")]
     public async Task<IActionResult> UpdateCategory(Guid categoryId, UpdatePortfolioCategoryRequest request)
     {
-        var updated = await _portfolio.UpdateCategoryAsync(CallerOrgId(), categoryId, request.Name);
+        var updated = await _portfolio.UpdateCategoryAsync(User.OrgId(), categoryId, request.Name);
         if (updated is null) return NotFound();
         return Ok(updated);
     }
@@ -115,7 +115,7 @@ public class PortfolioController : ControllerBase
     [HttpDelete("categories/{categoryId:guid}")]
     public async Task<IActionResult> DeleteCategory(Guid categoryId)
     {
-        var deleted = await _portfolio.DeleteCategoryAsync(CallerOrgId(), categoryId);
+        var deleted = await _portfolio.DeleteCategoryAsync(User.OrgId(), categoryId);
         if (!deleted) return NotFound();
         return NoContent();
     }
@@ -123,7 +123,7 @@ public class PortfolioController : ControllerBase
     [HttpPut("categories/{categoryId:guid}/sort-order")]
     public async Task<IActionResult> UpdateCategorySortOrder(Guid categoryId, UpdatePortfolioCategorySortOrderRequest request)
     {
-        var updated = await _portfolio.UpdateCategorySortOrderAsync(CallerOrgId(), categoryId, request.SortOrder);
+        var updated = await _portfolio.UpdateCategorySortOrderAsync(User.OrgId(), categoryId, request.SortOrder);
         if (!updated) return NotFound();
         return NoContent();
     }
@@ -131,35 +131,35 @@ public class PortfolioController : ControllerBase
     [HttpGet("projects/{projectId:guid}/resources")]
     public async Task<IActionResult> ListResources(Guid projectId)
     {
-        var resources = await _portfolio.ListResourcesAsync(CallerOrgId(), projectId);
+        var resources = await _portfolio.ListResourcesAsync(User.OrgId(), projectId);
         return resources is null ? NotFound() : Ok(resources);
     }
 
     [HttpPost("projects/{projectId:guid}/resources")]
     public async Task<IActionResult> AddResource(Guid projectId, CreateProjectResourcePlaceholderRequest request)
     {
-        var resource = await _portfolio.AddResourceAsync(CallerOrgId(), projectId, request);
+        var resource = await _portfolio.AddResourceAsync(User.OrgId(), projectId, request);
         return resource is null ? NotFound() : Ok(resource);
     }
 
     [HttpPut("projects/{projectId:guid}/resources/{resourceId:guid}")]
     public async Task<IActionResult> UpdateResource(Guid projectId, Guid resourceId, UpdateProjectResourcePlaceholderRequest request)
     {
-        var resource = await _portfolio.UpdateResourceAsync(CallerOrgId(), projectId, resourceId, request);
+        var resource = await _portfolio.UpdateResourceAsync(User.OrgId(), projectId, resourceId, request);
         return resource is null ? NotFound() : Ok(resource);
     }
 
     [HttpDelete("projects/{projectId:guid}/resources/{resourceId:guid}")]
     public async Task<IActionResult> RemoveResource(Guid projectId, Guid resourceId)
     {
-        var removed = await _portfolio.RemoveResourceAsync(CallerOrgId(), projectId, resourceId);
+        var removed = await _portfolio.RemoveResourceAsync(User.OrgId(), projectId, resourceId);
         return removed ? NoContent() : NotFound();
     }
 
     [HttpGet("roles")]
     public async Task<IActionResult> ListRoles()
     {
-        return Ok(await _portfolio.ListDistinctRolesAsync(CallerOrgId()));
+        return Ok(await _portfolio.ListDistinctRolesAsync(User.OrgId()));
     }
 
     // GET, not POST — a pure read with no side effects, same MustChangePassword-gate-avoidance
@@ -168,7 +168,7 @@ public class PortfolioController : ControllerBase
     [HttpGet("resourcing")]
     public async Task<IActionResult> GetResourcingSummary()
     {
-        return Ok(await _portfolio.GetResourcingSummaryAsync(CallerOrgId()));
+        return Ok(await _portfolio.GetResourcingSummaryAsync(User.OrgId()));
     }
 
     private static List<Guid> ParseProjectIds(string? projectIds) =>
@@ -178,6 +178,4 @@ public class PortfolioController : ControllerBase
             .Where(g => g.HasValue)
             .Select(g => g!.Value)
             .ToList();
-
-    private Guid CallerOrgId() => Guid.Parse(User.FindFirstValue("orgId")!);
 }

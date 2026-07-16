@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Enkl.Api.Auth;
 using Enkl.Api.Dtos;
 using Enkl.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -58,7 +59,7 @@ public class TasksController : ControllerBase
         try
         {
             var memberUserIds = await _tasks.GetProjectMemberUserIdsAsync(projectId);
-            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+            var userId = User.UserId();
             var displayName = User.FindFirstValue("displayName") ?? "Someone";
             var clientSessionId = Request.Headers["X-Client-Session-Id"].FirstOrDefault();
 

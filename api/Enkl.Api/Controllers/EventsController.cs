@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using Enkl.Api.Auth;
 using Enkl.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
@@ -29,7 +29,7 @@ public class EventsController : ControllerBase
     [HttpGet("stream")]
     public async Task Stream(CancellationToken ct)
     {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+        var userId = User.UserId();
         var clientSessionId = Request.Headers["X-Client-Session-Id"].FirstOrDefault();
 
         HttpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();

@@ -1,5 +1,5 @@
-using System.Security.Claims;
 using System.Text.Json;
+using Enkl.Api.Auth;
 using Enkl.Api.Dtos;
 using Enkl.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -22,7 +22,7 @@ public class ProjectsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetProjects()
     {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+        var userId = User.UserId();
         return Ok(await _projects.GetProjectsForUserAsync(userId));
     }
 
@@ -39,7 +39,7 @@ public class ProjectsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateProject(CreateProjectRequest request)
     {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+        var userId = User.UserId();
         var result = await _projects.CreateAsync(userId, request);
         return result is null ? Unauthorized() : Ok(result);
     }

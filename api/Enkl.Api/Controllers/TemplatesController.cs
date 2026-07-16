@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using Enkl.Api.Auth;
 using Enkl.Api.Dtos;
 using Enkl.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -27,27 +27,27 @@ public class TemplatesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List()
     {
-        return Ok(await _templates.ListAsync(CallerOrgId()));
+        return Ok(await _templates.ListAsync(User.OrgId()));
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetDetail(Guid id)
     {
-        var result = await _templates.GetDetailAsync(CallerOrgId(), id);
+        var result = await _templates.GetDetailAsync(User.OrgId(), id);
         return result is null ? NotFound() : Ok(result);
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(CreateTemplateRequest request)
     {
-        return Ok(await _templates.CreateAsync(CallerOrgId(), request));
+        return Ok(await _templates.CreateAsync(User.OrgId(), request));
     }
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "OrgAdmin")]
     public async Task<IActionResult> Rename(Guid id, UpdateTemplateRequest request)
     {
-        var ok = await _templates.RenameAsync(CallerOrgId(), id, request.Name);
+        var ok = await _templates.RenameAsync(User.OrgId(), id, request.Name);
         return ok ? NoContent() : NotFound();
     }
 
@@ -55,9 +55,7 @@ public class TemplatesController : ControllerBase
     [Authorize(Policy = "OrgAdmin")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var ok = await _templates.DeleteAsync(CallerOrgId(), id);
+        var ok = await _templates.DeleteAsync(User.OrgId(), id);
         return ok ? NoContent() : NotFound();
     }
-
-    private Guid CallerOrgId() => Guid.Parse(User.FindFirstValue("orgId")!);
 }

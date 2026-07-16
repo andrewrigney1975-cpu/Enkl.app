@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using Enkl.Api.Auth;
 using Enkl.Api.Dtos;
 using Enkl.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -21,36 +21,34 @@ public class OrganisationsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetMyOrganisation()
     {
-        var result = await _organisations.GetOrganisationAsync(CallerOrgId());
+        var result = await _organisations.GetOrganisationAsync(User.OrgId());
         return result is null ? NotFound() : Ok(result);
     }
 
     [HttpPut("users/{userId:guid}/admin")]
     public async Task<IActionResult> SetUserAdmin(Guid userId, SetOrgAdminRequest request)
     {
-        var ok = await _organisations.SetUserAdminAsync(CallerOrgId(), userId, request.IsOrgAdmin);
+        var ok = await _organisations.SetUserAdminAsync(User.OrgId(), userId, request.IsOrgAdmin);
         return ok ? NoContent() : NotFound();
     }
 
     [HttpPost("users")]
     public async Task<IActionResult> CreateUser(CreateUserRequest request)
     {
-        var result = await _organisations.CreateUserAsync(CallerOrgId(), request);
+        var result = await _organisations.CreateUserAsync(User.OrgId(), request);
         return Ok(result);
     }
 
     [HttpPut("users/{userId:guid}/email")]
     public async Task<IActionResult> SetUserEmail(Guid userId, SetUserEmailRequest request)
     {
-        var ok = await _organisations.SetUserEmailAsync(CallerOrgId(), userId, request.EmailAddress);
+        var ok = await _organisations.SetUserEmailAsync(User.OrgId(), userId, request.EmailAddress);
         return ok ? NoContent() : NotFound();
     }
 
     [HttpGet("org-teams")]
     public async Task<IActionResult> GetOrgTeams()
     {
-        return Ok(await _organisations.GetOrgTeamsAsync(CallerOrgId()));
+        return Ok(await _organisations.GetOrgTeamsAsync(User.OrgId()));
     }
-
-    private Guid CallerOrgId() => Guid.Parse(User.FindFirstValue("orgId")!);
 }

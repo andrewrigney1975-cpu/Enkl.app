@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.Text.Json;
 using Enkl.Api.Auth;
 using Enkl.Api.Dtos;
@@ -33,13 +32,13 @@ public class OrganisationPrinciplesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> ListWide()
     {
-        return Ok(await _principles.ListOrganisationWideAsync(CallerOrgId()));
+        return Ok(await _principles.ListOrganisationWideAsync(User.OrgId()));
     }
 
     [HttpGet("suggestions")]
     public async Task<IActionResult> Suggestions()
     {
-        return Ok(await _principles.GetSuggestionsAsync(CallerOrgId()));
+        return Ok(await _principles.GetSuggestionsAsync(User.OrgId()));
     }
 
     [HttpPost("{principleId:guid}/copy")]
@@ -50,11 +49,9 @@ public class OrganisationPrinciplesController : ControllerBase
             return Forbid();
         }
 
-        var result = await _principles.CopyAsync(CallerOrgId(), principleId, request);
+        var result = await _principles.CopyAsync(User.OrgId(), principleId, request);
         return result is null ? NotFound() : Ok(result);
     }
-
-    private Guid CallerOrgId() => Guid.Parse(User.FindFirstValue("orgId")!);
 
     private bool CallerIsMemberOf(Guid projectId)
     {

@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using Enkl.Api.Auth;
 using Enkl.Api.Dtos;
 using Enkl.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -26,47 +26,45 @@ public class ToDoController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List()
     {
-        return Ok(await _todo.ListAsync(CallerUserId()));
+        return Ok(await _todo.ListAsync(User.UserId()));
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(CreateToDoListRequest request)
     {
-        return Ok(await _todo.CreateListAsync(CallerUserId(), request));
+        return Ok(await _todo.CreateListAsync(User.UserId(), request));
     }
 
     [HttpPut("{listId:guid}")]
     public async Task<IActionResult> Rename(Guid listId, UpdateToDoListRequest request)
     {
-        var result = await _todo.RenameListAsync(CallerUserId(), listId, request);
+        var result = await _todo.RenameListAsync(User.UserId(), listId, request);
         return result is null ? NotFound() : Ok(result);
     }
 
     [HttpDelete("{listId:guid}")]
     public async Task<IActionResult> Delete(Guid listId)
     {
-        return await _todo.DeleteListAsync(CallerUserId(), listId) ? NoContent() : NotFound();
+        return await _todo.DeleteListAsync(User.UserId(), listId) ? NoContent() : NotFound();
     }
 
     [HttpPost("{listId:guid}/items")]
     public async Task<IActionResult> CreateItem(Guid listId, CreateToDoItemRequest request)
     {
-        var result = await _todo.CreateItemAsync(CallerUserId(), listId, request);
+        var result = await _todo.CreateItemAsync(User.UserId(), listId, request);
         return result is null ? NotFound() : Ok(result);
     }
 
     [HttpPut("{listId:guid}/items/{itemId:guid}")]
     public async Task<IActionResult> UpdateItem(Guid listId, Guid itemId, UpdateToDoItemRequest request)
     {
-        var result = await _todo.UpdateItemAsync(CallerUserId(), listId, itemId, request);
+        var result = await _todo.UpdateItemAsync(User.UserId(), listId, itemId, request);
         return result is null ? NotFound() : Ok(result);
     }
 
     [HttpDelete("{listId:guid}/items/{itemId:guid}")]
     public async Task<IActionResult> DeleteItem(Guid listId, Guid itemId)
     {
-        return await _todo.DeleteItemAsync(CallerUserId(), listId, itemId) ? NoContent() : NotFound();
+        return await _todo.DeleteItemAsync(User.UserId(), listId, itemId) ? NoContent() : NotFound();
     }
-
-    private Guid CallerUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
 }
