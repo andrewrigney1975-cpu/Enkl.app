@@ -19,10 +19,14 @@ namespace Enkl.Api.Controllers;
 public class PortfolioController : ControllerBase
 {
     private readonly PortfolioService _portfolio;
+    private readonly PortfolioCategoryService _categories;
+    private readonly PortfolioResourceService _resources;
 
-    public PortfolioController(PortfolioService portfolio)
+    public PortfolioController(PortfolioService portfolio, PortfolioCategoryService categories, PortfolioResourceService resources)
     {
         _portfolio = portfolio;
+        _categories = categories;
+        _resources = resources;
     }
 
     [HttpGet("projects")]
@@ -95,19 +99,19 @@ public class PortfolioController : ControllerBase
     [HttpGet("categories")]
     public async Task<IActionResult> ListCategories()
     {
-        return Ok(await _portfolio.ListCategoriesAsync(User.OrgId()));
+        return Ok(await _categories.ListCategoriesAsync(User.OrgId()));
     }
 
     [HttpPost("categories")]
     public async Task<IActionResult> CreateCategory(CreatePortfolioCategoryRequest request)
     {
-        return Ok(await _portfolio.CreateCategoryAsync(User.OrgId(), request.Name));
+        return Ok(await _categories.CreateCategoryAsync(User.OrgId(), request.Name));
     }
 
     [HttpPut("categories/{categoryId:guid}")]
     public async Task<IActionResult> UpdateCategory(Guid categoryId, UpdatePortfolioCategoryRequest request)
     {
-        var updated = await _portfolio.UpdateCategoryAsync(User.OrgId(), categoryId, request.Name);
+        var updated = await _categories.UpdateCategoryAsync(User.OrgId(), categoryId, request.Name);
         if (updated is null) return NotFound();
         return Ok(updated);
     }
@@ -115,7 +119,7 @@ public class PortfolioController : ControllerBase
     [HttpDelete("categories/{categoryId:guid}")]
     public async Task<IActionResult> DeleteCategory(Guid categoryId)
     {
-        var deleted = await _portfolio.DeleteCategoryAsync(User.OrgId(), categoryId);
+        var deleted = await _categories.DeleteCategoryAsync(User.OrgId(), categoryId);
         if (!deleted) return NotFound();
         return NoContent();
     }
@@ -123,7 +127,7 @@ public class PortfolioController : ControllerBase
     [HttpPut("categories/{categoryId:guid}/sort-order")]
     public async Task<IActionResult> UpdateCategorySortOrder(Guid categoryId, UpdatePortfolioCategorySortOrderRequest request)
     {
-        var updated = await _portfolio.UpdateCategorySortOrderAsync(User.OrgId(), categoryId, request.SortOrder);
+        var updated = await _categories.UpdateCategorySortOrderAsync(User.OrgId(), categoryId, request.SortOrder);
         if (!updated) return NotFound();
         return NoContent();
     }
@@ -131,44 +135,44 @@ public class PortfolioController : ControllerBase
     [HttpGet("projects/{projectId:guid}/resources")]
     public async Task<IActionResult> ListResources(Guid projectId)
     {
-        var resources = await _portfolio.ListResourcesAsync(User.OrgId(), projectId);
+        var resources = await _resources.ListResourcesAsync(User.OrgId(), projectId);
         return resources is null ? NotFound() : Ok(resources);
     }
 
     [HttpPost("projects/{projectId:guid}/resources")]
     public async Task<IActionResult> AddResource(Guid projectId, CreateProjectResourcePlaceholderRequest request)
     {
-        var resource = await _portfolio.AddResourceAsync(User.OrgId(), projectId, request);
+        var resource = await _resources.AddResourceAsync(User.OrgId(), projectId, request);
         return resource is null ? NotFound() : Ok(resource);
     }
 
     [HttpPut("projects/{projectId:guid}/resources/{resourceId:guid}")]
     public async Task<IActionResult> UpdateResource(Guid projectId, Guid resourceId, UpdateProjectResourcePlaceholderRequest request)
     {
-        var resource = await _portfolio.UpdateResourceAsync(User.OrgId(), projectId, resourceId, request);
+        var resource = await _resources.UpdateResourceAsync(User.OrgId(), projectId, resourceId, request);
         return resource is null ? NotFound() : Ok(resource);
     }
 
     [HttpDelete("projects/{projectId:guid}/resources/{resourceId:guid}")]
     public async Task<IActionResult> RemoveResource(Guid projectId, Guid resourceId)
     {
-        var removed = await _portfolio.RemoveResourceAsync(User.OrgId(), projectId, resourceId);
+        var removed = await _resources.RemoveResourceAsync(User.OrgId(), projectId, resourceId);
         return removed ? NoContent() : NotFound();
     }
 
     [HttpGet("roles")]
     public async Task<IActionResult> ListRoles()
     {
-        return Ok(await _portfolio.ListDistinctRolesAsync(User.OrgId()));
+        return Ok(await _resources.ListDistinctRolesAsync(User.OrgId()));
     }
 
     // GET, not POST — a pure read with no side effects, same MustChangePassword-gate-avoidance
     // reasoning as GetAggregate/GetActivity above. Deliberately takes no project ids at all — see
-    // PortfolioService.GetResourcingSummaryAsync's doc comment for why this is org-wide.
+    // PortfolioResourceService.GetResourcingSummaryAsync's doc comment for why this is org-wide.
     [HttpGet("resourcing")]
     public async Task<IActionResult> GetResourcingSummary()
     {
-        return Ok(await _portfolio.GetResourcingSummaryAsync(User.OrgId()));
+        return Ok(await _resources.GetResourcingSummaryAsync(User.OrgId()));
     }
 
     private static List<Guid> ParseProjectIds(string? projectIds) =>
