@@ -1,10 +1,12 @@
 "use strict";
 import { getCurrentProject } from '../store.js';
 import { escapeHTML, getTaskById, getDocumentById, getRiskById, getPrincipleById, getObjectiveById, getMemberById } from '../utils.js';
-import { RISK_LIKELIHOOD_META, RISK_IMPACT_META } from '../config.js';
+import { RISK_LIKELIHOOD_META, RISK_IMPACT_META, TEAM_COMMITTEE_TYPES } from '../config.js';
 import { riskScore, riskScoreBand, buildTeamCommitteeTree, buildRiskMatrixSvg } from '../mutations.js';
 import { markdownToHtml } from '../rich-text/markdown.js';
 import { utcISOToLocalDisplayDate, memberInitials } from '../date-utils.js';
+import { computeOrgChartLayout, ORGCHART_NODE_W, ORGCHART_NODE_H, ORGCHART_GAP_Y, ORGCHART_TYPE_ACCENT } from '../views/org-chart.js';
+import { iconSvg } from '../icons.js';
 
 /* =========================================================
    ENTITY REPORTS — a single generic, printable report view shared by Risks/Decisions/Principles/
@@ -203,6 +205,70 @@ function renderTeamMembersSection(project){
   '</div>';
 }
 
+/* Static (non-interactive) rendering of one org-chart type's tree — same layout math
+   (computeOrgChartLayout) and node/edge markup as views/org-chart.js's own renderOrgChart, just
+   without the pan/zoom/popover chrome a printed report has no use for. Returns '' if this project
+   has no teams/committees of the given type, so the caller can skip the sub-heading entirely rather
+   than printing an empty chart. */
+function buildOrgChartSvg(project, filterType){
+  var hasAny = (project.teamsCommittees || []).some(function(tc){ return tc.type === filterType; });
+  if(!hasAny) return '';
+
+  var layout = computeOrgChartLayout(project, filterType);
+  var accent = ORGCHART_TYPE_ACCENT[filterType];
+
+  var edgesHTML = layout.edges.map(function(e){
+    var fromPos = layout.positions[e.fromId], toPos = layout.positions[e.toId];
+    if(!fromPos || !toPos) return '';
+    var px = fromPos.x + ORGCHART_NODE_W / 2, py = fromPos.y + ORGCHART_NODE_H;
+    var cx = toPos.x + ORGCHART_NODE_W / 2, cy = toPos.y;
+    var midY = py + ORGCHART_GAP_Y / 2;
+    var path = 'M ' + px + ' ' + py + ' L ' + px + ' ' + midY + ' L ' + cx + ' ' + midY + ' L ' + cx + ' ' + cy;
+    return '<path d="' + path + '" fill="none" stroke="var(--kf-border-strong)" stroke-width="2"></path>';
+  }).join('');
+
+  var nodesHTML = layout.nodes.map(function(n){
+    var tc = n.tc;
+    var members = tc.memberIds || [];
+    var name = tc.name.length > 22 ? tc.name.slice(0, 21) + '…' : tc.name;
+    return (
+      '<g transform="translate(' + n.x + ',' + n.y + ')">' +
+        '<rect x="0" y="0" width="' + n.w + '" height="' + n.h + '" rx="6" style="fill:var(--kf-surface);stroke:var(--kf-border);" stroke-width="1.5"></rect>' +
+        '<rect x="0" y="0" width="5" height="' + n.h + '" rx="2" fill="' + accent + '"></rect>' +
+        '<text x="16" y="18" font-size="10" font-weight="700" style="fill:var(--kf-text-faint);">' + escapeHTML(tc.key) + '</text>' +
+        '<text x="16" y="36" font-size="13" font-weight="600" style="fill:var(--kf-text);"><title>' + escapeHTML(tc.name) + '</title>' + escapeHTML(name) + '</text>' +
+        '<g transform="translate(16,' + (n.h - 16) + ')" style="color:var(--kf-text-faint);">' + iconSvg('team', 13) + '</g>' +
+        '<text x="34" y="' + (n.h - 5) + '" font-size="11" font-weight="600" style="fill:var(--kf-text-faint);">' + members.length + '</text>' +
+      '</g>'
+    );
+  }).join('');
+
+  var svg = '<svg width="' + layout.width + '" height="' + layout.height + '" viewBox="0 0 ' + layout.width + ' ' + layout.height + '" xmlns="http://www.w3.org/2000/svg">' +
+    edgesHTML + nodesHTML +
+  '</svg>';
+
+  return '<div class="kf-report-org-chart">' + svg + '</div>';
+}
+
+/* Renders both the Team and Committee org charts (whichever have data — see buildOrgChartSvg), each
+   scaled by CSS (.kf-report-org-chart svg { max-width: 100%; height: auto; }, styles.css) to fit the
+   printed page's width, same "shrink an SVG chart to the page" pattern renderRisksSection already
+   uses for the Risk Matrix. Only labeled per-type when both are present, so a project with just teams
+   (the common case) doesn't get a redundant "Team" sub-heading above its one chart. */
+function renderOrgChartsForReport(project){
+  var teamSvg = buildOrgChartSvg(project, 'team');
+  var committeeSvg = buildOrgChartSvg(project, 'committee');
+  if(!teamSvg && !committeeSvg) return '';
+
+  if(teamSvg && committeeSvg){
+    return (
+      '<h3 class="kf-report-org-chart-subheading">' + escapeHTML(TEAM_COMMITTEE_TYPES.team) + 's</h3>' + teamSvg +
+      '<h3 class="kf-report-org-chart-subheading">' + escapeHTML(TEAM_COMMITTEE_TYPES.committee) + 's</h3>' + committeeSvg
+    );
+  }
+  return teamSvg || committeeSvg;
+}
+
 /* The indented team/committee hierarchy itself (Teams & Committees), each node showing its own
    members — reuses buildTeamCommitteeTree's flat {node, depth} list exactly as
    modals/teams-committees.js's own renderTeamsCommitteesList does, just without the interactive
@@ -227,6 +293,7 @@ function renderTeamHierarchySection(project){
 
   return '<div class="kf-report-section">' +
     '<h2 class="kf-report-section-heading">Team Structure</h2>' +
+    renderOrgChartsForReport(project) +
     '<div class="kf-report-team-tree">' + rowsHTML + '</div>' +
   '</div>';
 }

@@ -3647,6 +3647,27 @@
     margin-top: 2px;
   }
 
+  /* Same "shrink an embedded chart to the page/container width" pattern as .kf-report-risk-matrix
+     svg below — the org chart's own SVG has a fixed viewBox sized to its actual node layout
+     (computeOrgChartLayout, views/org-chart.js), and max-width:100%/height:auto scales that down
+     uniformly to fit whatever width it's placed in (the printed page's content width included),
+     rather than overflowing horizontally off the page. */
+  .kf-report-org-chart {
+    margin-bottom: 16px;
+  }
+
+  .kf-report-org-chart svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .kf-report-org-chart-subheading {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: var(--kf-text-secondary);
+  }
+
   .kf-report-risk-matrix {
     margin-bottom: 16px;
   }

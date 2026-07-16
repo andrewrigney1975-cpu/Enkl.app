@@ -54,6 +54,19 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const teamTreeText = doc.getElementById('reportBody').textContent;
   log('new team appears in the Team Structure section', teamTreeText.indexOf('PM Report Team') !== -1);
 
+  // ── 3b. Org chart renders under the Team Structure heading, above the text hierarchy ──
+  const teamStructureHeading = Array.from(doc.querySelectorAll('#reportBody .kf-report-section-heading'))
+    .find(h => h.textContent === 'Team Structure');
+  const teamStructureSection = teamStructureHeading ? teamStructureHeading.closest('.kf-report-section') : null;
+  const orgChartEl = teamStructureSection ? teamStructureSection.querySelector('.kf-report-org-chart') : null;
+  log('Team Structure section embeds an org chart SVG', !!(orgChartEl && orgChartEl.querySelector('svg')));
+  const treeEl = teamStructureSection ? teamStructureSection.querySelector('.kf-report-team-tree') : null;
+  const sectionChildren = teamStructureSection ? Array.from(teamStructureSection.children) : [];
+  log('org chart appears before the text hierarchy within Team Structure',
+      !!(orgChartEl && treeEl && sectionChildren.indexOf(orgChartEl) < sectionChildren.indexOf(treeEl)));
+  log('org chart wrapper carries the print-scalable CSS class (.kf-report-org-chart svg { max-width:100% })',
+      !!(orgChartEl && orgChartEl.classList.contains('kf-report-org-chart')));
+
   // ── 4. Risks section includes the Risk Matrix and per-risk mitigations/closure fields ──
   doc.getElementById('reportClose').click();
   await wait(20);
