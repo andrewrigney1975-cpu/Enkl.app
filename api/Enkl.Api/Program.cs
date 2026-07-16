@@ -351,3 +351,8 @@ static async Task MigrateDatabaseWithRetryAsync(WebApplication app)
         }
     }
 }
+
+// ARCHITECTURE-REVIEW.md finding #2: Program.cs's top-level statements make this class `internal` by
+// default, which WebApplicationFactory<Program> (Enkl.Api.Tests) can't reference across assemblies —
+// this marker is purely a visibility fix, no behavioral effect.
+public partial class Program { }

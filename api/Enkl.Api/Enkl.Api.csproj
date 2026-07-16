@@ -15,7 +15,12 @@
     <!-- Direct pin: Microsoft.AspNetCore.OpenApi 10.0.9 otherwise pulls in the vulnerable
          Microsoft.OpenApi 2.0.0 transitively (GHSA-v5pm-xwqc-g5wc, NU1903). -->
     <PackageReference Include="Microsoft.OpenApi" Version="2.10.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
+    <!-- Pinned to match Npgsql.EntityFrameworkCore.PostgreSQL 10.0.3's own EFCore 10.0.4 dependency —
+         Design's PrivateAssets="all" keeps it from flowing to consumers, but a higher Design version
+         here still makes THIS project compile against the higher EFCore, producing an Enkl.Api.dll
+         that Enkl.Api.Tests' own (lower, Npgsql-pinned) transitive resolution can't satisfy
+         (CS1705). Bump both together, never just Design, until Npgsql ships an EFCore 10.0.9+ build. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
