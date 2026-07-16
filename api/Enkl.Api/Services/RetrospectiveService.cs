@@ -115,8 +115,16 @@ public class RetrospectiveService
     /// <summary>Distills a Start/Keep-doing item into a Principle (via the existing
     /// PrincipleService, so a shared org-wide Principle library sees it too), then links the item
     /// back to the new Principle so the UI can show it as already promoted.</summary>
+    // ARCHITECTURE-REVIEW.md finding 2.2 (transaction audit): _principles.CreateAsync() commits its
+    // own SaveChangesAsync() immediately, and this method then does a SECOND, separate
+    // SaveChangesAsync() to link item.PromotedPrincipleId to the new row — without an explicit
+    // transaction wrapping both, a failure on the second save would leave a real, unlinked Principle
+    // behind while the retrospective item never shows as promoted. Wrapped the same way
+    // MigrationService.MigrateAsync does for its own multi-step writes.
     public async Task<PromoteRetrospectiveItemResponseDto?> PromoteItemAsync(Guid projectId, Guid retrospectiveId, Guid itemId, PromoteRetrospectiveItemRequest request)
     {
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+
         var item = await _db.RetrospectiveItems
             .Include(i => i.Retrospective)
             .FirstOrDefaultAsync(i => i.Id == itemId && i.RetrospectiveId == retrospectiveId && i.Retrospective.ProjectId == projectId);
@@ -131,6 +139,7 @@ public class RetrospectiveService
         item.PromotedPrincipleId = principle.Id;
         item.DateLastModified = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return new PromoteRetrospectiveItemResponseDto(principle, ToItemDto(item));
     }
