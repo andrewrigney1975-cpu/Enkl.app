@@ -21,6 +21,17 @@ public class TasksController : ControllerBase
         _broadcaster = broadcaster;
     }
 
+    // ARCHITECTURE-REVIEW.md finding 2.2: additive, targeted alternative to pulling every task
+    // through GET /api/projects/{id} (ProjectService.GetProjectDetailAsync's one all-in-one graph
+    // fetch) — see TaskService.GetTasksPagedAsync's own doc comment. page defaults to 1, pageSize to
+    // 50 (clamped [1, 200] in the service) if the caller omits either.
+    [HttpGet]
+    public async Task<IActionResult> List(Guid projectId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    {
+        var result = await _tasks.GetTasksPagedAsync(projectId, page, pageSize);
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(Guid projectId, CreateTaskRequest request)
     {

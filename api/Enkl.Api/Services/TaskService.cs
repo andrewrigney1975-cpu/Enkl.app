@@ -16,6 +16,43 @@ public class TaskService
         _db = db;
     }
 
+    /// <summary>
+    /// ARCHITECTURE-REVIEW.md finding 2.2: a targeted, paginated alternative to pulling every task in
+    /// a project through ProjectService.GetProjectDetailAsync's one all-in-one graph fetch. Ordered by
+    /// DateCreated (oldest first) for stable pagination — a project's task set only grows/gets
+    /// reordered within columns, never reordered by creation time, so this ordering is stable across
+    /// pages even while the board itself is being edited concurrently. Returns null (not an empty
+    /// page) if the project itself doesn't exist, so the controller can 404 rather than return an
+    /// empty-but-200 page for a nonexistent project.
+    /// </summary>
+    public async Task<PagedResultDto<TaskDto>?> GetTasksPagedAsync(Guid projectId, int page, int pageSize)
+    {
+        var projectExists = await _db.Projects.AnyAsync(p => p.Id == projectId);
+        if (!projectExists) return null;
+
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 200);
+
+        var totalCount = await _db.Tasks.CountAsync(t => t.ProjectId == projectId);
+
+        // AsSplitQuery, same reasoning as ProjectService.GetProjectDetailAsync's own multi-Include
+        // fetch: two collection Includes (Dependencies, AuditLog) on the same paged-down row set would
+        // otherwise multiply rather than add, even at this much smaller (<=200 task) scale.
+        var pageEntities = await _db.Tasks
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Where(t => t.ProjectId == projectId)
+            .OrderBy(t => t.DateCreated)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Include(t => t.Dependencies)
+            .Include(t => t.AuditLog)
+            .ToListAsync();
+
+        var items = pageEntities.Select(ProjectService.ToTaskDto).ToList();
+        return new PagedResultDto<TaskDto>(items, totalCount, page, pageSize);
+    }
+
     public async Task<TaskDto?> CreateAsync(Guid projectId, CreateTaskRequest request)
     {
         var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == projectId);
