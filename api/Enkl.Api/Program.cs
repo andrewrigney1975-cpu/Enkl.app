@@ -11,8 +11,18 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Threading.RateLimiting;
+using Serilog;
+using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ARCHITECTURE-REVIEW.md finding #5: structured JSON logs to stdout (captured today via
+// `docker compose logs api`, no log-shipping stack). Every existing/future ILogger<T> injection
+// keeps working unchanged — Serilog just becomes the sink underneath Microsoft.Extensions.Logging.
+builder.Host.UseSerilog((ctx, cfg) => cfg
+    .ReadFrom.Configuration(ctx.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(new CompactJsonFormatter()));
 
 // Defense-in-depth against the checked-in dev placeholders in appsettings.json ever reaching a
 // real deployment: docker-compose.yml now fails to even start the container if DB_PASSWORD/
@@ -182,6 +192,32 @@ app.Use(async (context, next) =>
     context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
     await next();
 });
+
+// ARCHITECTURE-REVIEW.md finding #5: correlation ID for tracing one request across nginx -> this
+// API -> logs. nginx.conf sets X-Correlation-Id to its own $request_id on every proxied request, so
+// this just reads that through; the Guid fallback only fires if this API is ever hit directly,
+// bypassing nginx (e.g. a bare `dotnet run`). Pushed onto Serilog's LogContext so every log line for
+// this request -- including the exception handler's LogError below -- carries it automatically with
+// no call-site changes, and echoed back on the response so a bug report can reference the same ID
+// that's in the server logs.
+app.Use(async (context, next) =>
+{
+    var correlationId = context.Request.Headers.TryGetValue("X-Correlation-Id", out var incoming) && !string.IsNullOrWhiteSpace(incoming)
+        ? incoming.ToString()
+        : Guid.NewGuid().ToString();
+
+    context.Response.Headers["X-Correlation-Id"] = correlationId;
+
+    using (Serilog.Context.LogContext.PushProperty("CorrelationId", correlationId))
+    {
+        await next();
+    }
+});
+
+// Wraps everything below it, including the exception handler, so its one-line-per-request summary
+// (method/path/status/elapsed ms) reflects the TRUE final status code -- e.g. a 500 the exception
+// handler produces -- rather than whatever status was set before an exception was thrown.
+app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
 {

@@ -7,6 +7,7 @@
         "ext-pdo": "*",
         "ext-pgsql": "*",
         "firebase/php-jwt": "^7.1",
+        "monolog/monolog": "^3.0",
         "onelogin/php-saml": "^4.3",
         "slim/psr7": "^1.7",
         "slim/slim": "^4.14",

@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+use Enkl\Api\Auth\CorrelationIdMiddleware;
+use Enkl\Api\Auth\RequestLoggingMiddleware;
 use Enkl\Api\Config\Config;
 use Enkl\Api\Db\Database;
 use Enkl\Api\Db\Migrator;
+use Enkl\Api\Support\Log;
+use Enkl\Api\Support\RequestContext;
 use Enkl\Api\Validation\ApiValidationException;
 use Slim\Factory\AppFactory;
 use Slim\Psr7\Response;
@@ -74,11 +78,28 @@ function buildApp(): \Slim\App
             return $response->withHeader('Content-Type', 'application/json')->withStatus(409);
         }
 
-        error_log('[Enkl PHP API] Unhandled exception: ' . $exception->getMessage() . "\n" . $exception->getTraceAsString());
+        Log::channel()->error('Unhandled exception', [
+            'exceptionClass' => get_class($exception),
+            'message' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
 
-        $response->getBody()->write(json_encode(['message' => 'An unexpected error occurred. Please try again.']));
+        $response->getBody()->write(json_encode([
+            'message' => 'An unexpected error occurred. Please try again.',
+            'correlationId' => RequestContext::getCorrelationId(),
+        ]));
         return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
     });
+
+    // ARCHITECTURE-REVIEW.md finding #5. Added LAST (after addErrorMiddleware above) so, per Slim's
+    // LIFO middleware stack (last add() = outermost = runs first -- same convention documented on
+    // JwtAuthMiddleware/SessionValidationMiddleware in routes.php), the runtime order is:
+    // CorrelationIdMiddleware (outermost, sets the ID before anything else runs) -> RequestLogging
+    // Middleware (sees the true final status, including ones the error middleware above produces) ->
+    // the error middleware -> routes/JwtAuth/SessionValidation -> the route handler. This mirrors
+    // Program.cs's correlation-middleware -> UseSerilogRequestLogging -> UseExceptionHandler ordering.
+    $app->add(RequestLoggingMiddleware::class);
+    $app->add(new CorrelationIdMiddleware());
 
     return $app;
 }
@@ -126,6 +147,6 @@ function runMigrationsWithLogging(): void
     $migrator = new Migrator(Database::connection(), __DIR__ . '/Db/migrations');
     $applied = $migrator->run();
     if ($applied !== []) {
-        error_log('[Enkl PHP API] Applied migrations: ' . implode(', ', $applied));
+        Log::channel()->info('Applied migrations', ['migrations' => $applied]);
     }
 }
