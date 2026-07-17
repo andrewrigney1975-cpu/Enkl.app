@@ -65,6 +65,42 @@ export var TABLE_SCHEMAS = {
   teamsCommittees: ['id', 'key', 'name', 'description', 'type', 'parentId', 'memberIds', 'dateCreated', 'dateLastModified']
 };
 
+/* Foreign-key relationships among the tables above, purely descriptive (not enforced/validated — a
+   query can join on anything regardless of this list). This is the single source of truth for the
+   ERD features/schema-erd.js draws in the Advanced Query tab's "Tables & Columns" panel — keeping it
+   here next to TABLE_SCHEMAS means the diagram can never drift out of sync with what's actually
+   queryable, since both are read from the same constant. Array-valued fields (documentIds, memberIds,
+   etc.) are still listed here as relationships even though they're not literal scalar FK columns a
+   real SQL JOIN could use directly — they're still meaningful "this entity relates to that entity"
+   edges for the diagram's purposes. */
+export var TABLE_RELATIONSHIPS = [
+  {from: 'tasks', fromField: 'columnId', to: 'columns', toField: 'id'},
+  {from: 'tasks', fromField: 'assigneeId', to: 'members', toField: 'id'},
+  {from: 'tasks', fromField: 'releaseId', to: 'releases', toField: 'id'},
+  {from: 'tasks', fromField: 'typeId', to: 'taskTypes', toField: 'id'},
+  {from: 'tasks', fromField: 'parentTaskId', to: 'tasks', toField: 'id'},
+  {from: 'tasks', fromField: 'dependencies', to: 'tasks', toField: 'id'},
+  {from: 'members', fromField: 'reportsToId', to: 'members', toField: 'id'},
+  {from: 'risks', fromField: 'ownerId', to: 'members', toField: 'id'},
+  {from: 'risks', fromField: 'taskId', to: 'tasks', toField: 'id'},
+  {from: 'risks', fromField: 'documentIds', to: 'documents', toField: 'id'},
+  {from: 'risks', fromField: 'principleIds', to: 'principles', toField: 'id'},
+  {from: 'risks', fromField: 'objectiveIds', to: 'objectives', toField: 'id'},
+  {from: 'decisions', fromField: 'ownerId', to: 'members', toField: 'id'},
+  {from: 'decisions', fromField: 'taskId', to: 'tasks', toField: 'id'},
+  {from: 'decisions', fromField: 'documentIds', to: 'documents', toField: 'id'},
+  {from: 'decisions', fromField: 'riskIds', to: 'risks', toField: 'id'},
+  {from: 'decisions', fromField: 'principleIds', to: 'principles', toField: 'id'},
+  {from: 'decisions', fromField: 'objectiveIds', to: 'objectives', toField: 'id'},
+  {from: 'objectives', fromField: 'principleIds', to: 'principles', toField: 'id'},
+  {from: 'documents', fromField: 'ownerId', to: 'members', toField: 'id'},
+  {from: 'documents', fromField: 'taskId', to: 'tasks', toField: 'id'},
+  {from: 'documents', fromField: 'relatedDocumentIds', to: 'documents', toField: 'id'},
+  {from: 'releases', fromField: 'ownerId', to: 'members', toField: 'id'},
+  {from: 'teamsCommittees', fromField: 'parentId', to: 'teamsCommittees', toField: 'id'},
+  {from: 'teamsCommittees', fromField: 'memberIds', to: 'members', toField: 'id'}
+];
+
 /* Belt-and-suspenders safety backstop, independent of AlaSQL's own behavior — AlaSQL does NOT reject
    DROP/DELETE/etc. on its own (confirmed: `DROP TABLE tasks` executes silently against the in-memory
    table registry otherwise), so this is the actual guarantee, not a redundant check. Runs on the raw

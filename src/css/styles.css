@@ -3071,30 +3071,20 @@
     margin: 10px 0;
   }
 
+  /* Holds the hand-rolled SVG ERD (features/schema-erd.js) — sized to scroll in both directions
+     since the diagram is naturally wider AND taller than the modal, rather than trying to squeeze a
+     whole schema diagram into a fixed small box. */
   .kf-query-schema-panel {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px 16px;
-    max-height: 140px;
-    overflow-y: auto;
+    max-height: 360px;
+    overflow: auto;
     background: var(--kf-bg);
     border-radius: var(--kf-radius);
-    padding: 8px 10px;
+    padding: 10px;
     margin-bottom: 10px;
-    font-size: 12px;
   }
 
   .kf-query-schema-panel.hidden {
     display: none;
-  }
-
-  .kf-query-schema-table-name {
-    font-weight: 700;
-    color: var(--kf-text);
-  }
-
-  .kf-query-schema-table-cols {
-    color: var(--kf-text-secondary);
   }
 
   .kf-query-error {

@@ -5,7 +5,8 @@ import { hydrateIcons } from '../icons.js';
 import { TEAM_COMMITTEE_TYPES } from '../config.js';
 import { toast } from '../ui.js';
 import { PROJECT_SEARCH_MIN_CHARS, buildProjectSearchGroups, buildSearchSnippetHTML } from '../features/project-search.js';
-import { executeQuery, QueryError, TABLE_SCHEMAS } from '../features/query-engine.js';
+import { executeQuery, QueryError } from '../features/query-engine.js';
+import { buildSchemaErdSvg } from '../features/schema-erd.js';
 import { csvEscapeValue } from '../views/task-list.js';
 import { openTaskModal } from './task.js';
 import { openTeamModal } from './team.js';
@@ -183,14 +184,9 @@ export function showProjectSearchQueryView(){
 export function toggleProjectQuerySchemaPanel(){
   var panel = document.getElementById('projectQuerySchemaPanel');
   var willShow = panel.classList.contains('hidden');
-  if(willShow){
-    panel.innerHTML = Object.keys(TABLE_SCHEMAS).sort().map(function(table){
-      return '<div class="kf-query-schema-table">' +
-        '<div class="kf-query-schema-table-name">' + escapeHTML(table) + '</div>' +
-        '<div class="kf-query-schema-table-cols">' + TABLE_SCHEMAS[table].map(escapeHTML).join(', ') + '</div>' +
-      '</div>';
-    }).join('');
-  }
+  // Regenerated fresh every time the panel opens, straight from query-engine.js's own
+  // TABLE_SCHEMAS/TABLE_RELATIONSHIPS — never a stale cached diagram.
+  if(willShow) panel.innerHTML = buildSchemaErdSvg();
   panel.classList.toggle('hidden', !willShow);
 }
 
