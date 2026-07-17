@@ -243,6 +243,16 @@ export function generateScimTokenApi(){
   return apiFetch('/organisations/me/sso-config/scim-token', {method: 'POST'});
 }
 
+export function getApiKeyApi(){
+  return apiFetch('/organisations/me/api-key', {method: 'GET'});
+}
+export function generateApiKeyApi(){
+  return apiFetch('/organisations/me/api-key', {method: 'POST'});
+}
+export function revokeApiKeyApi(){
+  return apiFetch('/organisations/me/api-key', {method: 'DELETE'});
+}
+
 /* Read-only — SCIM/the IdP owns Org Team membership (see OrgTeam's own server-side doc comment).
    The only mutating action available here is applyOrgTeamToProjectApi below. */
 export function getOrgTeamsApi(){

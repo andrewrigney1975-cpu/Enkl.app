@@ -36,6 +36,7 @@ public class AppDbContext : DbContext
     public DbSet<PageLoadTiming> PageLoadTimings => Set<PageLoadTiming>();
     public DbSet<ProjectResourcePlaceholder> ProjectResourcePlaceholders => Set<ProjectResourcePlaceholder>();
     public DbSet<SavedQuery> SavedQueries => Set<SavedQuery>();
+    public DbSet<OrganisationApiKey> OrganisationApiKeys => Set<OrganisationApiKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -24,10 +24,11 @@ final class SavedQueryService
 
         $id = Uuid::v4();
         $this->db->prepare(<<<SQL
-            INSERT INTO "SavedQueries" ("Id", "ProjectId", "Name", "Sql", "DateCreated")
-            VALUES (:id, :pid, :name, :sql, now())
+            INSERT INTO "SavedQueries" ("Id", "ProjectId", "Name", "Sql", "DateCreated", "ExposeViaApi")
+            VALUES (:id, :pid, :name, :sql, now(), :exposeViaApi)
         SQL)->execute([
             'id' => $id, 'pid' => $projectId, 'name' => $request['name'] ?? '', 'sql' => $request['sql'] ?? '',
+            'exposeViaApi' => (int) ($request['exposeViaApi'] ?? false),
         ]);
 
         return $this->toDto($id);
@@ -42,9 +43,10 @@ final class SavedQueryService
         }
 
         $this->db->prepare(<<<SQL
-            UPDATE "SavedQueries" SET "Name" = :name, "Sql" = :sql WHERE "Id" = :id
+            UPDATE "SavedQueries" SET "Name" = :name, "Sql" = :sql, "ExposeViaApi" = :exposeViaApi WHERE "Id" = :id
         SQL)->execute([
             'name' => $request['name'] ?? '', 'sql' => $request['sql'] ?? '', 'id' => $queryId,
+            'exposeViaApi' => (int) ($request['exposeViaApi'] ?? false),
         ]);
 
         return $this->toDto($queryId);
@@ -65,6 +67,7 @@ final class SavedQueryService
 
         return [
             'id' => $q['Id'], 'name' => $q['Name'], 'sql' => $q['Sql'], 'dateCreated' => $q['DateCreated'],
+            'exposeViaApi' => (bool) $q['ExposeViaApi'],
         ];
     }
 }

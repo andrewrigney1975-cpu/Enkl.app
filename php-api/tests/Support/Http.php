@@ -24,6 +24,12 @@ final class Http
     }
 
     /** @return array{status:int, body:array<mixed>|null} */
+    public static function delete(string $path, ?string $token = null, array $headers = []): array
+    {
+        return self::request('DELETE', $path, null, $token, $headers);
+    }
+
+    /** @return array{status:int, body:array<mixed>|null} */
     private static function request(string $method, string $path, ?array $body, ?string $token, array $headers): array
     {
         $ch = curl_init(testServerBaseUrl() . $path);

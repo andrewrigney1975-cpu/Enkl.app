@@ -25,7 +25,8 @@ public class SavedQueryService
             ProjectId = projectId,
             Name = request.Name,
             Sql = request.Sql,
-            DateCreated = DateTime.UtcNow
+            DateCreated = DateTime.UtcNow,
+            ExposeViaApi = request.ExposeViaApi
         };
         _db.SavedQueries.Add(query);
         await _db.SaveChangesAsync();
@@ -39,6 +40,7 @@ public class SavedQueryService
 
         query.Name = request.Name;
         query.Sql = request.Sql;
+        query.ExposeViaApi = request.ExposeViaApi;
         await _db.SaveChangesAsync();
         return ToDto(query);
     }
@@ -53,5 +55,5 @@ public class SavedQueryService
         return true;
     }
 
-    private static SavedQueryDto ToDto(SavedQuery q) => new(q.Id, q.Name, q.Sql, q.DateCreated);
+    private static SavedQueryDto ToDto(SavedQuery q) => new(q.Id, q.Name, q.Sql, q.DateCreated, q.ExposeViaApi);
 }

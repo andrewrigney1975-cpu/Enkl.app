@@ -480,10 +480,11 @@ final class ProjectService
 
     private function fetchSavedQueries(string $projectId): array
     {
-        $stmt = $this->db->prepare('SELECT "Id", "Name", "Sql", "DateCreated" FROM "SavedQueries" WHERE "ProjectId" = :pid ORDER BY "DateCreated"');
+        $stmt = $this->db->prepare('SELECT "Id", "Name", "Sql", "DateCreated", "ExposeViaApi" FROM "SavedQueries" WHERE "ProjectId" = :pid ORDER BY "DateCreated"');
         $stmt->execute(['pid' => $projectId]);
         return array_map(fn($q) => [
             'id' => $q['Id'], 'name' => $q['Name'], 'sql' => $q['Sql'], 'dateCreated' => $q['DateCreated'],
+            'exposeViaApi' => (bool) $q['ExposeViaApi'],
         ], $stmt->fetchAll());
     }
 

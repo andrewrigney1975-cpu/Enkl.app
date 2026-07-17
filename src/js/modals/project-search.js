@@ -187,6 +187,10 @@ export function showProjectSearchQueryView(){
   document.getElementById('projectSearchQueryFooter').classList.remove('hidden');
   document.getElementById('projectQuerySaveRow').classList.add('hidden');
   document.getElementById('projectQuerySavedPanel').classList.add('hidden');
+  // Expose via API has no meaning for a local-only project — there's no server row of any kind to
+  // attach an API key or a view-filter to (see CLAUDE.md §20) — so the control isn't offered at all,
+  // not merely disabled, same exemption every other server-only permission gate in this app makes.
+  document.getElementById('projectQueryExposeApiRow').classList.toggle('hidden', !isServerAuthoritative(getCurrentProject()));
   openProjectQuerySchemaPanel(); // Tables & Columns is shown by default when the Advanced Query view opens
   hideProjectQueryIntellisense();
   clearLoadedSavedQuery();
@@ -412,11 +416,30 @@ function updateSaveQueryButtonLabel(){
   document.getElementById('projectQuerySaveBtn').textContent = loadedSavedQueryId ? 'Update Query' : 'Save Query';
 }
 
-function setLoadedSavedQuery(id, name, sql){
+// Builds the public URL a 3rd-party caller would hit for this saved query — same-origin path per
+// api.js's own convention (nginx reverse-proxies /api/* alongside the frontend, see PublicQueryController's
+// own note on the /api/public/v1/ prefix), so no separate base-URL config is needed here.
+function projectQueryApiUrl(queryId){
+  return window.location.origin + '/api/public/v1/queries/' + queryId + '/results';
+}
+
+function showProjectQueryApiUrl(queryId){
+  document.getElementById('projectQueryApiUrlText').textContent = projectQueryApiUrl(queryId);
+  document.getElementById('projectQueryApiUrlRow').classList.remove('hidden');
+}
+
+function hideProjectQueryApiUrl(){
+  document.getElementById('projectQueryApiUrlRow').classList.add('hidden');
+}
+
+function setLoadedSavedQuery(id, name, sql, exposeViaApi){
   loadedSavedQueryId = id;
   loadedSavedQueryName = name;
   loadedSavedQuerySql = sql;
   updateSaveQueryButtonLabel();
+  document.getElementById('projectQueryExposeApiCheckbox').checked = !!exposeViaApi;
+  if(exposeViaApi) showProjectQueryApiUrl(id);
+  else hideProjectQueryApiUrl();
 }
 
 export function clearLoadedSavedQuery(){
@@ -424,6 +447,8 @@ export function clearLoadedSavedQuery(){
   loadedSavedQueryName = null;
   loadedSavedQuerySql = null;
   updateSaveQueryButtonLabel();
+  document.getElementById('projectQueryExposeApiCheckbox').checked = false;
+  hideProjectQueryApiUrl();
 }
 
 // "Dirty" only has meaning relative to a saved baseline — a query that was never saved has nothing
@@ -475,7 +500,7 @@ export function handleProjectQuerySavedListClick(e){
   document.getElementById('projectQuerySql').value = query.sql;
   document.getElementById('projectQuerySavedPanel').classList.add('hidden');
   hideProjectQueryIntellisense();
-  setLoadedSavedQuery(query.id, query.name, query.sql);
+  setLoadedSavedQuery(query.id, query.name, query.sql, query.exposeViaApi);
 }
 
 function deleteSavedQueryRow(queryId){
@@ -526,13 +551,16 @@ async function performSavedQueryUpdate(onSaved){
   var sql = document.getElementById('projectQuerySql').value;
   var queryId = loadedSavedQueryId;
   var name = loadedSavedQueryName;
+  var exposeViaApi = document.getElementById('projectQueryExposeApiCheckbox').checked;
 
   if(isServerAuthoritative(project)){
     try {
-      await savedQueryApi.update(project.serverProjectId, queryId, {name: name, sql: sql});
+      await savedQueryApi.update(project.serverProjectId, queryId, {name: name, sql: sql, exposeViaApi: exposeViaApi});
       await refreshProjectFromServer(project.id);
       toast('Query updated.');
       loadedSavedQuerySql = sql;
+      if(exposeViaApi) showProjectQueryApiUrl(queryId);
+      else hideProjectQueryApiUrl();
       if(onSaved) onSaved();
     } catch(e){
       toast('Could not update query on the server: ' + (e.message || 'unknown error'));
@@ -612,11 +640,14 @@ export async function confirmSaveProjectQuery(){
   if(!sql.trim()){ toast('Enter a query first.'); return; }
 
   if(isServerAuthoritative(project)){
+    var exposeViaApi = document.getElementById('projectQueryExposeApiCheckbox').checked;
     try {
-      await savedQueryApi.create(project.serverProjectId, {name: name, sql: sql});
+      var created = await savedQueryApi.create(project.serverProjectId, {name: name, sql: sql, exposeViaApi: exposeViaApi});
       await refreshProjectFromServer(project.id);
       toast('Query saved.');
       hideProjectQuerySaveRow();
+      if(exposeViaApi) showProjectQueryApiUrl(created.id);
+      else hideProjectQueryApiUrl();
     } catch(e){
       toast('Could not save query on the server: ' + (e.message || 'unknown error'));
     }
@@ -734,6 +765,20 @@ export function exportProjectQueryResultsAsCsv(){
   var filename = (project ? project.key : 'query') + '-query-' + new Date().toISOString().slice(0,10) + '.csv';
   downloadBlob(blob, filename);
   toast('Exported ' + filename);
+}
+
+export function copyProjectQueryApiUrl(){
+  var url = document.getElementById('projectQueryApiUrlText').textContent;
+  if(!url) return;
+  if(!navigator.clipboard || !navigator.clipboard.writeText){
+    toast('Clipboard access is not available in this browser.');
+    return;
+  }
+  navigator.clipboard.writeText(url).then(function(){
+    toast('Copied API URL to clipboard.');
+  }, function(){
+    toast('Could not copy to clipboard.');
+  });
 }
 
 export function copyProjectQueryResultsAsJson(){

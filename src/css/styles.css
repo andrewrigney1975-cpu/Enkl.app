@@ -3221,6 +3221,45 @@
     background: var(--kf-input-bg-focus);
   }
 
+  .kf-query-expose-api-row {
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+
+  .kf-query-expose-api-row.hidden {
+    display: none;
+  }
+
+  .kf-query-expose-api-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  .kf-query-api-url-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 12px;
+  }
+
+  .kf-query-api-url-row.hidden {
+    display: none;
+  }
+
+  .kf-query-api-url-text {
+    font-family: monospace;
+    overflow-x: auto;
+    white-space: nowrap;
+    background: var(--kf-input-bg);
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 4px 8px;
+    flex: 1;
+  }
+
   .kf-query-saved-row {
     display: flex;
     align-items: center;
@@ -4419,6 +4458,8 @@
     #projectSearchOverlay .kf-query-actions,
     #projectSearchOverlay .kf-query-saved-panel,
     #projectSearchOverlay .kf-query-save-row,
+    #projectSearchOverlay .kf-query-expose-api-row,
+    #projectSearchOverlay .kf-query-api-url-row,
     #projectSearchOverlay .kf-query-result-toggle,
     #projectSearchOverlay .kf-modal-footer {
       display: none !important;

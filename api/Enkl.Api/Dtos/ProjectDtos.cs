@@ -51,7 +51,7 @@ public record DecisionDto(
 /// <summary>A saved Advanced Query SQL snippet (features/query-engine.js) — shared across every
 /// member of the project, same as any other project-scoped entity. No display key/counter scheme
 /// (unlike Risk's KEY-RISK-001) — Name is the human identifier.</summary>
-public record SavedQueryDto(Guid Id, string Name, string Sql, DateTime DateCreated);
+public record SavedQueryDto(Guid Id, string Name, string Sql, DateTime DateCreated, bool ExposeViaApi);
 
 public record ProjectDetailDto(
     Guid Id, string Name, string Key, Guid OrganisationId,
@@ -95,7 +95,7 @@ public record UpdateReleaseRequest(string Name, string Status, Guid? OwnerId, Da
 public record CreateTaskTypeRequest(string Name, string? IconName);
 public record UpdateTaskTypeRequest(string Name, string? IconName);
 
-public record CreateSavedQueryRequest(string Name, string Sql);
+public record CreateSavedQueryRequest(string Name, string Sql, bool ExposeViaApi = false);
 
 public record CreatePrincipleRequest(string Title, string? Description, string? DocumentUrl);
 public record UpdatePrincipleRequest(string Title, string? Description, string? DocumentUrl);

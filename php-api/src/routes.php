@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Enkl\Api\Auth\ApiKeyAuthMiddleware;
 use Enkl\Api\Auth\JwtAuthMiddleware;
 use Enkl\Api\Auth\OrgAdminMiddleware;
 use Enkl\Api\Auth\ProjectAdminMiddleware;
@@ -21,9 +22,11 @@ use Enkl\Api\Controllers\ObjectivesController;
 use Enkl\Api\Controllers\OrganisationPrinciplesController;
 use Enkl\Api\Controllers\OrganisationSsoConfigController;
 use Enkl\Api\Controllers\OrganisationsController;
+use Enkl\Api\Controllers\OrganisationApiKeyController;
 use Enkl\Api\Controllers\PortfolioController;
 use Enkl\Api\Controllers\PrinciplesController;
 use Enkl\Api\Controllers\ProjectsController;
+use Enkl\Api\Controllers\PublicQueryController;
 use Enkl\Api\Controllers\ReleasesController;
 use Enkl\Api\Controllers\RetrospectivesController;
 use Enkl\Api\Controllers\RisksController;
@@ -129,7 +132,23 @@ function registerRoutes(App $app): void
         $group->get('/sso-config', [OrganisationSsoConfigController::class, 'get']);
         $group->put('/sso-config', [OrganisationSsoConfigController::class, 'update']);
         $group->post('/sso-config/scim-token', [OrganisationSsoConfigController::class, 'generateScimToken']);
+        $group->get('/api-key', [OrganisationApiKeyController::class, 'get']);
+        $group->post('/api-key', [OrganisationApiKeyController::class, 'generate']);
+        $group->delete('/api-key', [OrganisationApiKeyController::class, 'revoke']);
     })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
+
+    // ---- Public Query API (the app's first public/3rd-party-facing surface — deliberately
+    // namespaced/versioned apart from the internal "api/..." routes, see PublicQueryController.php's
+    // own note) — gated by ApiKeyAuthMiddleware's per-org static API key INSTEAD OF
+    // JwtAuthMiddleware/RequireAuthMiddleware, same shape as the SCIM group above. Rate-limited by
+    // the presented API key (hashed), not IP — see RateLimitMiddleware.php's own note on why. ----
+    $app->get('/api/public/v1/queries/{savedQueryId}/results', [PublicQueryController::class, 'getResults'])
+        ->add(ApiKeyAuthMiddleware::class)
+        ->add(new RateLimitMiddleware('publicQuery', 60, function ($request) {
+            $authHeader = $request->getHeaderLine('Authorization');
+            $token = stripos($authHeader, 'bearer ') === 0 ? trim(substr($authHeader, 7)) : '';
+            return $token !== '' ? hash('sha256', $token) : 'unknown';
+        }));
 
     // ---- Portfolio Dashboard (OrgAdmin only, deliberately NO ProjectMemberMiddleware — an admin
     // reviewing their organisation's portfolio may not personally belong to every project in it; see
