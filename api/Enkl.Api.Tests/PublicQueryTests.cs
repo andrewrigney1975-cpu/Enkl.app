@@ -130,13 +130,70 @@ public class PublicQueryTests
     [Fact]
     public async Task GetResults_WithWriteStatementInSavedSql_RejectsWithBadRequest()
     {
-        var (_, savedQueryId, apiKey) = await SeedExposedQueryWithApiKeyAsync(sql: "DELETE FROM query_tasks");
+        var (_, savedQueryId, apiKey) = await SeedExposedQueryWithApiKeyAsync(sql: "DELETE FROM [tasks]");
 
         var client = _fixture.Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         var response = await client.GetAsync($"/api/public/v1/queries/{savedQueryId}/results");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    // Real bug found live (2026-07-18): a saved query authored via the Advanced Query UI is always
+    // bracket-quoted (SQL formatter/intellisense, CLAUDE.md §17/§18) and uses AlaSQL's lowercase
+    // table names / camelCase field names — Postgres understands neither verbatim. This exercises
+    // the exact shape of query a real user would have saved, against real seeded task data, proving
+    // both TranslateBracketIdentifiers AND the view's camelCase column aliases are correct together.
+    [Fact]
+    public async Task GetResults_WithBracketQuotedQueryAgainstRealTaskData_ReturnsCorrectlyMappedRows()
+    {
+        var org = TestDataHelper.Unique("org");
+        var admin = TestDataHelper.Unique("admin");
+        var projectKey = TestDataHelper.Unique("PRJ");
+        Guid savedQueryId;
+        using (var scope = _fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (seededOrg, _) = await TestDataHelper.SeedOrgAndUserAsync(db, org, admin, isOrgAdmin: true);
+            var project = await TestDataHelper.SeedProjectAsync(db, seededOrg.Id, projectKey);
+
+            var column = new Column { Id = Guid.NewGuid(), ProjectId = project.Id, Name = "To Do", Done = false, Order = 0 };
+            db.Columns.Add(column);
+            db.Tasks.Add(new TaskItem
+            {
+                Id = Guid.NewGuid(), ProjectId = project.Id, Key = projectKey + "-1", Title = "Fix login bug",
+                Priority = "high", ColumnId = column.Id, DateCreated = DateTime.UtcNow, DateLastModified = DateTime.UtcNow
+            });
+
+            var query = new SavedQuery
+            {
+                Id = Guid.NewGuid(), ProjectId = project.Id, Name = "Bracket-quoted test",
+                Sql = "SELECT [title], [priority] FROM [tasks] WHERE [priority] = 'high'",
+                DateCreated = DateTime.UtcNow, ExposeViaApi = true
+            };
+            db.SavedQueries.Add(query);
+            await db.SaveChangesAsync();
+            savedQueryId = query.Id;
+        }
+
+        var client = _fixture.Factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Forwarded-For", TestDataHelper.UniqueIp());
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(admin, TestDataHelper.DefaultPassword));
+        var login = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login!.Token);
+        var keyResponse = await client.PostAsync("/api/organisations/me/api-key", null);
+        var key = await keyResponse.Content.ReadFromJsonAsync<GenerateApiKeyResponse>();
+
+        var publicClient = _fixture.Factory.CreateClient();
+        publicClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", key!.Key);
+        var response = await publicClient.GetAsync($"/api/public/v1/queries/{savedQueryId}/results");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var rows = body.GetProperty("rows");
+        Assert.Equal(1, rows.GetArrayLength());
+        Assert.Equal("Fix login bug", rows[0].GetProperty("title").GetString());
+        Assert.Equal("high", rows[0].GetProperty("priority").GetString());
     }
 
     // Revoking the key must take effect immediately — no separate "logout" step for an API key.

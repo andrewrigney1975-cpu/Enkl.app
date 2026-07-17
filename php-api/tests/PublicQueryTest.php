@@ -94,11 +94,51 @@ final class PublicQueryTest extends TestCase
     // cleanly with a 400, not a raw Postgres permission-denied 500.
     public function testGetResultsWithWriteStatementInSavedSqlRejectsWithBadRequest(): void
     {
-        $seeded = $this->seedExposedQueryWithApiKey(sql: 'DELETE FROM query_tasks');
+        $seeded = $this->seedExposedQueryWithApiKey(sql: 'DELETE FROM [tasks]');
 
         $response = Http::get('/api/public/v1/queries/' . $seeded['savedQueryId'] . '/results', $seeded['apiKey']);
 
         self::assertSame(400, $response['status']);
+    }
+
+    // Real bug found live (2026-07-18): a saved query authored via the Advanced Query UI is always
+    // bracket-quoted (SQL formatter/intellisense) and uses AlaSQL's lowercase table names/camelCase
+    // field names — Postgres understands neither verbatim. This exercises the exact shape of query
+    // a real user would have saved, against real seeded task data, proving both
+    // translateBracketIdentifiers() AND the view's camelCase column aliases are correct together.
+    public function testGetResultsWithBracketQuotedQueryAgainstRealTaskDataReturnsCorrectlyMappedRows(): void
+    {
+        $ip = TestDataHelper::uniqueIp();
+        $org = TestDataHelper::unique('org');
+        $admin = TestDataHelper::unique('admin');
+        $seeded = TestDataHelper::seedOrgAndUser(self::$db, $org, $admin, isOrgAdmin: true);
+        $projectKey = TestDataHelper::unique('P');
+        $projectId = TestDataHelper::seedProject(self::$db, $seeded['orgId'], $projectKey);
+
+        $columnId = Uuid::v4();
+        self::$db->prepare(
+            'INSERT INTO "Columns" ("Id", "ProjectId", "Name", "Done", "Order") VALUES (:id, :pid, \'To Do\', false, 0)'
+        )->execute(['id' => $columnId, 'pid' => $projectId]);
+        self::$db->prepare(<<<SQL
+            INSERT INTO "Tasks" ("Id", "ProjectId", "Key", "Title", "Priority", "ColumnId", "Progress", "Archived", "DateCreated", "DateLastModified")
+            VALUES (:id, :pid, :key, 'Fix login bug', 'high', :columnId, 0, false, now(), now())
+        SQL)->execute(['id' => Uuid::v4(), 'pid' => $projectId, 'key' => $projectKey . '-1', 'columnId' => $columnId]);
+
+        $savedQueryId = Uuid::v4();
+        self::$db->prepare(<<<SQL
+            INSERT INTO "SavedQueries" ("Id", "ProjectId", "Name", "Sql", "DateCreated", "ExposeViaApi")
+            VALUES (:id, :pid, 'Bracket-quoted test', :sql, now(), true)
+        SQL)->execute(['id' => $savedQueryId, 'pid' => $projectId, 'sql' => "SELECT [title], [priority] FROM [tasks] WHERE [priority] = 'high'"]);
+
+        $login = Http::post('/api/auth/login', ['username' => $admin, 'password' => TestDataHelper::DEFAULT_PASSWORD], null, ['X-Forwarded-For' => $ip]);
+        $keyResponse = Http::post('/api/organisations/me/api-key', [], $login['body']['token'], ['X-Forwarded-For' => $ip]);
+
+        $response = Http::get('/api/public/v1/queries/' . $savedQueryId . '/results', $keyResponse['body']['key']);
+
+        self::assertSame(200, $response['status']);
+        self::assertCount(1, $response['body']['rows']);
+        self::assertSame('Fix login bug', $response['body']['rows'][0]['title']);
+        self::assertSame('high', $response['body']['rows'][0]['priority']);
     }
 
     // Revoking the key must take effect immediately — no separate "logout" step for an API key.

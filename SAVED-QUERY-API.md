@@ -34,12 +34,13 @@ with the rest of the codebase's conventions. This file is the standalone, org-fa
                      ┌───────────────────────▼───────────────────────────────┐
                      │  Postgres role: enkl_public_query (SELECT-only)       │
                      │  SET LOCAL app.query_project_id = '<project id>'      │
-                     │  runs the saved query's raw SQL text                  │
-                     │  against 10 project-scoped views only:                │
-                     │  query_tasks, query_columns, query_members,           │
-                     │  query_risks, query_decisions, query_principles,      │
-                     │  query_objectives, query_documents, query_releases,   │
-                     │  query_task_types, query_teams_committees             │
+                     │  translates [bracket] quoting to "double" quoting,    │
+                     │  then runs the saved query's SQL text against 10      │
+                     │  project-scoped views, exact-cased/aliased to match   │
+                     │  the Advanced Query grammar: "tasks", "columns",      │
+                     │  "members", "risks", "decisions", "principles",       │
+                     │  "objectives", "documents", "releases", "taskTypes",  │
+                     │  "teamsCommittees"                                    │
                      └───────────────────────┬───────────────────────────────┘
                                              │
                              3. rows returned as JSON, transaction
@@ -84,32 +85,59 @@ Two ways to do that were considered:
 ### The safety model, concretely
 
 A dedicated Postgres role, `enkl_public_query`, is created by the database migration
-(`AddSavedQueryApiExposure` / `023_add_saved_query_api_exposure.sql`). It has:
+(`AddSavedQueryApiExposure` / `023_add_saved_query_api_exposure.sql`); the queryable views
+themselves were corrected in a follow-up migration (`FixSavedQueryApiViews` /
+`024_fix_saved_query_api_views.sql`, see the note below). The role has:
 
-- `SELECT` only, on exactly ten views (`query_tasks`, `query_columns`, `query_members`, `query_risks`,
-  `query_decisions`, `query_principles`, `query_objectives`, `query_documents`, `query_releases`,
-  `query_task_types`, `query_teams_committees`).
+- `SELECT` only, on exactly ten views — `"tasks"`, `"columns"`, `"members"`, `"risks"`,
+  `"decisions"`, `"principles"`, `"objectives"`, `"documents"`, `"releases"`, `"taskTypes"`,
+  `"teamsCommittees"` — named and columned to match the Advanced Query grammar exactly (lowercase
+  table names, camelCase field names like `columnId`/`dateCreated`), so a saved query written
+  against that grammar runs against them without any manual translation on the query author's part.
 - No access to any other table — not `Organisations`, not `Users`, not the real `Tasks`/`Risks`/etc.
   tables, not anything belonging to any org other than the one the query's project belongs to.
 - No write access anywhere, including to the ten views it can read.
 
-Each view is defined as `SELECT * FROM "Tasks" WHERE "ProjectId" = current_setting(...)::uuid` (and
-equivalent for the other nine) — hard-filtered to a single project via a Postgres session variable
-that the execution service sets, inside a transaction, immediately before running the saved query's
-SQL text. That transaction is always rolled back afterward; nothing is ever written.
+Each view is hard-filtered to a single project via a Postgres session variable
+(`current_setting('app.query_project_id', ...)`) that the execution service sets, inside a
+transaction, immediately before running the saved query's SQL text. That transaction is always
+rolled back afterward; nothing is ever written. Fields that are arrays of related-record ids on the
+client side (a task's dependency ids, a risk's linked document ids, etc.) are computed via a
+correlated subquery in the view definition, since there's no single database column to point at —
+the view is what does that assembly, not the execution service.
 
-The practical effect: even though a saved query's raw SQL text is executed completely verbatim, with
-no parsing or rewriting, it is **physically incapable** of reading another project's data, another
-organisation's data, or any table outside the ten exposed views — the database itself refuses,
-regardless of what the query asks for. This was confirmed directly:
+Two small text transformations happen to the saved SQL immediately before it's sent to Postgres,
+neither of which is a security boundary (the grant boundary above is what actually matters) — they
+exist purely so a query written for the in-browser AlaSQL engine also runs, unmodified, here:
+
+- **Bracket-to-double-quote translation.** The SQL formatter/intellisense in the Advanced Query tab
+  bracket-quotes every identifier (`[tasks].[title]`) — that's valid syntax for AlaSQL, but Postgres
+  has no bracket-quoting at all. `PublicQueryExecutionService` rewrites `[x]` to `"x"` (skipping
+  anything inside a single-quoted string literal) before running the query.
+- **Exact-cased, exact-named views**, as above — so `FROM [tasks]` (after bracket translation, `FROM
+  "tasks"`) resolves to a real, case-sensitive Postgres relation with that literal name.
+
+The practical effect: even though a saved query's SQL text is executed essentially verbatim (modulo
+the harmless quoting-syntax translation above), it is **physically incapable** of reading another
+project's data, another organisation's data, or any table outside the ten exposed views — the
+database itself refuses, regardless of what the query asks for. This was confirmed directly:
 
 ```
 $ psql -U enkl_public_query -d enkl -c 'SELECT * FROM "Organisations" LIMIT 1;'
 ERROR:  permission denied for table Organisations
 
-$ psql -U enkl_public_query -d enkl -c 'DELETE FROM query_tasks;'
-ERROR:  permission denied for view query_tasks
+$ psql -U enkl_public_query -d enkl -c 'DELETE FROM "tasks";'
+ERROR:  permission denied for view tasks
 ```
+
+> **Note on the two text transformations above**: the first version of this feature only had the
+> grant-boundary/view-scoping design and skipped both transformations, on the assumption every
+> queryable table already mapped 1:1 to a real column. The very first real saved query run through
+> it (from a real user, not the test suite's trivial `SELECT 1`) failed with a syntax error, which
+> traced back to both gaps at once — the bracket-quoting mismatch, and several `TABLE_SCHEMAS`
+> fields (task dependencies, risk/decision/objective cross-links, team membership) that only exist
+> as junction tables client-side, not a plain column. Fixed in the `024_fix_saved_query_api_views`
+> migration described above.
 
 Two smaller, defense-in-depth measures sit on top of that primary control:
 
