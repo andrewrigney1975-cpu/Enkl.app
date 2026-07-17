@@ -59,6 +59,28 @@ export function isOrgAdmin(){
   return !!(payload && payload.orgAdmin === 'true');
 }
 
+/* Whether the caller is a Project Administrator on the given server project id (JwtTokenService.cs's
+   "projects" claim, decoded client-side without signature verification — same "only ever used to
+   decide what to SHOW, never what to ALLOW" trust model as isOrgAdmin() above; the server always
+   re-checks a live ProjectMembers row via ProjectAdminAuthorizationHandler/ProjectAdminMiddleware).
+   Returns false for a missing token, a missing/malformed "projects" claim, or a local-only project
+   with no serverProjectId at all — callers gate local-only projects on isServerAuthoritative()
+   instead, same as every other permission gate in this app (e.g. applyHeaderButtonVisibility's
+   teamsCommittees check). */
+export function isProjectAdmin(serverProjectId){
+  var token = getToken();
+  if(!token || !serverProjectId) return false;
+  var payload = decodeTokenPayload(token);
+  if(!payload || !payload.projects) return false;
+  try {
+    var memberships = JSON.parse(payload.projects);
+    var entry = memberships.find(function(m){ return m.ProjectId === serverProjectId; });
+    return !!(entry && entry.IsProjectAdmin);
+  } catch(e){
+    return false;
+  }
+}
+
 /* The logged-in user's Organisation display name (see JwtTokenService.cs's orgName claim), used to
    append " - <org name>" to the header logo once logged in. Null when logged out or the token predates
    this claim (an old token still cached in localStorage from before this was added). */
@@ -337,6 +359,13 @@ export var objectiveApi = makeEntityApi('objectives');
 export var teamCommitteeApi = makeEntityApi('teams-committees');
 export var decisionApi = makeEntityApi('decisions');
 export var memberApi = makeEntityApi('members');
+
+/* PUT /api/projects/{projectId}/members/{memberId}/admin, see MembersController.SetProjectAdmin —
+   Project-Admin-gated server-side, same as every other memberApi method; "the project admin role can
+   be assigned to users via the Team management tool" (modals/team.js). */
+memberApi.setProjectAdmin = function(projectId, memberId, isProjectAdmin){
+  return apiFetch('/projects/' + projectId + '/members/' + memberId + '/admin', {method: 'PUT', body: JSON.stringify({isProjectAdmin: isProjectAdmin})});
+};
 
 /* Project-scoped (not organisation-scoped, despite living next to the "Organisation Library" feature)
    — PUT /api/projects/{projectId}/principles/{id}/share, see PrinciplesController.Share. Bolted onto

@@ -2,7 +2,7 @@
 import { ui, toast } from '../ui.js';
 import { getCurrentProject } from '../store.js';
 import { iconSvg } from '../icons.js';
-import { escapeHTML, renderBoard, renderAssigneeFilterChips } from '../views/board.js';
+import { escapeHTML, renderBoard, renderAssigneeFilterChips, canCurrentUserManageProject } from '../views/board.js';
 import { memberInitials, clampAllocatedFraction } from '../date-utils.js';
 import { addMember, renameMember, setMemberRole, setMemberAllocatedFraction, setMemberReportsTo, removeMember, getTeamsCommitteesForMember } from '../mutations.js';
 import { getMemberById } from '../utils.js';
@@ -30,6 +30,10 @@ export function openTeamModal(){
   // scenes (see MemberService.CreateAsync) — that's the only case an email is required or even
   // shown; a local-only project's members are plain objects with no account concept.
   emailInput.classList.toggle('hidden', !isServerAuthoritative(project));
+  // "Manage team members" is a Project Administrator capability once a project is server-authoritative
+  // — a plain member still opens this modal to SEE the team (and, further down, gets read-only rows
+  // instead of the add-member form below), just can't add/edit/remove anyone.
+  document.getElementById('addMemberField').classList.toggle('hidden', !canCurrentUserManageProject());
   document.getElementById('teamOverlay').classList.remove('hidden');
   document.getElementById('newMemberNameInput').focus();
 }
@@ -61,18 +65,27 @@ export function renderMemberList(){
   }
   populateRoleOptions(project);
   var timeTrackingOn = isTimeTrackingEnabled(project);
+  // "Manage team members" is a Project Administrator capability once server-authoritative — a plain
+  // member sees the same list read-only (disabled inputs, no remove button, no admin toggle) rather
+  // than the row being hidden outright, so they can still see who's on the project and who's an admin.
+  var canManage = canCurrentUserManageProject();
+  var disabledAttr = canManage ? '' : ' disabled';
   project.members.forEach(function(m){
     var row = document.createElement('div');
     row.className = 'kf-member-row';
     row.setAttribute('data-member-id', m.id);
     row.innerHTML =
       '<span class="kf-avatar kf-avatar-md" style="background:' + m.color + ';">' + escapeHTML(memberInitials(m.name)) + '</span>' +
-      '<input type="text" class="kf-member-name-input" value="' + escapeHTML(m.name) + '" maxlength="60" aria-label="Member name">' +
-      '<input type="text" class="kf-member-role-input" value="' + escapeHTML(m.role || '') + '" maxlength="60" list="memberRoleOptions" placeholder="Role" aria-label="Member role">' +
+      '<input type="text" class="kf-member-name-input" value="' + escapeHTML(m.name) + '" maxlength="60" aria-label="Member name"' + disabledAttr + '>' +
+      '<input type="text" class="kf-member-role-input" value="' + escapeHTML(m.role || '') + '" maxlength="60" list="memberRoleOptions" placeholder="Role" aria-label="Member role"' + disabledAttr + '>' +
       (timeTrackingOn
-        ? '<input type="number" class="kf-member-allocated-fraction-input" min="0" max="100" step="1" value="' + (m.allocatedFraction != null ? m.allocatedFraction : '') + '" placeholder="%" title="Allocated fraction" aria-label="' + escapeHTML(m.name) + ' allocated fraction">'
+        ? '<input type="number" class="kf-member-allocated-fraction-input" min="0" max="100" step="1" value="' + (m.allocatedFraction != null ? m.allocatedFraction : '') + '" placeholder="%" title="Allocated fraction" aria-label="' + escapeHTML(m.name) + ' allocated fraction"' + disabledAttr + '>'
         : '') +
-      '<button class="kf-btn kf-btn-ghost" data-action="remove-member" title="Remove from project">' + iconSvg('trash',14) + '</button>';
+      (isServerAuthoritative(project)
+        ? '<label class="kf-member-admin-toggle" title="Project Administrator: can manage columns, app settings, workflow, and team members">' +
+            '<input type="checkbox" class="kf-member-admin-checkbox"' + (m.isProjectAdmin ? ' checked' : '') + disabledAttr + ' aria-label="' + escapeHTML(m.name) + ' is Project Administrator">Admin</label>'
+        : '') +
+      (canManage ? '<button class="kf-btn kf-btn-ghost" data-action="remove-member" title="Remove from project">' + iconSvg('trash',14) + '</button>' : '');
     var nameInput = row.querySelector('.kf-member-name-input');
     nameInput.addEventListener('change', async function(){
       if(isServerAuthoritative(project)){
@@ -123,32 +136,54 @@ export function renderMemberList(){
         renderMemberList();
       });
     }
-    row.querySelector('[data-action="remove-member"]').addEventListener('click', function(){
-      confirmDialog(
-        'Remove ' + m.name + '?',
-        'They will be unassigned from any tickets currently assigned to them.',
-        async function(){
-          if(isServerAuthoritative(project)){
-            try {
-              await memberApi.remove(project.serverProjectId, m.id);
-              await refreshProjectFromServer(project.id);
-              renderMemberList();
-              renderBoard();
-              renderAssigneeFilterChips();
-              toast('Removed ' + m.name + '.');
-            } catch(e){
-              toast('Could not remove team member on the server: ' + (e.message || 'unknown error'));
+    var removeBtn = row.querySelector('[data-action="remove-member"]');
+    if(removeBtn){
+      removeBtn.addEventListener('click', function(){
+        confirmDialog(
+          'Remove ' + m.name + '?',
+          'They will be unassigned from any tickets currently assigned to them.',
+          async function(){
+            if(isServerAuthoritative(project)){
+              try {
+                await memberApi.remove(project.serverProjectId, m.id);
+                await refreshProjectFromServer(project.id);
+                renderMemberList();
+                renderBoard();
+                renderAssigneeFilterChips();
+                toast('Removed ' + m.name + '.');
+              } catch(e){
+                toast('Could not remove team member on the server: ' + (e.message || 'unknown error'));
+              }
+              return;
             }
-            return;
+            var unassigned = removeMember(project, m.id);
+            renderMemberList();
+            renderBoard();
+            renderAssigneeFilterChips();
+            toast('Removed ' + m.name + (unassigned > 0 ? ' — unassigned from ' + unassigned + ' task(s).' : '.'));
           }
-          var unassigned = removeMember(project, m.id);
+        );
+      });
+    }
+    // "The project admin role can be assigned to users via the Team management tool" — server-only
+    // (no local-project equivalent, see the isServerAuthoritative check the checkbox's own markup
+    // above is gated on) and Project-Admin-gated (MemberService.SetProjectAdminAsync's last-admin
+    // guard rejects demoting the only remaining admin — surfaced as a toast, same error-handling
+    // shape as every other server action in this row).
+    var adminCheckbox = row.querySelector('.kf-member-admin-checkbox');
+    if(adminCheckbox){
+      adminCheckbox.addEventListener('change', async function(){
+        var nextValue = adminCheckbox.checked;
+        try {
+          await memberApi.setProjectAdmin(project.serverProjectId, m.id, nextValue);
+          await refreshProjectFromServer(project.id);
           renderMemberList();
-          renderBoard();
-          renderAssigneeFilterChips();
-          toast('Removed ' + m.name + (unassigned > 0 ? ' — unassigned from ' + unassigned + ' task(s).' : '.'));
+        } catch(e){
+          adminCheckbox.checked = !nextValue;
+          toast('Could not update Project Administrator status: ' + (e.message || 'unknown error'));
         }
-      );
-    });
+      });
+    }
     listEl.appendChild(row);
 
     var reportsToRow = document.createElement('div');
@@ -160,7 +195,7 @@ export function renderMemberList(){
     }).join('');
     reportsToRow.innerHTML =
       '<label for="reportsTo-' + m.id + '">Reports to</label>' +
-      '<select id="reportsTo-' + m.id + '" class="kf-member-reportsto-select" aria-label="' + escapeHTML(m.name) + ' reports to">' + optionsHTML + '</select>';
+      '<select id="reportsTo-' + m.id + '" class="kf-member-reportsto-select" aria-label="' + escapeHTML(m.name) + ' reports to"' + disabledAttr + '>' + optionsHTML + '</select>';
     var reportsToSelect = reportsToRow.querySelector('select');
     reportsToSelect.addEventListener('change', async function(){
       if(isServerAuthoritative(project)){

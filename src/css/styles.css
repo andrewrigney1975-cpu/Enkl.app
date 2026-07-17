@@ -1623,6 +1623,25 @@
     text-align: right;
   }
 
+  /* Project Administrator toggle (modals/team.js) — only rendered for a server-authoritative project
+     (local-only projects have no admin/auth concept), disabled for a viewer who isn't a Project
+     Admin themselves (see canCurrentUserManageProject in views/board.js). */
+  .kf-member-admin-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: var(--kf-text-secondary);
+    border-left: 1px solid var(--kf-border);
+    padding-left: 10px;
+    white-space: nowrap;
+  }
+
+  .kf-member-admin-toggle input[type=checkbox]:disabled {
+    cursor: not-allowed;
+  }
+
   .kf-member-row .kf-member-allocated-fraction-input:focus {
     outline: none;
     background: var(--kf-bg);
@@ -1793,6 +1812,22 @@
   }
 
   #healthBtn.hidden {
+    display: none;
+  }
+
+  /* Project Administrator gate (views/board.js's applyHeaderButtonVisibility) — hidden for a
+     non-admin on a server-authoritative project, same compound-selector convention every other
+     .hidden toggle in this app needs (no generic .hidden{display:none} utility exists — see
+     CLAUDE.md's own documented gotcha). */
+  #appSettingsBtn.hidden {
+    display: none;
+  }
+
+  #addColumnTopBtn.hidden {
+    display: none;
+  }
+
+  #addMemberField.hidden {
     display: none;
   }
 

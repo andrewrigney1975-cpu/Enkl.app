@@ -13,7 +13,7 @@ import { getReleaseById } from '../utils.js';
 import { evaluateColumnMove, isWorkflowEnabled } from '../features/workflow-engine.js';
 import { isGovernanceMapEnabled } from './governance-map.js';
 import { isServerAuthoritative, isServerLoggedIn, moveTaskToColumnOnServer, refreshProjectFromServer, reorderColumnsOnServer, deleteColumnOnServer } from '../features/migration.js';
-import { updateProjectSettingsApi, isOrgAdmin, getOrgName, isApiReachable, pollApiReachability } from '../api.js';
+import { updateProjectSettingsApi, isOrgAdmin, isProjectAdmin, getOrgName, isApiReachable, pollApiReachability } from '../api.js';
 import { renderPriorityFilterChips, renderTeamFilterChips, renderAssigneeFilterChips, renderTaskTypeFilterChips, taskMatchesFilters } from './board-filters.js';
 import { fitBoardForTaskModal, restoreBoardAfterTaskModal, refitBoardForOpenTaskModal } from './board-layout.js';
 
@@ -71,10 +71,32 @@ export var HEADER_MOVABLE_NAV_ITEMS = [
   {key: 'decisions', id: 'decisionsBtn', label: 'Decisions'},
   {key: 'teamsCommittees', id: 'teamsCommitteesBtn', label: 'Teams & Committees'}
 ];
+/* Project Administrator gate, shared by applyHeaderButtonVisibility (App Settings/Workflow buttons)
+   and renderColumn/renderBoard below (column add/edit/delete/reorder controls) — one place computing
+   "can the CURRENT user manage this project's columns/settings/workflow/members", so the three
+   call sites can never drift out of sync with each other. Local-only projects have no admin/auth
+   concept at all (same exemption every other permission gate in this app already makes), so they're
+   always manageable. */
+export function canCurrentUserManageProject(){
+  var project = getCurrentProject();
+  return !isServerAuthoritative(project) || isProjectAdmin(project.serverProjectId);
+}
+
 export function applyHeaderButtonVisibility(){
   var project = getCurrentProject();
   var visibility = project ? normalizeHeaderButtonVisibility(project.headerButtonVisibility) : {documents:true, risks:true, decisions:true, health:true, principles:true, objectives:true, teamsCommittees:true, workflow:false, retrospective:false};
   document.getElementById('healthBtn').classList.toggle('hidden', !visibility.health);
+
+  /* Project Administrator gate (see MembersController.cs's own doc comment for the four capabilities
+     this role covers): App Settings, Workflow, and column add/edit/delete/reorder are all
+     Project-Admin-only once a project is server-authoritative, same "unrestricted until there's
+     actually an admin/auth concept" exemption for local-only projects as every other permission gate
+     here. renderColumn()/renderBoard() below call canCurrentUserManageProject() directly for the
+     column-header controls; the Team modal's member-management controls (modals/team.js) apply the
+     same underlying isProjectAdmin() check where they're rendered. */
+  var canManageProject = canCurrentUserManageProject();
+  document.getElementById('appSettingsBtn').classList.toggle('hidden', !canManageProject);
+  document.getElementById('addColumnTopBtn').classList.toggle('hidden', !canManageProject);
 
   /* Teams & Committees CRUD is OrgAdmin-only once a project is server-authoritative (matching
      TeamsCommitteesController's server-side [Authorize(Policy="OrgAdmin")]) — a non-admin member
@@ -124,8 +146,11 @@ export function applyHeaderButtonVisibility(){
 
   document.getElementById('orgChartBtn').classList.toggle('kf-vis-hidden', !visibility.teamsCommittees);
   document.getElementById('navOrgChartBtn').classList.toggle('kf-vis-hidden', !visibility.teamsCommittees);
-  document.getElementById('workflowBtn').classList.toggle('kf-vis-hidden', !visibility.workflow);
-  document.getElementById('navWorkflowBtn').classList.toggle('kf-vis-hidden', !visibility.workflow);
+  // Workflow editing is Project-Admin-only (canManageProject, above) — same entry-point-hidden
+  // treatment as Portfolio Dashboard/Planner/Teams & Committees rather than a read-only view mode,
+  // consistent with how every other admin-only feature in this app is gated.
+  document.getElementById('workflowBtn').classList.toggle('kf-vis-hidden', !visibility.workflow || !canManageProject);
+  document.getElementById('navWorkflowBtn').classList.toggle('kf-vis-hidden', !visibility.workflow || !canManageProject);
   /* Retrospectives has no in-header quick button (nav-only, unlike Workflow/Org Chart above), so this
      is the only visibility toggle it needs. */
   document.getElementById('navRetrospectiveBtn').classList.toggle('kf-vis-hidden', !visibility.retrospective);
@@ -340,11 +365,13 @@ export function renderBoard(){
       board.appendChild(renderColumn(project, col));
     });
   }
-  var addColBtn = document.createElement('button');
-  addColBtn.className = 'kf-add-column';
-  addColBtn.innerHTML = iconHTML('plus',16) + '<span>Add column</span>';
-  addColBtn.addEventListener('click', function(){ _openColumnModal(null); });
-  board.appendChild(addColBtn);
+  if(canCurrentUserManageProject()){
+    var addColBtn = document.createElement('button');
+    addColBtn.className = 'kf-add-column';
+    addColBtn.innerHTML = iconHTML('plus',16) + '<span>Add column</span>';
+    addColBtn.addEventListener('click', function(){ _openColumnModal(null); });
+    board.appendChild(addColBtn);
+  }
 }
 
 /* For columns marked "done", tasks are always displayed sorted by
@@ -404,47 +431,56 @@ export function renderColumn(project, col){
   // which enforces the cap unconditionally too).
   var countBadgeText = (col.cap != null && col.cap !== -1) ? (activeTaskCount + ' of ' + col.cap) : String(activeTaskCount);
 
+  // Column add/edit/delete/reorder are all Project-Admin-only once a project is server-authoritative
+  // (see canCurrentUserManageProject's own doc comment) — a non-admin gets a read-only board: no
+  // edit/delete icons, and the header isn't draggable at all (a plain boolean property, not a
+  // wrapper element, so none of the display:contents drag-and-drop risk CLAUDE.md documents applies
+  // to gating it this way).
+  var canManage = canCurrentUserManageProject();
+
   var header = document.createElement('div');
   header.className = 'kf-column-header';
-  header.draggable = true;
+  header.draggable = canManage;
   header.innerHTML =
     iconHTML('grip',14) +
     '<span class="kf-column-name' + (col.done ? ' done' : '') + '">' + escapeHTML(col.name) + '</span>' +
     '<span class="kf-count-badge">' + escapeHTML(countBadgeText) + '</span>';
 
-  var actions = document.createElement('div');
-  actions.className = 'kf-column-actions';
-  var editBtn = document.createElement('button');
-  editBtn.className = 'kf-btn kf-btn-ghost';
-  editBtn.title = 'Edit column';
-  editBtn.innerHTML = iconHTML('edit',14);
-  editBtn.addEventListener('click', function(e){ e.stopPropagation(); _openColumnModal(col.id); });
-  var delBtn = document.createElement('button');
-  delBtn.className = 'kf-btn kf-btn-ghost';
-  delBtn.title = 'Delete column';
-  delBtn.innerHTML = iconHTML('trash',14);
-  delBtn.addEventListener('click', function(e){
-    e.stopPropagation();
-    _confirmDialog(
-      'Delete column "' + col.name + '"?',
-      col.order.length > 0
-        ? 'Its ' + col.order.length + ' task(s) will be permanently deleted.'
-        : 'This column has no tasks.',
-      function(){
-        if(isServerAuthoritative(project)){
-          deleteColumnOnServer(project, col.id).then(renderBoard, function(err){
-            _toast('Could not delete column on the server: ' + (err.message || 'unknown error'));
-          });
-          return;
+  if(canManage){
+    var actions = document.createElement('div');
+    actions.className = 'kf-column-actions';
+    var editBtn = document.createElement('button');
+    editBtn.className = 'kf-btn kf-btn-ghost';
+    editBtn.title = 'Edit column';
+    editBtn.innerHTML = iconHTML('edit',14);
+    editBtn.addEventListener('click', function(e){ e.stopPropagation(); _openColumnModal(col.id); });
+    var delBtn = document.createElement('button');
+    delBtn.className = 'kf-btn kf-btn-ghost';
+    delBtn.title = 'Delete column';
+    delBtn.innerHTML = iconHTML('trash',14);
+    delBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      _confirmDialog(
+        'Delete column "' + col.name + '"?',
+        col.order.length > 0
+          ? 'Its ' + col.order.length + ' task(s) will be permanently deleted.'
+          : 'This column has no tasks.',
+        function(){
+          if(isServerAuthoritative(project)){
+            deleteColumnOnServer(project, col.id).then(renderBoard, function(err){
+              _toast('Could not delete column on the server: ' + (err.message || 'unknown error'));
+            });
+            return;
+          }
+          deleteColumn(project, col.id);
+          renderBoard();
         }
-        deleteColumn(project, col.id);
-        renderBoard();
-      }
-    );
-  });
-  actions.appendChild(editBtn);
-  actions.appendChild(delBtn);
-  header.appendChild(actions);
+      );
+    });
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+    header.appendChild(actions);
+  }
 
   header.addEventListener('dragstart', function(e){
     ui.draggedColumnId = col.id;
