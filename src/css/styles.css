@@ -5668,6 +5668,14 @@
     font-size: 13px;
   }
 
+  .kf-storage-project-row .kf-about-project-key {
+    flex: 0 0 80px;
+    width: 80px;
+    box-sizing: border-box;
+    text-align: left;
+    white-space: nowrap;
+  }
+
   .kf-storage-project-row .kf-about-project-name {
     flex: 1;
     min-width: 0;
