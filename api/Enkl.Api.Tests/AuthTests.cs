@@ -195,6 +195,9 @@ public class AuthTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    // isOrgAdmin: false is explicit here since Org Admins now also pass ProjectMemberAuthorizationHandler
+    // (they get every Project Admin capability, which is inherently also project-member-level access)
+    // — this test needs a genuinely plain, non-org-admin user to isolate what it's actually testing.
     [Fact]
     public async Task ProjectMemberPolicy_RejectsTokenWithoutThatProjectMembership()
     {
@@ -205,7 +208,7 @@ public class AuthTests
         using (var scope = _fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var (seededOrg, _) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user);
+            var (seededOrg, _) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user, isOrgAdmin: false);
             // Project exists in the SAME org, but the logged-in user is never added as a member of it —
             // the "projects" claim minted at login is empty, so ProjectMemberAuthorizationHandler must
             // reject regardless of same-org membership.
@@ -226,6 +229,9 @@ public class AuthTests
     // token was minted must stop granting access immediately — not just at next login/token expiry.
     // ProjectMemberAuthorizationHandler now checks a live "ProjectMembers" row instead of trusting the
     // JWT's baked-in "projects" claim, which still reflects membership as of login time throughout.
+    // isOrgAdmin: false, same reasoning as ProjectMemberPolicy_RejectsTokenWithoutThatProjectMembership
+    // above — the "afterRemoval" assertion needs a genuinely plain member so removal actually revokes
+    // access, rather than an Org Admin bypass silently keeping it granted.
     [Fact]
     public async Task ProjectMemberPolicy_RejectsTokenWhoseMembershipWasRemovedAfterMint()
     {
@@ -237,7 +243,7 @@ public class AuthTests
         using (var scope = _fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var (seededOrg, seededUser) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user);
+            var (seededOrg, seededUser) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user, isOrgAdmin: false);
             userId = seededUser.Id;
             var project = await TestDataHelper.SeedProjectAsync(db, seededOrg.Id, projectKey, member: seededUser);
             projectId = project.Id;
@@ -268,7 +274,10 @@ public class AuthTests
     }
 
     // Project Administrator role: a plain (non-admin) project member can view the project but must
-    // not be able to add a column — one of the four Project Admin capabilities.
+    // not be able to add a column — one of the four Project Admin capabilities. isOrgAdmin: false is
+    // explicit here (not just relying on some other default) since Org Admins now also pass the
+    // ProjectAdmin policy — this test needs a genuinely plain, non-org-admin member to isolate what
+    // it's actually testing.
     [Fact]
     public async Task ProjectAdminPolicy_RejectsPlainMemberFromCreatingColumn()
     {
@@ -279,7 +288,7 @@ public class AuthTests
         using (var scope = _fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var (seededOrg, seededUser) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user);
+            var (seededOrg, seededUser) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user, isOrgAdmin: false);
             var project = await TestDataHelper.SeedProjectAsync(db, seededOrg.Id, projectKey, member: seededUser, memberIsProjectAdmin: false);
             projectId = project.Id;
         }
@@ -326,7 +335,9 @@ public class AuthTests
 
     // Promotion/demotion takes effect on the very next request, not at next login — same live-check
     // guarantee as ProjectMemberPolicy_RejectsTokenWhoseMembershipWasRemovedAfterMint above, applied
-    // to the Project Admin flag specifically.
+    // to the Project Admin flag specifically. isOrgAdmin: false, same reasoning as
+    // ProjectAdminPolicy_RejectsPlainMemberFromCreatingColumn above — must be a genuinely plain member
+    // pre-promotion for the "before" assertion to mean anything now that Org Admins also pass.
     [Fact]
     public async Task ProjectAdminPolicy_PromotionTakesEffectWithoutReLogin()
     {
@@ -338,7 +349,7 @@ public class AuthTests
         using (var scope = _fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var (seededOrg, seededUser) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user);
+            var (seededOrg, seededUser) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user, isOrgAdmin: false);
             userId = seededUser.Id;
             var project = await TestDataHelper.SeedProjectAsync(db, seededOrg.Id, projectKey, member: seededUser, memberIsProjectAdmin: false);
             projectId = project.Id;
@@ -363,5 +374,64 @@ public class AuthTests
 
         var afterPromotion = await client.PostAsJsonAsync($"/api/projects/{projectId}/columns", new CreateColumnRequest("Now Allowed", false, null));
         Assert.Equal(HttpStatusCode.OK, afterPromotion.StatusCode);
+    }
+
+    // An Org Admin gets every Project Admin capability across their own org's projects, even with no
+    // ProjectMembers row for that project at all.
+    [Fact]
+    public async Task ProjectAdminPolicy_AllowsOrgAdminEvenWithoutProjectMembership()
+    {
+        var org = TestDataHelper.Unique("org");
+        var user = TestDataHelper.Unique("user");
+        var projectKey = TestDataHelper.Unique("PRJ");
+        Guid projectId;
+        using (var scope = _fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (seededOrg, seededUser) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user, isOrgAdmin: true);
+            // No `member:` argument — the Org Admin is deliberately not a ProjectMembers row at all.
+            var project = await TestDataHelper.SeedProjectAsync(db, seededOrg.Id, projectKey);
+            projectId = project.Id;
+        }
+
+        var client = _fixture.Factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Forwarded-For", TestDataHelper.UniqueIp());
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(user, TestDataHelper.DefaultPassword));
+        var login = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login!.Token);
+
+        var response = await client.PostAsJsonAsync($"/api/projects/{projectId}/columns", new CreateColumnRequest("Org Admin Column", false, null));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    // Cross-org isolation (CLAUDE.md §4): an Org Admin's bypass is scoped to their OWN org's projects
+    // only — the "orgId" claim is re-verified against the project's live OrganisationId, not just
+    // trusted, so an Org Admin from a different org can't reach this project this way either.
+    [Fact]
+    public async Task ProjectAdminPolicy_RejectsOrgAdminFromADifferentOrganisation()
+    {
+        var org = TestDataHelper.Unique("org");
+        var otherOrg = TestDataHelper.Unique("otherorg");
+        var user = TestDataHelper.Unique("user");
+        var otherOrgAdmin = TestDataHelper.Unique("otheradmin");
+        var projectKey = TestDataHelper.Unique("PRJ");
+        Guid projectId;
+        using (var scope = _fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (seededOrg, _) = await TestDataHelper.SeedOrgAndUserAsync(db, org, user, isOrgAdmin: false);
+            await TestDataHelper.SeedOrgAndUserAsync(db, otherOrg, otherOrgAdmin, isOrgAdmin: true);
+            var project = await TestDataHelper.SeedProjectAsync(db, seededOrg.Id, projectKey);
+            projectId = project.Id;
+        }
+
+        var client = _fixture.Factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Forwarded-For", TestDataHelper.UniqueIp());
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(otherOrgAdmin, TestDataHelper.DefaultPassword));
+        var login = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login!.Token);
+
+        var response = await client.PostAsJsonAsync($"/api/projects/{projectId}/columns", new CreateColumnRequest("Should Not Exist", false, null));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }

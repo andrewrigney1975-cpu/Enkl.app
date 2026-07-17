@@ -16,6 +16,13 @@ namespace Enkl.Api.Auth;
 /// never for authorization itself, so a promotion/demotion takes effect on the very next request
 /// rather than waiting for the next login/token refresh.
 ///
+/// An Org Admin also succeeds here even without a ProjectMembers row at all — Org Admins get every
+/// Project Admin capability across their whole org's projects, on top of their org-only affordances.
+/// The "orgAdmin" claim alone is never trusted for this (same no-trust-the-client's-id-list rule as
+/// the Portfolio cross-org-isolation pattern, CLAUDE.md §4): the project's own OrganisationId is
+/// re-queried live and compared against the caller's "orgId" claim, so an Org Admin from a different
+/// org can't reach a project outside their org this way.
+///
 /// Registered as a Singleton (Program.cs — IAuthorizationHandler instances are shared across
 /// requests), so AppDbContext (scoped) can't be constructor-injected directly; IServiceScopeFactory
 /// resolves a fresh scoped instance per check instead, matching ProjectMemberAuthorizationHandler.
@@ -56,6 +63,25 @@ public class ProjectAdminAuthorizationHandler : AuthorizationHandler<ProjectAdmi
         if (isProjectAdmin)
         {
             context.Succeed(requirement);
+            return;
+        }
+
+        if (context.User.HasClaim("orgAdmin", "true"))
+        {
+            var callerOrgId = context.User.TryOrgId();
+            if (callerOrgId is not null)
+            {
+                var projectOrgId = await db.Projects
+                    .AsNoTracking()
+                    .Where(p => p.Id == projectId)
+                    .Select(p => (Guid?)p.OrganisationId)
+                    .FirstOrDefaultAsync();
+
+                if (projectOrgId is not null && projectOrgId == callerOrgId)
+                {
+                    context.Succeed(requirement);
+                }
+            }
         }
     }
 }
