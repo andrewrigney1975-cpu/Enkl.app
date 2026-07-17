@@ -3,6 +3,7 @@
 import { STORAGE_KEY, TEAM_COMMITTEE_TYPES, RISK_STATUS_META, DECISION_TYPE_META, DECISION_STATUS_META } from './config.js';
 import { clampTaskScore, localDateValueToUTCISO, localDateValueFromDate, defaultStartDateValue, defaultEndDateValue, memberColorForIndex } from './date-utils.js';
 import { getTasksArray, getTeamCommitteeById, getColumn, isValidTaskTypeIconName, isValidRiskScoreValue } from './utils.js';
+import { toast } from './ui.js';
 
 /* =========================================================
    SHARED MUTABLE STATE
@@ -19,13 +20,57 @@ export function uid(prefix){
   return (prefix||'id') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
 }
 
+/* Most browsers cap a single origin's localStorage around 5MB — JS string .length counts UTF-16
+   code units, ~2 bytes each, so this is a size-in-bytes approximation, not exact, but close enough
+   to warn well before the real ceiling. Warned only once per page load (storageQuotaWarningShown),
+   not on every single save past the threshold — otherwise a user who keeps working past the warning
+   would get spammed with an identical toast on every mutation. Exported so modals/project-storage.js
+   can reuse the exact same threshold/estimate rather than a second, driftable copy of these numbers. */
+export var STORAGE_QUOTA_WARNING_BYTES = 4 * 1024 * 1024;
+export var STORAGE_QUOTA_ESTIMATE_BYTES = 5 * 1024 * 1024;
+var storageQuotaWarningShown = false;
+
+/* Same UTF-16-code-units-times-2 approximation saveDB() uses for the whole DB, exposed for
+   per-project sizing (modals/project-storage.js) where there's no already-serialized string to
+   reuse. */
+export function estimateByteSize(value){
+  return JSON.stringify(value).length * 2;
+}
+
+/* Returns true/false so a caller COULD react to a failed save, though nothing currently does — the
+   real fix here is that a failure is no longer silent: previously this only logged to the console
+   (see CLAUDE.md's note on this), so a user whose local storage was full would see their in-memory
+   state update normally (correct-looking UI) while nothing was actually persisted, with zero
+   indication anything was wrong until their next reload silently reverted them. */
 export function saveDB(){
+  var serialized;
+  try {
+    serialized = JSON.stringify(state.db);
+  } catch(e){
+    console.error('Enkl: failed to serialize DB for saving', e);
+    toast('Could not save your changes — local data is in an unexpected state. Please reload the page.');
+    return false;
+  }
+
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.db));
+    localStorage.setItem(STORAGE_KEY, serialized);
   }catch(e){
     console.error('Enkl: failed to save to localStorage', e);
-    // Callers may show a toast to the user
+    var isQuotaError = !!e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014);
+    if(isQuotaError){
+      toast('Local storage is full — this change was NOT saved. Free up space (e.g. delete an old local-only project) or move large projects to a server account.');
+    } else {
+      toast('Could not save your changes locally' + (e && e.message ? ': ' + e.message : '.'));
+    }
+    return false;
   }
+
+  if(!storageQuotaWarningShown && serialized.length * 2 >= STORAGE_QUOTA_WARNING_BYTES){
+    storageQuotaWarningShown = true;
+    var approxMb = Math.round(serialized.length * 2 / (1024 * 1024) * 10) / 10;
+    toast('Local storage is getting full (~' + approxMb + 'MB used) — you may soon be unable to save further changes.');
+  }
+  return true;
 }
 
 /* Portfolio Dashboard's selected-project-ids, remembered between runs of the same browser only (per
