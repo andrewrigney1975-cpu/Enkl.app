@@ -5633,6 +5633,88 @@
     padding: 6px 2px;
   }
 
+  /* Project Storage modal (modals/project-storage.js) — reuses .kf-about-project-key/-name/
+     -projects-list/-projects-empty above as-is; these are its own additions (summary bar, warning
+     banner, and the extra per-row cells a plain About-style row doesn't need). */
+  .kf-storage-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--kf-text);
+  }
+
+  .kf-storage-warning-banner {
+    font-size: 12px;
+    color: var(--kf-overdue-fg);
+    background: var(--kf-overdue-bg);
+    border-radius: var(--kf-radius);
+    padding: 8px 10px;
+    margin-bottom: 14px;
+  }
+
+  .kf-storage-warning-banner.hidden {
+    display: none;
+  }
+
+  .kf-storage-project-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--kf-radius);
+    background: var(--kf-bg);
+    font-size: 13px;
+  }
+
+  .kf-storage-project-row .kf-about-project-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kf-storage-project-badge {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--kf-text-secondary);
+    background: var(--kf-column-bg);
+    border-radius: 3px;
+    padding: 2px 6px;
+  }
+
+  .kf-storage-project-track {
+    display: block;
+    flex: 0 0 60px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--kf-border);
+    overflow: hidden;
+  }
+
+  .kf-storage-summary .kf-storage-project-track {
+    flex: 1 1 auto;
+  }
+
+  .kf-storage-project-fill {
+    display: block;
+    height: 100%;
+    background: var(--kf-blue);
+    border-radius: 3px;
+  }
+
+  .kf-storage-project-size {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--kf-text-secondary);
+    min-width: 44px;
+    text-align: right;
+  }
+
   .kf-about-links {
     display: flex;
     gap: 8px;

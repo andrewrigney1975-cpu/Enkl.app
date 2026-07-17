@@ -82,8 +82,8 @@ function ruleFor(text, selector){
     // Tools since this list was written.
     log('Views section: List View, Timeline, Dependency Map, Cost/Benefit Chart, Org Chart, Governance Map',
         viewsOrder.join(',') === 'navTaskListBtn,navTimelineBtn,navDepMapBtn,navCostBenefitBtn,navOrgChartBtn,navGovernanceMapBtn', viewsOrder.join(','));
-    log('Tools section: Bulk Edit, To-Do, Archived, Task Types, Releases, Workflow, Portfolio Planner, Retrospectives',
-        toolsOrder.join(',') === 'navBulkEditBtn,navTodoBtn,navArchivedBtn,navTaskTypesBtn,navReleasesBtn,navWorkflowBtn,navPortfolioPlannerBtn,navRetrospectiveBtn', toolsOrder.join(','));
+    log('Tools section: Bulk Edit, To-Do, Archived, Task Types, Releases, Project Storage, Workflow, Portfolio Planner, Retrospectives',
+        toolsOrder.join(',') === 'navBulkEditBtn,navTodoBtn,navArchivedBtn,navTaskTypesBtn,navReleasesBtn,navProjectStorageBtn,navWorkflowBtn,navPortfolioPlannerBtn,navRetrospectiveBtn', toolsOrder.join(','));
 
     viewsOrder.concat(toolsOrder).forEach(id => {
       const el = doc.getElementById(id);

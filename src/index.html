@@ -154,6 +154,7 @@
         <button type="button" class="kf-side-nav-item" id="navArchivedBtn" title="Archived"><span class="kf-icon" data-icon="archive" data-size="21"></span><span class="kf-side-nav-text">Archived</span><span id="navArchivedCountBadge" class="kf-count-badge kf-archived-count-badge kf-vis-hidden"></span></button>
         <button type="button" class="kf-side-nav-item" id="navTaskTypesBtn" title="Task Types"><span class="kf-icon" data-icon="tag" data-size="21"></span><span class="kf-side-nav-text">Task Types</span></button>
         <button type="button" class="kf-side-nav-item" id="navReleasesBtn" title="Releases"><span class="kf-icon" data-icon="rocket" data-size="21"></span><span class="kf-side-nav-text">Releases</span></button>
+        <button type="button" class="kf-side-nav-item" id="navProjectStorageBtn" title="Project Storage"><span class="kf-icon" data-icon="database" data-size="21"></span><span class="kf-side-nav-text">Project Storage</span></button>
         <button type="button" class="kf-side-nav-item" id="navWorkflowBtn" title="Workflow"><span class="kf-icon" data-icon="workflow" data-size="21"></span><span class="kf-side-nav-text">Workflow</span></button>
         <button type="button" class="kf-side-nav-item kf-vis-hidden" id="navPortfolioPlannerBtn" title="Portfolio Planner"><span class="kf-icon" data-icon="portfolioPlanner" data-size="21"></span><span class="kf-side-nav-text">Portfolio Planner</span></button>
         <button type="button" class="kf-side-nav-item" id="navRetrospectiveBtn" title="Retrospectives"><span class="kf-icon" data-icon="retrospective" data-size="21"></span><span class="kf-side-nav-text">Retrospectives</span></button>
@@ -209,6 +210,7 @@
       <button class="kf-btn kf-btn-secondary" id="archivedTasksBtn"><span class="kf-icon" data-icon="archive" data-size="14"></span>Archived<span id="archivedCountBadge" class="kf-count-badge kf-archived-count-badge kf-vis-hidden"></span></button>
       <button class="kf-btn kf-btn-secondary" id="taskTypesBtn"><span class="kf-icon" data-icon="tag" data-size="14"></span>Task Types</button>
       <button class="kf-btn kf-btn-secondary" id="releasesBtn"><span class="kf-icon" data-icon="rocket" data-size="14"></span>Releases</button>
+      <button class="kf-btn kf-btn-secondary" id="projectStorageBtn"><span class="kf-icon" data-icon="database" data-size="14"></span>Project Storage</button>
       <button class="kf-btn kf-btn-secondary" id="workflowBtn"><span class="kf-icon" data-icon="workflow" data-size="14"></span>Workflow</button>
     </div>
   </div>
@@ -1902,6 +1904,28 @@
       </div>
 
       <div class="kf-about-company-placeholder"><svg viewBox="0 0 454 50" xmlns="http://www.w3.org/2000/svg"><text x="227" y="40" font-family="Century Gothic, Arial, sans-serif" font-size="48px" font-weight="300" letter-spacing="-1.8px" fill="currentColor" text-anchor="middle">therigneygroup</text></svg></div>
+    </div>
+  </div>
+</div>
+
+<!-- Project Storage Modal -->
+<div class="kf-overlay hidden" id="projectStorageOverlay">
+  <div class="kf-modal kf-modal-md" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>Project Storage</h2>
+      <button class="kf-btn kf-btn-ghost" id="projectStorageModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div class="kf-storage-summary">
+        <div id="projectStorageTotal"></div>
+        <span class="kf-storage-project-track"><span class="kf-storage-project-fill" id="projectStorageTotalBar"></span></span>
+      </div>
+      <div class="kf-storage-warning-banner hidden" id="projectStorageWarning"></div>
+      <div class="kf-about-subheading">Projects (largest first)</div>
+      <div id="projectStorageList" class="kf-about-projects-list"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-primary" id="projectStorageDoneBtn">Close</button>
     </div>
   </div>
 </div>

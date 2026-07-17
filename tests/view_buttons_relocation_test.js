@@ -6,7 +6,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 // Governance Map was added to Views later (replacing Workflow's old spot there — Workflow itself
 // moved to Tools), and To-Do was added to Tools since these lists were written.
 const VIEWS_BTN_IDS = ['taskListBtn', 'timelineBtn', 'depMapBtn', 'costBenefitBtn', 'orgChartBtn', 'governanceMapBtn'];
-const TOOLS_BTN_IDS = ['bulkEditBtn', 'todoBtn', 'archivedTasksBtn', 'taskTypesBtn', 'releasesBtn', 'workflowBtn'];
+const TOOLS_BTN_IDS = ['bulkEditBtn', 'todoBtn', 'archivedTasksBtn', 'taskTypesBtn', 'releasesBtn', 'projectStorageBtn', 'workflowBtn'];
 const ALL_RELOCATING_IDS = VIEWS_BTN_IDS.concat(TOOLS_BTN_IDS);
 
 (async () => {

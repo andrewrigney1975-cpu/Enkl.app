@@ -8,7 +8,7 @@
    timestamp. This value is informational only: it's included in a
    project's export file but is never read back in on import.
    ========================================================= */
-export var APP_VERSION = '2.182.20260717.1624';
+export var APP_VERSION = '2.188.20260717.1742';
 
 /* =========================================================
    ICONS — inline SVG, line-icon style, stroke=currentColor
@@ -56,6 +56,7 @@ export var ICON_PATHS = {
   sparkle:     '<path d="M12 2.5 13.8 8.7 20 10.5 13.8 12.3 12 18.5 10.2 12.3 4 10.5 10.2 8.7Z"/><path d="M19 15.5l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9Z"/>',
   bug:         '<path d="M9 9h6"/><path d="M8 13a4 4 0 0 1 8 0v3a4 4 0 0 1-8 0Z"/><path d="M5 12H3"/><path d="M21 12h-2"/><path d="M5 19l2.5-2"/><path d="M19 19l-2.5-2"/><path d="M5 6l2.5 2.5"/><path d="M19 6l-2.5 2.5"/><path d="M12 6V4"/>',
   archive:     '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/><path d="M10 13h4"/>',
+  database:    '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   quadrant:    '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/><path d="M3 12h18"/><circle cx="7.5" cy="7.5" r="1.4"/><circle cx="16" cy="8.5" r="1.4"/><circle cx="8.5" cy="16" r="1.4"/><circle cx="16.5" cy="16.5" r="1.4"/>',
   menu:        '<path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/>',
   graph:       '<circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7.1 7.2 10.3 16"/><path d="M16.9 7.2 13.7 16"/><path d="M7.3 6h9.4"/>',

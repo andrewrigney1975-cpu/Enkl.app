@@ -163,6 +163,17 @@ export function applyHeaderButtonVisibility(){
   document.getElementById('governanceMapBtn').classList.toggle('kf-vis-hidden', !govMapEnabled);
   document.getElementById('navGovernanceMapBtn').classList.toggle('kf-vis-hidden', !govMapEnabled);
 
+  /* Project Storage reports on the WHOLE local DB (every project sitting in this browser, not just
+     the current one), so it's gated on SESSION login state rather than the current project's own
+     server-authoritative status the way Portfolio Dashboard/Planner above are. A session that's
+     never logged in at all is implicitly its own "Org Admin" for local data — there's no real
+     multi-tenant org concept without a server login — so this only hides for a logged-in session
+     that ISN'T actually an Org Admin, the same isServerLoggedIn()+isOrgAdmin() combination Project
+     Templates/Todo Lists already use (see modals/todo.js's own doc comment). */
+  var canViewProjectStorage = !isServerLoggedIn() || isOrgAdmin();
+  document.getElementById('projectStorageBtn').classList.toggle('kf-vis-hidden', !canViewProjectStorage);
+  document.getElementById('navProjectStorageBtn').classList.toggle('kf-vis-hidden', !canViewProjectStorage);
+
   renderTeamFilterChips();
 }
 

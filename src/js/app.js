@@ -60,6 +60,7 @@ import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitt
 import { openReportOverlay, closeReportOverlay, isReportOverlayOpen, printReport, openProjectManagementReportOverlay } from './features/reports.js';
 import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick } from './modals/project-search.js';
 import { openAboutModal, closeAboutModal, isAboutModalOpen } from './modals/about.js';
+import { openProjectStorageModal, closeProjectStorageModal, isProjectStorageModalOpen } from './modals/project-storage.js';
 import { openUfoModal, closeUfoModal, isUfoModalOpen } from './modals/ufo.js';
 import { openOpeningExperienceModal, closeOpeningExperienceModal, isOpeningExperienceModalOpen, chooseOpeningExperience, recordDeviceTypeAndMaybeShowPicker } from './modals/opening-experience.js';
 import { randomise } from './features/randomise.js';
@@ -117,6 +118,7 @@ function wireEvents(){
   document.getElementById('navArchivedBtn').addEventListener('click', openArchivedTasksOverlay);
   document.getElementById('navTaskTypesBtn').addEventListener('click', openTaskTypesModal);
   document.getElementById('navReleasesBtn').addEventListener('click', openReleasesOverlay);
+  document.getElementById('navProjectStorageBtn').addEventListener('click', openProjectStorageModal);
   document.getElementById('navRetrospectiveBtn').addEventListener('click', openRetrospectivesOverlay);
 
   document.getElementById('projectSelect').addEventListener('change', function(e){
@@ -192,6 +194,12 @@ function wireEvents(){
   document.getElementById('releasesDoneBtn').addEventListener('click', closeReleasesOverlay);
   document.getElementById('releasesOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'releasesOverlay') closeReleasesOverlay();
+  });
+  document.getElementById('projectStorageBtn').addEventListener('click', openProjectStorageModal);
+  document.getElementById('projectStorageModalClose').addEventListener('click', closeProjectStorageModal);
+  document.getElementById('projectStorageDoneBtn').addEventListener('click', closeProjectStorageModal);
+  document.getElementById('projectStorageOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'projectStorageOverlay') closeProjectStorageModal();
   });
   document.getElementById('addReleaseBtn').addEventListener('click', function(){ showReleasesFormView(null); });
   document.getElementById('releaseFormCancelBtn').addEventListener('click', showReleasesListView);
@@ -1487,6 +1495,7 @@ function wireEvents(){
     else if(isHealthOverlayOpen()){ cancelHealthGaugeAnimation(); closeHealthOverlay(); }
     else if(isAppSettingsOverlayOpen()) closeAppSettingsOverlay();
     else if(isAboutModalOpen()) closeAboutModal();
+    else if(isProjectStorageModalOpen()) closeProjectStorageModal();
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
     else if(!document.getElementById('importConflictOverlay').classList.contains('hidden')) closeImportConflictModal();
     else if(!document.getElementById('overdueAlertOverlay').classList.contains('hidden')) closeOverdueAlert();
