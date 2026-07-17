@@ -42,7 +42,10 @@ function makeFakeJwt(payload){
 
   function optionLabels(){
     return Array.prototype.map.call(dropdownEl.querySelectorAll('.kf-intellisense-option'), function(row){
-      return row.querySelector('span:last-child').textContent;
+      // row.lastElementChild (a DIRECT child), not querySelector('span:last-child') — the latter also
+      // matches a badge's own nested icon <span> (itself the last child of ITS parent), which comes
+      // first in document order and would win instead of the actual label span.
+      return row.lastElementChild.textContent;
     });
   }
 
@@ -50,6 +53,20 @@ function makeFakeJwt(payload){
     return Array.prototype.map.call(dropdownEl.querySelectorAll('.kf-intellisense-option-type'), function(el){
       return el.textContent;
     });
+  }
+
+  // The badge's *kind* now lives in its class (kf-intellisense-type-<kind>) rather than always being
+  // readable text — a table/PK/FK badge is an SVG icon with no text node at all.
+  function optionKindAt(index){
+    var el = dropdownEl.querySelectorAll('.kf-intellisense-option-type')[index];
+    if(!el) return null;
+    var cls = Array.prototype.find.call(el.classList, function(c){ return c.indexOf('kf-intellisense-type-') === 0; });
+    return cls ? cls.slice('kf-intellisense-type-'.length) : null;
+  }
+
+  function findRowKind(label){
+    var idx = optionLabels().indexOf(label);
+    return idx === -1 ? null : optionKindAt(idx);
   }
 
   function keydown(key){
@@ -63,7 +80,7 @@ function makeFakeJwt(payload){
   log('dropdown opens for a table-context prefix', !dropdownEl.classList.contains('hidden'));
   const tableLabels = optionLabels();
   log('offers both "tasks" and "taskTypes" for prefix "ta"', tableLabels.indexOf('tasks') !== -1 && tableLabels.indexOf('taskTypes') !== -1, tableLabels.join(','));
-  log('table suggestions are badged "T"', optionBadges().every(function(b){ return b === 'T'; }), optionBadges().join(','));
+  log('table suggestions are badged with the table (grid) icon, not a letter', optionKindAt(0) === 'table' && dropdownEl.querySelectorAll('.kf-intellisense-type-table .kf-icon').length === tableLabels.length, optionBadges().join(','));
 
   // ── 2. Tab accepts a table suggestion, brackets it, moves the caret past it ────────────────
   typeSql('SELECT * FROM tasks');
@@ -84,6 +101,19 @@ function makeFakeJwt(payload){
   log('matching keywords are offered alongside fields', scopedLabels.indexOf('IN') !== -1 && scopedLabels.indexOf('IS') !== -1, scopedLabels.join(','));
   log('a field from an unreferenced table is not offered (e.g. documents/principles never joined here)', scopedLabels.indexOf('documents.id') === -1);
 
+  // ── 3b. Primary-key / foreign-key / plain-field badge kinds ────────────────────────────────
+  typeSql('SELECT * FROM tasks JOIN risks WHERE ');
+  await wait(30);
+  log('a table\'s own "id" field is badged as a primary key (tasks.id)', findRowKind('tasks.id') === 'field-pk');
+  log('a table\'s own "id" field is badged as a primary key (risks.id)', findRowKind('risks.id') === 'field-pk');
+  log('a field that is some table\'s own FK to another table is badged as a foreign key', findRowKind('taskId') === 'field-fk');
+  log('an ordinary non-key field is badged "field" with no icon and no text', (function(){
+    if(findRowKind('impact') !== 'field') return false;
+    var idx = optionLabels().indexOf('impact');
+    var badgeEl = dropdownEl.querySelectorAll('.kf-intellisense-option-type')[idx];
+    return badgeEl.textContent.trim() === '' && badgeEl.querySelector('.kf-icon') === null;
+  })());
+
   // ── 4. Clicking a specific disambiguated option inserts BOTH segments bracketed ────────────
   const tasksIdIndex = optionLabels().indexOf('tasks.id');
   const tasksIdRow = dropdownEl.querySelectorAll('.kf-intellisense-option')[tasksIdIndex];
@@ -95,6 +125,7 @@ function makeFakeJwt(payload){
   await wait(30);
   const startLabels = optionLabels();
   log('typing "sel" with nothing before it offers the SELECT keyword', startLabels.indexOf('SELECT') !== -1, startLabels.join(','));
+  log('a keyword suggestion is badged with the word "SQL"', dropdownEl.querySelectorAll('.kf-intellisense-option-type')[startLabels.indexOf('SELECT')].textContent.trim() === 'SQL');
   keydown('Tab');
   log('accepting a keyword inserts it upper-cased, unbracketed, with a trailing space', sqlEl.value === 'SELECT ', sqlEl.value);
 

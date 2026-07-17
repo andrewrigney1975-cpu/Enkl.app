@@ -33,7 +33,7 @@ import { getArchivedTasks, openArchivedTasksOverlay, closeArchivedTasksOverlay, 
 import { closeAllExportAsPanels, toggleExportAsPanel, exportSvgElementAsSvgFile, exportSvgElementAsPng } from './features/svg-export.js';
 
 /* ---- Modals ---- */
-import { confirmDialog, closeConfirmDialog, getPendingConfirmAction } from './modals/confirm.js';
+import { confirmDialog, closeConfirmDialog, getPendingConfirmAction, getPendingCancelAction } from './modals/confirm.js';
 import { openTaskModal, closeTaskModal, saveTaskFromModal, deleteTaskFromModal, updatePriorityIcon, updateDocUrlOpenButtonVisibility, openDocUrlInNewTab, renderDependencyPicker, toggleAuditTrail, onParentTaskSelectChange, renderSubtaskPicker } from './modals/task.js';
 import { closeSetPrivateKeyModal, confirmSetPrivateKeyFromModal } from './modals/private-key-set.js';
 import { closeUnlockPrivateTaskModal, confirmUnlockFromModal, continueWithoutKeyFromModal } from './modals/private-key-unlock.js';
@@ -58,7 +58,7 @@ import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen,
 import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen, showObjectivesFormView, showObjectivesListView, renderObjectivesList, saveObjectiveFromModal, deleteObjectiveFromModal } from './modals/objectives.js';
 import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitteesOverlayOpen, showTeamCommitteeFormView, showTeamsCommitteesListView, renderTeamsCommitteesList, saveTeamCommitteeFromModal, deleteTeamCommitteeFromModal } from './modals/teams-committees.js';
 import { openReportOverlay, closeReportOverlay, isReportOverlayOpen, printReport, openProjectManagementReportOverlay } from './features/reports.js';
-import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick, showProjectSearchSimpleView, showProjectSearchQueryView, toggleProjectQuerySchemaPanel, toggleProjectQuerySavedPanel, handleProjectQuerySavedListClick, handleProjectQuerySaveOrUpdateClick, hideProjectQuerySaveRow, confirmSaveProjectQuery, showProjectQueryResultsTableView, showProjectQueryResultsJsonView, runProjectQuery, formatProjectQuerySql, exportProjectQueryResultsAsCsv, copyProjectQueryResultsAsJson, exportProjectQueryResultsAsJson, printProjectQueryResults, erdZoomState, setProjectQueryErdZoom, resetProjectQueryErdZoom, zoomProjectQueryErdAtPoint, updateProjectQueryIntellisense, repositionProjectQueryIntellisense, hideProjectQueryIntellisense, isProjectQueryIntellisenseOpen, moveProjectQueryIntellisenseActive, acceptProjectQueryIntellisenseSuggestion, handleProjectQueryIntellisenseClick } from './modals/project-search.js';
+import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick, showProjectSearchSimpleView, showProjectSearchQueryView, toggleProjectQuerySchemaPanel, toggleProjectQuerySavedPanel, handleProjectQuerySavedListClick, handleProjectQuerySaveOrUpdateClick, handleProjectQueryNewClick, hideProjectQuerySaveRow, confirmSaveProjectQuery, showProjectQueryResultsTableView, showProjectQueryResultsJsonView, runProjectQuery, formatProjectQuerySql, exportProjectQueryResultsAsCsv, copyProjectQueryResultsAsJson, exportProjectQueryResultsAsJson, printProjectQueryResults, erdZoomState, setProjectQueryErdZoom, resetProjectQueryErdZoom, zoomProjectQueryErdAtPoint, updateProjectQueryIntellisense, repositionProjectQueryIntellisense, hideProjectQueryIntellisense, isProjectQueryIntellisenseOpen, moveProjectQueryIntellisenseActive, acceptProjectQueryIntellisenseSuggestion, handleProjectQueryIntellisenseClick } from './modals/project-search.js';
 import { openAboutModal, closeAboutModal, isAboutModalOpen } from './modals/about.js';
 import { openProjectStorageModal, closeProjectStorageModal, isProjectStorageModalOpen } from './modals/project-storage.js';
 import { openUfoModal, closeUfoModal, isUfoModalOpen } from './modals/ufo.js';
@@ -528,6 +528,7 @@ function wireEvents(){
   document.getElementById('projectSearchTabQueryBtn').addEventListener('click', showProjectSearchQueryView);
   document.getElementById('projectSearchQueryDoneBtn').addEventListener('click', closeProjectSearchOverlay);
   document.getElementById('projectQueryRunBtn').addEventListener('click', runProjectQuery);
+  document.getElementById('projectQueryNewBtn').addEventListener('click', handleProjectQueryNewClick);
   document.getElementById('projectQueryFormatBtn').addEventListener('click', formatProjectQuerySql);
   document.getElementById('projectQuerySchemaToggleBtn').addEventListener('click', toggleProjectQuerySchemaPanel);
   document.getElementById('projectQuerySavedToggleBtn').addEventListener('click', toggleProjectQuerySavedPanel);
@@ -1509,7 +1510,11 @@ function wireEvents(){
   });
 
   document.getElementById('confirmModalClose').addEventListener('click', closeConfirmDialog);
-  document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirmDialog);
+  document.getElementById('confirmCancelBtn').addEventListener('click', function(){
+    var cancelAction = getPendingCancelAction();
+    closeConfirmDialog();
+    if(cancelAction) cancelAction();
+  });
   document.getElementById('confirmOkBtn').addEventListener('click', function(){
     var action = getPendingConfirmAction();
     closeConfirmDialog();

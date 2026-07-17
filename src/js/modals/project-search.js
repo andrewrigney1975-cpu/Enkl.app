@@ -203,19 +203,28 @@ export function showProjectSearchQueryView(){
    ========================================================= */
 var intellisenseState = {open: false, options: [], start: 0, end: 0, activeIndex: 0};
 
-// 'join' (a smart TABLE_RELATIONSHIPS-derived ON-condition suggestion) gets its own badge class so it
-// visually stands out from a plain field/table/keyword suggestion — see .kf-intellisense-type-join.
-var INTELLISENSE_KIND_BADGES = {table: 'T', field: 'F', keyword: 'K', join: 'J'};
+// 'join' (a smart TABLE_RELATIONSHIPS-derived ON-condition suggestion) keeps a plain letter badge —
+// only K/T/F (keyword/table/field) were asked to become icons. Everything else in this table renders
+// as an icon via the standard data-icon + hydrateIcons() placeholder idiom (matches
+// renderSavedQueriesList()'s own delete-icon rows above); 'field' (a plain, non-key column) renders
+// with no icon and no text at all, per the ask, but the badge <span> stays in the markup so every
+// row's label still starts at the same x-offset.
+var INTELLISENSE_KIND_ICON = {table: 'grid', 'field-pk': 'key', 'field-fk': 'key'};
+var INTELLISENSE_KIND_LETTER = {join: 'J'};
 
 function renderIntellisenseDropdown(){
   var dropdown = document.getElementById('projectQueryIntellisenseDropdown');
   dropdown.innerHTML = intellisenseState.options.map(function(opt, i){
-    var badge = INTELLISENSE_KIND_BADGES[opt.kind] || '';
+    var badgeContent;
+    if(opt.kind === 'keyword') badgeContent = 'SQL';
+    else if(INTELLISENSE_KIND_ICON[opt.kind]) badgeContent = '<span class="kf-icon" data-icon="' + INTELLISENSE_KIND_ICON[opt.kind] + '" data-size="11"></span>';
+    else badgeContent = INTELLISENSE_KIND_LETTER[opt.kind] || '';
     return '<div class="kf-intellisense-option' + (i === intellisenseState.activeIndex ? ' active' : '') + '" data-option-index="' + i + '">' +
-      '<span class="kf-intellisense-option-type kf-intellisense-type-' + opt.kind + '">' + badge + '</span>' +
+      '<span class="kf-intellisense-option-type kf-intellisense-type-' + opt.kind + '">' + badgeContent + '</span>' +
       '<span>' + escapeHTML(opt.label) + '</span>' +
     '</div>';
   }).join('');
+  hydrateIcons(dropdown);
 }
 
 function positionIntellisenseDropdown(){
@@ -394,21 +403,35 @@ export function toggleProjectQuerySchemaPanel(){
 // itself is deleted, so the button always reflects a saved query that still actually exists.
 var loadedSavedQueryId = null;
 var loadedSavedQueryName = null;
+// The loaded query's own SQL as of the last load/save/update — the "New" button's dirty-check
+// baseline (see isLoadedQueryDirty()). Kept in sync on every successful update so a second edit in
+// the same session is compared against the just-saved text, not the original load.
+var loadedSavedQuerySql = null;
 
 function updateSaveQueryButtonLabel(){
   document.getElementById('projectQuerySaveBtn').textContent = loadedSavedQueryId ? 'Update Query' : 'Save Query';
 }
 
-function setLoadedSavedQuery(id, name){
+function setLoadedSavedQuery(id, name, sql){
   loadedSavedQueryId = id;
   loadedSavedQueryName = name;
+  loadedSavedQuerySql = sql;
   updateSaveQueryButtonLabel();
 }
 
 export function clearLoadedSavedQuery(){
   loadedSavedQueryId = null;
   loadedSavedQueryName = null;
+  loadedSavedQuerySql = null;
   updateSaveQueryButtonLabel();
+}
+
+// "Dirty" only has meaning relative to a saved baseline — a query that was never saved has nothing
+// to compare against, so the New button's save-prompt is scoped to "a saved query is loaded AND its
+// text has changed since", not "the box has any content at all".
+function isLoadedQueryDirty(){
+  if(loadedSavedQueryId === null) return false;
+  return document.getElementById('projectQuerySql').value !== loadedSavedQuerySql;
 }
 
 function renderSavedQueriesList(){
@@ -452,7 +475,7 @@ export function handleProjectQuerySavedListClick(e){
   document.getElementById('projectQuerySql').value = query.sql;
   document.getElementById('projectQuerySavedPanel').classList.add('hidden');
   hideProjectQueryIntellisense();
-  setLoadedSavedQuery(query.id, query.name);
+  setLoadedSavedQuery(query.id, query.name, query.sql);
 }
 
 function deleteSavedQueryRow(queryId){
@@ -492,30 +515,78 @@ export function handleProjectQuerySaveOrUpdateClick(){
   else showProjectQuerySaveRow();
 }
 
-function confirmUpdateProjectQuery(){
+// The raw update action, no confirm dialog of its own — used both by the "Update Query" button
+// (wrapped in a confirm, see confirmUpdateProjectQuery below) and by the "New" button's own confirm
+// dialog (which already asked "save first?", so a second nested confirm here would be redundant).
+// `onSaved` fires only after a genuinely successful save, never on a server error, so a failed save
+// can't silently discard the user's edits behind it (e.g. New's own reset-to-empty step).
+async function performSavedQueryUpdate(onSaved){
   var project = getCurrentProject();
   if(!project) return;
   var sql = document.getElementById('projectQuerySql').value;
-  if(!sql.trim()){ toast('Enter a query first.'); return; }
   var queryId = loadedSavedQueryId;
   var name = loadedSavedQueryName;
-  confirmDialog(
-    'Update "' + name + '"?',
-    'This will overwrite the saved query with the current SQL. This cannot be undone.',
-    async function(){
-      if(isServerAuthoritative(project)){
-        try {
-          await savedQueryApi.update(project.serverProjectId, queryId, {name: name, sql: sql});
-          await refreshProjectFromServer(project.id);
-          toast('Query updated.');
-        } catch(e){
-          toast('Could not update query on the server: ' + (e.message || 'unknown error'));
-        }
-        return;
-      }
-      updateSavedQuery(project, queryId, {name: name, sql: sql});
+
+  if(isServerAuthoritative(project)){
+    try {
+      await savedQueryApi.update(project.serverProjectId, queryId, {name: name, sql: sql});
+      await refreshProjectFromServer(project.id);
       toast('Query updated.');
+      loadedSavedQuerySql = sql;
+      if(onSaved) onSaved();
+    } catch(e){
+      toast('Could not update query on the server: ' + (e.message || 'unknown error'));
     }
+    return;
+  }
+  updateSavedQuery(project, queryId, {name: name, sql: sql});
+  toast('Query updated.');
+  loadedSavedQuerySql = sql;
+  if(onSaved) onSaved();
+}
+
+function confirmUpdateProjectQuery(){
+  var sql = document.getElementById('projectQuerySql').value;
+  if(!sql.trim()){ toast('Enter a query first.'); return; }
+  confirmDialog(
+    'Update "' + loadedSavedQueryName + '"?',
+    'This will overwrite the saved query with the current SQL. This cannot be undone.',
+    function(){ performSavedQueryUpdate(); }
+  );
+}
+
+/* =========================================================
+   NEW QUERY
+   Clears the textarea back to empty. If a saved query is loaded and has been edited since (see
+   isLoadedQueryDirty()), confirms whether to save those changes first — Confirm saves (reusing the
+   same update path "Update Query" uses) then clears; the dialog's own Cancel button discards the
+   changes and clears anyway; the X/outside-click dismissal aborts New entirely, leaving the edit in
+   place (see confirm.js's onCancel doc comment for why only the labeled Cancel button fires it).
+   ========================================================= */
+function resetProjectQueryToNew(){
+  var textarea = document.getElementById('projectQuerySql');
+  textarea.value = '';
+  hideProjectQueryIntellisense();
+  clearLoadedSavedQuery();
+  document.getElementById('projectQueryResultsWrap').innerHTML = '';
+  document.getElementById('projectQueryResultsJson').textContent = '';
+  document.getElementById('projectQueryRowCount').textContent = '';
+  var errorEl = document.getElementById('projectQueryError');
+  errorEl.classList.add('hidden');
+  errorEl.textContent = '';
+  textarea.focus();
+}
+
+export function handleProjectQueryNewClick(){
+  if(!isLoadedQueryDirty()){
+    resetProjectQueryToNew();
+    return;
+  }
+  confirmDialog(
+    'Save changes to "' + loadedSavedQueryName + '"?',
+    'This query has unsaved changes. Click Confirm to save them before starting a new query, or Cancel to discard the changes.',
+    function(){ performSavedQueryUpdate(resetProjectQueryToNew); },
+    function(){ resetProjectQueryToNew(); }
   );
 }
 

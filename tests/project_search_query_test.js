@@ -242,6 +242,57 @@ function makeFakeJwt(payload){
     log('reloading it shows the UPDATED sql, confirming it overwrote in place rather than creating a second entry',
         doc.getElementById('projectQuerySql').value === "SELECT * FROM tasks WHERE priority = 'high'", doc.getElementById('projectQuerySql').value);
 
+    // ── New button: clears immediately when clean, confirms save-or-discard when dirty ───────
+    doc.getElementById('projectQueryNewBtn').click();
+    await wait(20);
+    log('New clears the textarea when the loaded query has no unsaved edits', doc.getElementById('projectQuerySql').value === '');
+    log('New with nothing dirty does not open a confirm dialog', doc.getElementById('confirmOverlay').classList.contains('hidden'));
+    log('New resets the button back to "Save Query" (no query loaded anymore)', doc.getElementById('projectQuerySaveBtn').textContent === 'Save Query');
+
+    doc.getElementById('projectQuerySavedToggleBtn').click();
+    await wait(20);
+    doc.querySelector('#projectQuerySavedList [data-query-id]').click();
+    await wait(20);
+    doc.getElementById('projectQuerySql').value = "SELECT * FROM tasks WHERE priority = 'high' AND archived = false";
+
+    doc.getElementById('projectQueryNewBtn').click();
+    await wait(20);
+    log('New on a DIRTY loaded query opens a confirm dialog instead of clearing immediately',
+        !doc.getElementById('confirmOverlay').classList.contains('hidden') && doc.getElementById('projectQuerySql').value !== '');
+
+    doc.getElementById('confirmModalClose').click();
+    await wait(20);
+    log('closing the dialog via the X aborts New entirely — the edited text is untouched',
+        doc.getElementById('projectQuerySql').value === "SELECT * FROM tasks WHERE priority = 'high' AND archived = false");
+
+    doc.getElementById('projectQueryNewBtn').click();
+    await wait(20);
+    doc.getElementById('confirmCancelBtn').click();
+    await wait(20);
+    log('the dialog\'s Cancel button discards the edit and clears the textarea anyway', doc.getElementById('projectQuerySql').value === '');
+
+    doc.getElementById('projectQuerySavedToggleBtn').click();
+    await wait(20);
+    doc.querySelector('#projectQuerySavedList [data-query-id]').click();
+    await wait(20);
+    log('discarding via New\'s Cancel did NOT persist the edit — reloading shows the ORIGINAL sql',
+        doc.getElementById('projectQuerySql').value === "SELECT * FROM tasks WHERE priority = 'high'", doc.getElementById('projectQuerySql').value);
+
+    doc.getElementById('projectQuerySql').value = "SELECT * FROM tasks WHERE priority = 'critical'";
+    doc.getElementById('projectQueryNewBtn').click();
+    await wait(20);
+    doc.getElementById('confirmOkBtn').click();
+    await wait(50);
+    log('Confirm on New\'s dialog saves the edit first, then clears the textarea',
+        doc.getElementById('projectQuerySql').value === '' && doc.getElementById('projectQuerySaveBtn').textContent === 'Save Query');
+
+    doc.getElementById('projectQuerySavedToggleBtn').click();
+    await wait(20);
+    doc.querySelector('#projectQuerySavedList [data-query-id]').click();
+    await wait(20);
+    log('Confirm on New\'s dialog really did persist the edit before clearing',
+        doc.getElementById('projectQuerySql').value === "SELECT * FROM tasks WHERE priority = 'critical'", doc.getElementById('projectQuerySql').value);
+
     doc.getElementById('projectQuerySavedToggleBtn').click();
     await wait(20);
     const deleteBtn = doc.querySelector('#projectQuerySavedList [data-query-delete-id]');

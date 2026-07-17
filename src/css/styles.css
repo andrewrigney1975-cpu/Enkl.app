@@ -3139,10 +3139,47 @@
 
   /* A "join" suggestion (features/sql-intellisense.js's TABLE_RELATIONSHIPS-derived ON-condition,
      e.g. "tasks.columnId = columns.id") is a smart, ready-made suggestion rather than a plain
-     identifier — accented so it visually stands out from the T/F/K badges above it in the list. */
+     identifier — accented so it visually stands out from the other badge kinds in the list. */
   .kf-intellisense-type-join {
     background: var(--kf-blue);
     color: #fff;
+  }
+
+  /* A keyword badge shows the word "SQL", too wide for the fixed 16px icon box the other kinds use —
+     let it grow and shrink the font instead. */
+  .kf-intellisense-type-keyword {
+    width: auto;
+    padding: 0 4px;
+    font-size: 8px;
+    letter-spacing: 0.2px;
+  }
+
+  .kf-intellisense-type-table .kf-icon {
+    color: var(--kf-text-secondary);
+  }
+
+  /* Primary key (a table's own "id") vs foreign key (some other table's field pointing at this one) —
+     same key icon, different color is the only thing distinguishing them, exactly as asked. */
+  .kf-intellisense-type-field-pk {
+    background: none;
+  }
+
+  .kf-intellisense-type-field-pk .kf-icon {
+    color: #f0b429;
+  }
+
+  .kf-intellisense-type-field-fk {
+    background: none;
+  }
+
+  .kf-intellisense-type-field-fk .kf-icon {
+    color: #ffffff;
+  }
+
+  /* A plain (non-key) field gets no icon and no text at all — an empty, backgroundless badge so the
+     label text after it still lines up with every other row. */
+  .kf-intellisense-type-field {
+    background: none;
   }
 
   .kf-query-actions {

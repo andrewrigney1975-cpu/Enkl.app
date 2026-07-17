@@ -95,9 +95,26 @@ function relatedTables(tables){
   return related;
 }
 
+/* A field named "id" is its own table's primary key by this schema's universal convention (every
+   table's own TABLE_SCHEMAS entry starts with "id", never enforced any other way — see schema-erd.js's
+   own identical isKeyishField() heuristic). A field is a foreign key if it's some table's OWN column
+   pointing at another table, i.e. it appears as a `fromField` on a TABLE_RELATIONSHIPS edge whose
+   `from` is that same table — not just any field mentioned anywhere in the relationships list. */
+function isForeignKeyField(table, field){
+  return TABLE_RELATIONSHIPS.some(function(rel){ return rel.from === table && rel.fromField === field; });
+}
+
+function fieldKind(table, field){
+  if(field === 'id') return 'field-pk';
+  if(isForeignKeyField(table, field)) return 'field-fk';
+  return 'field';
+}
+
 /* Builds one suggestion per distinct field name across `tables` — disambiguated with a `table.`
    prefix (both segments individually bracketed) whenever the same field name appears in more than
-   one of those tables, bare `[field]` otherwise. */
+   one of those tables, bare `[field]` otherwise. `kind` distinguishes a plain field from a primary
+   key (`field-pk`) or foreign key (`field-fk`) — see fieldKind() — purely for the UI's suggestion-
+   type badge (a yellow key for PK, a white key for FK, nothing for an ordinary field). */
 function buildFieldOptions(tables){
   var owners = {};
   tables.forEach(function(table){
@@ -113,10 +130,10 @@ function buildFieldOptions(tables){
       // matchKey is the bare field name the user is actually typing — filtering must happen against
       // this, never the display label, or a disambiguated "tasks.id" label (which doesn't start with
       // the user's typed "i") would wrongly fail to match at all.
-      options.push({label: field, matchKey: field, kind: 'field', insertText: '[' + field + '] '});
+      options.push({label: field, matchKey: field, kind: fieldKind(fieldOwners[0], field), insertText: '[' + field + '] '});
     } else {
       fieldOwners.forEach(function(table){
-        options.push({label: table + '.' + field, matchKey: field, kind: 'field', insertText: '[' + table + '].[' + field + '] '});
+        options.push({label: table + '.' + field, matchKey: field, kind: fieldKind(table, field), insertText: '[' + table + '].[' + field + '] '});
       });
     }
   });
@@ -181,7 +198,7 @@ function matchesPrefix(matchKey, prefix){
    span to replace (see getWordSpan), `type` is 'table' or 'field-or-keyword'. `matchKey` is the bare
    identifier the user is actually typing (used for prefix filtering); `label` is the display text,
    which for a disambiguated field differs from matchKey (`tasks.id` vs `id`). `kind` is
-   'table'/'field'/'keyword'/'join', purely for the UI's suggestion-type badge. */
+   'table'/'field'/'field-pk'/'field-fk'/'keyword'/'join', purely for the UI's suggestion-type badge. */
 export function computeIntellisense(sql, caretIndex){
   if(isInsideStringLiteral(sql, caretIndex)) return null;
 
