@@ -3611,7 +3611,9 @@
     padding: 8px 10px;
     color: var(--kf-text);
     background: var(--kf-input-bg);
-    min-height: 70px;
+    min-height: 140px;
+    max-height: 300px;
+    overflow-y: auto;
   }
 
   .kf-richtext-editor:focus {
