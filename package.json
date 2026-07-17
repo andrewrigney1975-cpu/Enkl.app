@@ -17,7 +17,7 @@
   },
   "overrides": {
     "alasql": {
-      "react-native-fs": "npm:@enkl/noop@0.0.0-does-not-exist"
+      "react-native-fs": "file:../../vendor-stubs/react-native-fs-noop"
     }
   }
 }

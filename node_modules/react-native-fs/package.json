@@ -1,0 +1,7 @@
+{
+  "name": "react-native-fs-noop",
+  "version": "0.0.0",
+  "description": "Local no-op stub that package.json's overrides redirects alasql's optional react-native-fs dependency to, so it never actually installs (see CLAUDE.md §15). We never touch a Node/React-Native filesystem environment, so alasql's real optional adapter is dead weight only. A file: override MUST point at something that genuinely resolves — npm ci's strict lockfile validation (unlike npm install) fails hard on an override target that doesn't exist at all, which is why this stub exists instead of a nonexistent-package placeholder.",
+  "main": "index.js",
+  "private": true
+}
