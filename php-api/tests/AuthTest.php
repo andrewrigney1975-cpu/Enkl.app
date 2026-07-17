@@ -146,13 +146,16 @@ final class AuthTest extends TestCase
         self::assertSame(403, $response['status']);
     }
 
+    // isOrgAdmin: false is explicit here since Org Admins now also pass ProjectMemberMiddleware (they
+    // get every Project Admin capability, which is inherently also project-member-level access) —
+    // this test needs a genuinely plain, non-org-admin user to isolate what it's actually testing.
     public function testProjectMemberPolicyRejectsTokenWithoutThatProjectMembership(): void
     {
         $ip = TestDataHelper::uniqueIp();
         $org = TestDataHelper::unique('org');
         $user = TestDataHelper::unique('user');
         $projectKey = TestDataHelper::unique('PRJ');
-        $seeded = TestDataHelper::seedOrgAndUser(self::$db, $org, $user);
+        $seeded = TestDataHelper::seedOrgAndUser(self::$db, $org, $user, isOrgAdmin: false);
         // Project exists in the SAME org, but the logged-in user is never added as a member of it —
         // the "projects" claim minted at login is empty, so ProjectMemberMiddleware must reject
         // regardless of same-org membership.
@@ -166,14 +169,16 @@ final class AuthTest extends TestCase
     }
 
     // Project Administrator role: a plain (non-admin) project member can view the project but must
-    // not be able to add a column — one of the four Project Admin capabilities.
+    // not be able to add a column — one of the four Project Admin capabilities. isOrgAdmin: false is
+    // explicit here since Org Admins now also pass the ProjectAdmin check — this test needs a
+    // genuinely plain, non-org-admin member to isolate what it's actually testing.
     public function testProjectAdminPolicyRejectsPlainMemberFromCreatingColumn(): void
     {
         $ip = TestDataHelper::uniqueIp();
         $org = TestDataHelper::unique('org');
         $user = TestDataHelper::unique('user');
         $projectKey = TestDataHelper::unique('P');
-        $seeded = TestDataHelper::seedOrgAndUser(self::$db, $org, $user);
+        $seeded = TestDataHelper::seedOrgAndUser(self::$db, $org, $user, isOrgAdmin: false);
         $projectId = TestDataHelper::seedProject(self::$db, $seeded['orgId'], $projectKey, $seeded['userId'], memberIsProjectAdmin: false);
 
         $login = Http::post('/api/auth/login', ['username' => $user, 'password' => TestDataHelper::DEFAULT_PASSWORD], null, ['X-Forwarded-For' => $ip]);
@@ -204,13 +209,16 @@ final class AuthTest extends TestCase
 
     // Promotion/demotion takes effect on the very next request, not at next login — same live-check
     // guarantee ProjectMemberPolicy already relies on, applied to the Project Admin flag specifically.
+    // isOrgAdmin: false, same reasoning as testProjectAdminPolicyRejectsPlainMemberFromCreatingColumn
+    // above — must be a genuinely plain member pre-promotion for the "before" assertion to hold now
+    // that Org Admins also pass.
     public function testProjectAdminPolicyPromotionTakesEffectWithoutReLogin(): void
     {
         $ip = TestDataHelper::uniqueIp();
         $org = TestDataHelper::unique('org');
         $user = TestDataHelper::unique('user');
         $projectKey = TestDataHelper::unique('P');
-        $seeded = TestDataHelper::seedOrgAndUser(self::$db, $org, $user);
+        $seeded = TestDataHelper::seedOrgAndUser(self::$db, $org, $user, isOrgAdmin: false);
         $projectId = TestDataHelper::seedProject(self::$db, $seeded['orgId'], $projectKey, $seeded['userId'], memberIsProjectAdmin: false);
 
         $login = Http::post('/api/auth/login', ['username' => $user, 'password' => TestDataHelper::DEFAULT_PASSWORD], null, ['X-Forwarded-For' => $ip]);
@@ -224,5 +232,46 @@ final class AuthTest extends TestCase
 
         $afterPromotion = Http::post('/api/projects/' . $projectId . '/columns', ['name' => 'Now Allowed', 'done' => false, 'color' => null], $token, ['X-Forwarded-For' => $ip]);
         self::assertSame(200, $afterPromotion['status']);
+    }
+
+    // An Org Admin gets every Project Admin capability across their own org's projects, even with no
+    // ProjectMembers row for that project at all.
+    public function testProjectAdminPolicyAllowsOrgAdminEvenWithoutProjectMembership(): void
+    {
+        $ip = TestDataHelper::uniqueIp();
+        $org = TestDataHelper::unique('org');
+        $user = TestDataHelper::unique('user');
+        $projectKey = TestDataHelper::unique('P');
+        $seeded = TestDataHelper::seedOrgAndUser(self::$db, $org, $user, isOrgAdmin: true);
+        // No member argument — the Org Admin is deliberately not a ProjectMembers row at all.
+        $projectId = TestDataHelper::seedProject(self::$db, $seeded['orgId'], $projectKey);
+
+        $login = Http::post('/api/auth/login', ['username' => $user, 'password' => TestDataHelper::DEFAULT_PASSWORD], null, ['X-Forwarded-For' => $ip]);
+        $token = $login['body']['token'];
+
+        $response = Http::post('/api/projects/' . $projectId . '/columns', ['name' => 'Org Admin Column', 'done' => false, 'color' => null], $token, ['X-Forwarded-For' => $ip]);
+        self::assertSame(200, $response['status']);
+    }
+
+    // Cross-org isolation (CLAUDE.md §4): an Org Admin's bypass is scoped to their OWN org's projects
+    // only — the "orgId" claim is re-verified against the project's live OrganisationId, not just
+    // trusted, so an Org Admin from a different org can't reach this project this way either.
+    public function testProjectAdminPolicyRejectsOrgAdminFromADifferentOrganisation(): void
+    {
+        $ip = TestDataHelper::uniqueIp();
+        $org = TestDataHelper::unique('org');
+        $otherOrg = TestDataHelper::unique('otherorg');
+        $user = TestDataHelper::unique('user');
+        $otherOrgAdmin = TestDataHelper::unique('otheradmin');
+        $projectKey = TestDataHelper::unique('P');
+        $seeded = TestDataHelper::seedOrgAndUser(self::$db, $org, $user, isOrgAdmin: false);
+        TestDataHelper::seedOrgAndUser(self::$db, $otherOrg, $otherOrgAdmin, isOrgAdmin: true);
+        $projectId = TestDataHelper::seedProject(self::$db, $seeded['orgId'], $projectKey);
+
+        $login = Http::post('/api/auth/login', ['username' => $otherOrgAdmin, 'password' => TestDataHelper::DEFAULT_PASSWORD], null, ['X-Forwarded-For' => $ip]);
+        $token = $login['body']['token'];
+
+        $response = Http::post('/api/projects/' . $projectId . '/columns', ['name' => 'Should Not Exist', 'done' => false, 'color' => null], $token, ['X-Forwarded-For' => $ip]);
+        self::assertSame(403, $response['status']);
     }
 }

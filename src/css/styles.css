@@ -3322,6 +3322,14 @@
     max-height: 86vh;
   }
 
+  /* The Team modal's member rows (avatar + name + role + allocated-fraction + Admin checkbox +
+     remove button, see .kf-member-row) don't fit the shared .kf-modal-md width without the Admin
+     checkbox scrolling out of view — widened just for this modal rather than the shared class,
+     which other .kf-modal-md modals still use at their original width. */
+  #teamOverlay .kf-modal {
+    width: 680px;
+  }
+
   .kf-opening-experience-body {
     display: flex;
     flex-direction: column;

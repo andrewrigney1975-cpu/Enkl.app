@@ -27,6 +27,13 @@ use Slim\Routing\RouteContext;
  * `ProjectClaim.Role`/`.IsProjectAdmin` are minted for the frontend's own client-side "what to show"
  * decisions — see api.js's isProjectAdmin()) — fixed here to close the drift against the .NET tier's
  * already-live-checked ProjectMemberAuthorizationHandler.cs.
+ *
+ * An Org Admin also passes here even without a ProjectMembers row at all — a Project Admin is
+ * inherently also a project member (IsProjectAdmin is a column ON the ProjectMembers row), so an Org
+ * Admin who gets full Project Admin capabilities (see ProjectAdminMiddleware) needs this same bypass
+ * or they'd never reach those admin-gated routes to begin with (columns/members are nested under this
+ * ProjectMember-gated group in routes.php). Same live re-verification against the project's own
+ * "OrganisationId" as ProjectAdminMiddleware — never just trusting the "orgAdmin" claim.
  */
 final class ProjectMemberMiddleware implements MiddlewareInterface
 {
@@ -50,6 +57,16 @@ final class ProjectMemberMiddleware implements MiddlewareInterface
 
         if ($stmt->fetch() !== false) {
             return $handler->handle($request);
+        }
+
+        if (($claims->orgAdmin ?? null) === 'true' && isset($claims->orgId)) {
+            $orgStmt = Database::connection()->prepare(
+                'SELECT 1 FROM "Projects" WHERE "Id" = :pid AND "OrganisationId" = :orgId'
+            );
+            $orgStmt->execute(['pid' => $projectId, 'orgId' => (string) $claims->orgId]);
+            if ($orgStmt->fetch() !== false) {
+                return $handler->handle($request);
+            }
         }
 
         return $this->forbidden();

@@ -15,6 +15,13 @@ namespace Enkl.Api.Auth;
 /// for cross-org isolation — the JWT is still trusted for WHO the caller is (userId/orgId claims,
 /// checked elsewhere), just not for what they're currently a member of.
 ///
+/// An Org Admin also succeeds here even without a ProjectMembers row at all — a Project Admin is
+/// inherently also a project member (IsProjectAdmin is a column ON the ProjectMembers row), so an
+/// Org Admin who gets full Project Admin capabilities (see ProjectAdminAuthorizationHandler) needs
+/// this same bypass or they'd never reach those admin-gated routes to begin with (many are nested
+/// under a ProjectMember-gated route group). Same live re-verification against the project's own
+/// OrganisationId as ProjectAdminAuthorizationHandler — never just trusting the "orgAdmin" claim.
+///
 /// Registered as a Singleton (Program.cs — IAuthorizationHandler instances are shared across
 /// requests), so AppDbContext (scoped) can't be constructor-injected directly; IServiceScopeFactory
 /// resolves a fresh scoped instance per check instead, matching the standard ASP.NET Core pattern for
@@ -56,6 +63,25 @@ public class ProjectMemberAuthorizationHandler : AuthorizationHandler<ProjectMem
         if (isMember)
         {
             context.Succeed(requirement);
+            return;
+        }
+
+        if (context.User.HasClaim("orgAdmin", "true"))
+        {
+            var callerOrgId = context.User.TryOrgId();
+            if (callerOrgId is not null)
+            {
+                var projectOrgId = await db.Projects
+                    .AsNoTracking()
+                    .Where(p => p.Id == projectId)
+                    .Select(p => (Guid?)p.OrganisationId)
+                    .FirstOrDefaultAsync();
+
+                if (projectOrgId is not null && projectOrgId == callerOrgId)
+                {
+                    context.Succeed(requirement);
+                }
+            }
         }
     }
 }

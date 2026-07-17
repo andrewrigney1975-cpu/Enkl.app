@@ -62,7 +62,12 @@ export function isOrgAdmin(){
 /* Whether the caller is a Project Administrator on the given server project id (JwtTokenService.cs's
    "projects" claim, decoded client-side without signature verification — same "only ever used to
    decide what to SHOW, never what to ALLOW" trust model as isOrgAdmin() above; the server always
-   re-checks a live ProjectMembers row via ProjectAdminAuthorizationHandler/ProjectAdminMiddleware).
+   re-checks a live ProjectMembers row via ProjectAdminAuthorizationHandler/ProjectAdminMiddleware,
+   which independently re-verifies org membership for the Org-Admin case too — never trust this
+   client-side check for anything but "what to show"). An Org Admin always gets Project Admin
+   affordances on top of their org-only ones, so this returns true for any Org Admin outright without
+   even looking at the "projects" claim — every server-authoritative project a signed-in Org Admin
+   can reach in this UI already belongs to their own org.
    Returns false for a missing token, a missing/malformed "projects" claim, or a local-only project
    with no serverProjectId at all — callers gate local-only projects on isServerAuthoritative()
    instead, same as every other permission gate in this app (e.g. applyHeaderButtonVisibility's
@@ -70,6 +75,7 @@ export function isOrgAdmin(){
 export function isProjectAdmin(serverProjectId){
   var token = getToken();
   if(!token || !serverProjectId) return false;
+  if(isOrgAdmin()) return true;
   var payload = decodeTokenPayload(token);
   if(!payload || !payload.projects) return false;
   try {
