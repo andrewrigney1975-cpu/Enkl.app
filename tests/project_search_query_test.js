@@ -215,7 +215,9 @@ function makeFakeJwt(payload){
     const savedRow = doc.querySelector('#projectQuerySavedList [data-query-id]');
     savedRow.click();
     await wait(20);
-    log('clicking a saved query loads its SQL into the textarea', doc.getElementById('projectQuerySql').value === 'SELECT * FROM tasks');
+    // Saved queries are now always formatted before persisting (auto-format-on-save) — the loaded
+    // value is the FORMATTED form of what was typed, not the raw text.
+    log('clicking a saved query loads its SQL into the textarea', doc.getElementById('projectQuerySql').value === 'SELECT *\nFROM [tasks]');
     log('Saved Queries panel closes after loading', doc.getElementById('projectQuerySavedPanel').classList.contains('hidden'));
 
     // ── Update Query: loading a saved query flips the button label and overwrites in place ──
@@ -240,7 +242,7 @@ function makeFakeJwt(payload){
     doc.querySelector('#projectQuerySavedList [data-query-id]').click();
     await wait(20);
     log('reloading it shows the UPDATED sql, confirming it overwrote in place rather than creating a second entry',
-        doc.getElementById('projectQuerySql').value === "SELECT * FROM tasks WHERE priority = 'high'", doc.getElementById('projectQuerySql').value);
+        doc.getElementById('projectQuerySql').value === "SELECT *\nFROM [tasks]\nWHERE [priority] = 'high'", doc.getElementById('projectQuerySql').value);
 
     // ── New button: clears immediately when clean, confirms save-or-discard when dirty ───────
     doc.getElementById('projectQueryNewBtn').click();
@@ -276,7 +278,7 @@ function makeFakeJwt(payload){
     doc.querySelector('#projectQuerySavedList [data-query-id]').click();
     await wait(20);
     log('discarding via New\'s Cancel did NOT persist the edit — reloading shows the ORIGINAL sql',
-        doc.getElementById('projectQuerySql').value === "SELECT * FROM tasks WHERE priority = 'high'", doc.getElementById('projectQuerySql').value);
+        doc.getElementById('projectQuerySql').value === "SELECT *\nFROM [tasks]\nWHERE [priority] = 'high'", doc.getElementById('projectQuerySql').value);
 
     doc.getElementById('projectQuerySql').value = "SELECT * FROM tasks WHERE priority = 'critical'";
     doc.getElementById('projectQueryNewBtn').click();
@@ -291,7 +293,7 @@ function makeFakeJwt(payload){
     doc.querySelector('#projectQuerySavedList [data-query-id]').click();
     await wait(20);
     log('Confirm on New\'s dialog really did persist the edit before clearing',
-        doc.getElementById('projectQuerySql').value === "SELECT * FROM tasks WHERE priority = 'critical'", doc.getElementById('projectQuerySql').value);
+        doc.getElementById('projectQuerySql').value === "SELECT *\nFROM [tasks]\nWHERE [priority] = 'critical'", doc.getElementById('projectQuerySql').value);
 
     doc.getElementById('projectQuerySavedToggleBtn').click();
     await wait(20);

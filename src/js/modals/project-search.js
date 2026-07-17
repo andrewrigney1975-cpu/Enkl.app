@@ -591,7 +591,15 @@ export function handleProjectQuerySaveOrUpdateClick(){
 async function performSavedQueryUpdate(onSaved){
   var project = getCurrentProject();
   if(!project) return;
-  var sql = document.getElementById('projectQuerySql').value;
+  // Always formatted before persisting (§18's own bracket-wrap-every-identifier convention) — not
+  // just a style nicety: an unformatted, unbracketed query is exactly the shape that broke the
+  // Public Query API against Postgres (see CLAUDE.md §20's two live-bug writeups), so persisting the
+  // formatted form is a real defensive measure, not only cosmetic. The textarea is updated to match
+  // so what's displayed never silently diverges from what's actually saved.
+  var textarea = document.getElementById('projectQuerySql');
+  var sql = formatSql(textarea.value);
+  textarea.value = sql;
+  hideProjectQueryIntellisense();
   var queryId = loadedSavedQueryId;
   var name = loadedSavedQueryName;
   var exposeViaApi = document.getElementById('projectQueryExposeApiCheckbox').checked;
@@ -678,9 +686,14 @@ export async function confirmSaveProjectQuery(){
   var project = getCurrentProject();
   if(!project) return;
   var name = document.getElementById('projectQuerySaveNameInput').value.trim();
-  var sql = document.getElementById('projectQuerySql').value;
+  var textarea = document.getElementById('projectQuerySql');
   if(!name){ toast('Please enter a name for the query.'); return; }
-  if(!sql.trim()){ toast('Enter a query first.'); return; }
+  if(!textarea.value.trim()){ toast('Enter a query first.'); return; }
+  // Always formatted before persisting — see performSavedQueryUpdate's own comment for why this is
+  // a real defensive measure (bracket-wraps every identifier), not just a style nicety.
+  var sql = formatSql(textarea.value);
+  textarea.value = sql;
+  hideProjectQueryIntellisense();
 
   if(isServerAuthoritative(project)){
     var exposeViaApi = document.getElementById('projectQueryExposeApiCheckbox').checked;
