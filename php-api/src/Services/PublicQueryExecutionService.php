@@ -16,12 +16,12 @@ use PDOException;
  *
  * Safety model: Database::publicQueryConnection() authenticates as the dedicated, SELECT-only
  * enkl_public_query Postgres role (created by 023_add_saved_query_api_exposure.sql) — never the
- * app's own high-privilege connection. That role can see nothing except the ten exact-cased views
- * (see 024_fix_saved_query_api_views.sql) named/columned to match TABLE_SCHEMAS in query-engine.js
- * exactly, each hard-filtered to one project via a `SET LOCAL app.query_project_id` session
- * variable — that grant boundary is the actual guarantee, not the FORBIDDEN_PATTERN check below
- * (ported from query-engine.js, deliberately redundant defense-in-depth matching the existing
- * convention).
+ * app's own high-privilege connection. That role can see nothing except the ten all-lowercase views
+ * (see 025_fix_saved_query_api_view_casing.sql) named/columned to match TABLE_SCHEMAS in
+ * query-engine.js (case-folded to lowercase — see translateBracketIdentifiers()'s own note for
+ * why), each hard-filtered to one project via a `SET LOCAL app.query_project_id` session variable —
+ * that grant boundary is the actual guarantee, not the FORBIDDEN_PATTERN check below (ported from
+ * query-engine.js, deliberately redundant defense-in-depth matching the existing convention).
  *
  * Real bug found live (2026-07-18, first production use of this feature): every query the SQL
  * formatter/intellisense produces bracket-quotes every identifier (`[tasks].[title]`), matching
@@ -30,8 +30,17 @@ use PDOException;
  * rewriting `[x]` to `"x"` before execution. This also surfaced a second, related bug: the views
  * were originally named `query_tasks` etc. with `SELECT *` preserving the REAL Postgres PascalCase
  * column names, but a saved query references the lowercase table names/camelCase field names
- * TABLE_SCHEMAS defines — fixed by renaming/re-aliasing the views to match exactly, see that
- * migration's own comment for the full mapping including junction-table-backed array fields.
+ * TABLE_SCHEMAS defines — fixed by renaming/re-aliasing the views to match exactly.
+ *
+ * A SECOND real bug found live (2026-07-18, same day, next report): a saved query need not
+ * bracket-quote every identifier at all — `t.columnId` (bare, no brackets) resolves fine in AlaSQL,
+ * matching the JS property exactly as typed. Postgres folds an UNQUOTED identifier to lowercase
+ * before matching, so a view column literally named `"columnId"` is invisible to a bare
+ * `t.columnId` reference (Postgres looks for `columnid`). Fixed by making every view/column fully
+ * lowercase (025_fix_saved_query_api_view_casing.sql) AND having translateBracketIdentifiers()
+ * lowercase bracket CONTENTS too, not just quote them — so both a bare `columnId` (auto-folded by
+ * Postgres) and a bracketed `[columnId]` (translated here to `"columnid"`) resolve to the same
+ * column.
  */
 final class PublicQueryExecutionService
 {
@@ -43,20 +52,29 @@ final class PublicQueryExecutionService
     private const MAX_ROWS = 1000;
 
     /** Rewrites AlaSQL-style `[identifier]` bracket-quoting to Postgres' `"identifier"`
-     * double-quoting — a simple character-level pass, not a real SQL tokenizer, so it toggles
+     * double-quoting, LOWERCASING the bracket contents in the process (see this class's own doc
+     * comment for why) — a simple character-level pass, not a real SQL tokenizer, so it toggles
      * string-literal tracking on every unescaped `'` (a doubled `''` toggles twice, correctly
      * leaving the parser "still inside" the same string). */
     private static function translateBracketIdentifiers(string $sql): string
     {
         $result = '';
         $inString = false;
+        $bracketBuffer = null;
         for ($i = 0, $len = strlen($sql); $i < $len; $i++) {
             $c = $sql[$i];
-            if ($c === "'") {
+            if ($bracketBuffer !== null) {
+                if ($c === ']') {
+                    $result .= '"' . strtolower($bracketBuffer) . '"';
+                    $bracketBuffer = null;
+                } else {
+                    $bracketBuffer .= $c;
+                }
+            } elseif ($c === "'") {
                 $inString = !$inString;
                 $result .= $c;
-            } elseif (!$inString && ($c === '[' || $c === ']')) {
-                $result .= '"';
+            } elseif (!$inString && $c === '[') {
+                $bracketBuffer = '';
             } else {
                 $result .= $c;
             }

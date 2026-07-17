@@ -47,21 +47,47 @@ public class PublicQueryExecutionService
     /// double-quoting — a simple character-level pass, not a real SQL tokenizer, so it toggles
     /// string-literal tracking on every unescaped `'` (a doubled `''` toggles twice, correctly
     /// leaving the parser "still inside" the same string, since no bracket character can meaningfully
-    /// appear between the two quote characters of that escape sequence anyway).</summary>
+    /// appear between the two quote characters of that escape sequence anyway).
+    ///
+    /// Real bug found live (2026-07-18, second report): a saved query need not bracket-quote every
+    /// identifier at all — AlaSQL resolves a bare `t.columnId` just fine, matching the JS object
+    /// property exactly as typed. Postgres, in contrast, folds an UNQUOTED identifier to lowercase
+    /// before matching it against a real (quoted, case-preserved) column — so a view column named
+    /// `"columnId"` is invisible to a bare `t.columnId` reference (Postgres looks for `columnid`).
+    /// The only way for BOTH a bare `columnId` (auto-folded to lowercase by Postgres) and a
+    /// bracket-quoted `[columnId]` (translated to a double-quoted, case-preserving reference) to
+    /// resolve to the SAME view column is if that column is named fully lowercase to begin with —
+    /// see the FixSavedQueryApiViewCasing migration. This method's job is the other half: it must
+    /// also LOWERCASE whatever's inside the brackets, not just quote it, so `[columnId]` becomes
+    /// `"columnid"` (matching the now-all-lowercase view schema) rather than `"columnId"` (which
+    /// would just as surely fail to match an all-lowercase column, in the opposite direction).</summary>
     internal static string TranslateBracketIdentifiers(string sql)
     {
         var result = new System.Text.StringBuilder(sql.Length);
         var inString = false;
+        System.Text.StringBuilder? bracketBuffer = null;
         foreach (var c in sql)
         {
-            if (c == '\'')
+            if (bracketBuffer is not null)
+            {
+                if (c == ']')
+                {
+                    result.Append('"').Append(bracketBuffer.ToString().ToLowerInvariant()).Append('"');
+                    bracketBuffer = null;
+                }
+                else
+                {
+                    bracketBuffer.Append(c);
+                }
+            }
+            else if (c == '\'')
             {
                 inString = !inString;
                 result.Append(c);
             }
-            else if (!inString && (c == '[' || c == ']'))
+            else if (!inString && c == '[')
             {
-                result.Append('"');
+                bracketBuffer = new System.Text.StringBuilder();
             }
             else
             {

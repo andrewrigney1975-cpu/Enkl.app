@@ -34,13 +34,12 @@ with the rest of the codebase's conventions. This file is the standalone, org-fa
                      ┌───────────────────────▼───────────────────────────────┐
                      │  Postgres role: enkl_public_query (SELECT-only)       │
                      │  SET LOCAL app.query_project_id = '<project id>'      │
-                     │  translates [bracket] quoting to "double" quoting,    │
-                     │  then runs the saved query's SQL text against 10      │
-                     │  project-scoped views, exact-cased/aliased to match   │
-                     │  the Advanced Query grammar: "tasks", "columns",      │
-                     │  "members", "risks", "decisions", "principles",       │
-                     │  "objectives", "documents", "releases", "taskTypes",  │
-                     │  "teamsCommittees"                                    │
+                     │  translates [bracket] quoting to lowercased "double"  │
+                     │  quoting, then runs the saved query's SQL text        │
+                     │  against 10 project-scoped, all-lowercase views:      │
+                     │  tasks, columns, members, risks, decisions,           │
+                     │  principles, objectives, documents, releases,         │
+                     │  tasktypes, teamscommittees                          │
                      └───────────────────────┬───────────────────────────────┘
                                              │
                              3. rows returned as JSON, transaction
@@ -86,14 +85,13 @@ Two ways to do that were considered:
 
 A dedicated Postgres role, `enkl_public_query`, is created by the database migration
 (`AddSavedQueryApiExposure` / `023_add_saved_query_api_exposure.sql`); the queryable views
-themselves were corrected in a follow-up migration (`FixSavedQueryApiViews` /
-`024_fix_saved_query_api_views.sql`, see the note below). The role has:
+themselves were corrected in two follow-up migrations (see the note below). The role has:
 
-- `SELECT` only, on exactly ten views — `"tasks"`, `"columns"`, `"members"`, `"risks"`,
-  `"decisions"`, `"principles"`, `"objectives"`, `"documents"`, `"releases"`, `"taskTypes"`,
-  `"teamsCommittees"` — named and columned to match the Advanced Query grammar exactly (lowercase
-  table names, camelCase field names like `columnId`/`dateCreated`), so a saved query written
-  against that grammar runs against them without any manual translation on the query author's part.
+- `SELECT` only, on exactly ten views — `tasks`, `columns`, `members`, `risks`, `decisions`,
+  `principles`, `objectives`, `documents`, `releases`, `tasktypes`, `teamscommittees` — **all
+  lowercase**, matching what Postgres itself would resolve any unquoted reference to (see the note
+  below for why this matters), with every column similarly lowercased from its `TABLE_SCHEMAS`
+  camelCase name (`columnId` → `columnid`, `dateCreated` → `datecreated`, ...).
 - No access to any other table — not `Organisations`, not `Users`, not the real `Tasks`/`Risks`/etc.
   tables, not anything belonging to any org other than the one the query's project belongs to.
 - No write access anywhere, including to the ten views it can read.
@@ -106,16 +104,22 @@ client side (a task's dependency ids, a risk's linked document ids, etc.) are co
 correlated subquery in the view definition, since there's no single database column to point at —
 the view is what does that assembly, not the execution service.
 
-Two small text transformations happen to the saved SQL immediately before it's sent to Postgres,
-neither of which is a security boundary (the grant boundary above is what actually matters) — they
-exist purely so a query written for the in-browser AlaSQL engine also runs, unmodified, here:
+One small text transformation happens to the saved SQL immediately before it's sent to Postgres,
+which is not a security boundary (the grant boundary above is what actually matters) — it exists
+purely so a query written for the in-browser AlaSQL engine also runs, unmodified, here:
 
-- **Bracket-to-double-quote translation.** The SQL formatter/intellisense in the Advanced Query tab
-  bracket-quotes every identifier (`[tasks].[title]`) — that's valid syntax for AlaSQL, but Postgres
-  has no bracket-quoting at all. `PublicQueryExecutionService` rewrites `[x]` to `"x"` (skipping
-  anything inside a single-quoted string literal) before running the query.
-- **Exact-cased, exact-named views**, as above — so `FROM [tasks]` (after bracket translation, `FROM
-  "tasks"`) resolves to a real, case-sensitive Postgres relation with that literal name.
+- **Bracket-to-double-quote translation, with lowercasing.** The SQL formatter/intellisense in the
+  Advanced Query tab bracket-quotes every identifier it inserts (`[tasks].[title]`) — that's valid
+  syntax for AlaSQL, but Postgres has no bracket-quoting at all. A saved query doesn't have to use
+  brackets everywhere, though — AlaSQL resolves a bare `t.columnId` just as happily. Postgres
+  handles the two cases differently: an unquoted identifier is automatically folded to lowercase
+  before matching, while a quoted one is matched with its case preserved exactly. For a bare
+  reference and a bracketed reference to the *same* identifier to always resolve to the same
+  database column regardless of which style a query happens to use, that column has to be named
+  fully lowercase — and the bracket translation has to lowercase whatever's inside the brackets, not
+  just quote it. So `PublicQueryExecutionService` rewrites `[columnId]` to `"columnid"` (quoted
+  *and* lowercased), while a bare `columnId` is left untouched and gets lowercased by Postgres
+  itself on the way in — both converge on the one real, all-lowercase column.
 
 The practical effect: even though a saved query's SQL text is executed essentially verbatim (modulo
 the harmless quoting-syntax translation above), it is **physically incapable** of reading another
@@ -126,18 +130,23 @@ database itself refuses, regardless of what the query asks for. This was confirm
 $ psql -U enkl_public_query -d enkl -c 'SELECT * FROM "Organisations" LIMIT 1;'
 ERROR:  permission denied for table Organisations
 
-$ psql -U enkl_public_query -d enkl -c 'DELETE FROM "tasks";'
+$ psql -U enkl_public_query -d enkl -c 'DELETE FROM tasks;'
 ERROR:  permission denied for view tasks
 ```
 
-> **Note on the two text transformations above**: the first version of this feature only had the
-> grant-boundary/view-scoping design and skipped both transformations, on the assumption every
-> queryable table already mapped 1:1 to a real column. The very first real saved query run through
-> it (from a real user, not the test suite's trivial `SELECT 1`) failed with a syntax error, which
-> traced back to both gaps at once — the bracket-quoting mismatch, and several `TABLE_SCHEMAS`
-> fields (task dependencies, risk/decision/objective cross-links, team membership) that only exist
-> as junction tables client-side, not a plain column. Fixed in the `024_fix_saved_query_api_views`
-> migration described above.
+> **Note on how this design settled**: the first version of this feature only had the
+> grant-boundary/view-scoping design, with no text transformation at all, on the assumption every
+> saved query would be fully bracket-quoted and every queryable table mapped 1:1 to a real column.
+> The first real saved query run through it (a bracket-quoted query, from a real user) failed with a
+> syntax error — Postgres has no bracket-quoting syntax — and also exposed that several
+> `TABLE_SCHEMAS` fields (task dependencies, risk/decision/objective cross-links, team membership)
+> only exist as junction tables client-side, not a plain column. That first fix added bracket-to-
+> quote translation and re-aliased the views to mixed-case columns matching `TABLE_SCHEMAS` exactly.
+> A second real saved query — this one mixing bracketed and bare identifiers in the same statement,
+> which is perfectly normal AlaSQL usage — then failed differently: Postgres silently lowercases an
+> unquoted identifier before matching it, so the bare references in that query couldn't find the
+> mixed-case columns the first fix had created. The final, current design (lowercase everything,
+> lowercase bracket contents too) is what actually makes both quoting styles agree.
 
 Two smaller, defense-in-depth measures sit on top of that primary control:
 

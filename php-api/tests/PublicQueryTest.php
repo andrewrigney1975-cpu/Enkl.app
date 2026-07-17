@@ -141,6 +141,50 @@ final class PublicQueryTest extends TestCase
         self::assertSame('high', $response['body']['rows'][0]['priority']);
     }
 
+    // Real bug found live (2026-07-18, second report): a saved query need not bracket-quote EVERY
+    // identifier — AlaSQL resolves a bare `t.columnId` just fine. This mirrors the exact reported
+    // repro: a mix of unquoted (t.id, t.columnId, tasks, c.done) and bracket-quoted ([column] as an
+    // alias, [columns] as a table name) identifiers in the same query, proving both the
+    // all-lowercase view schema AND the bracket translator's now-lowercasing behavior are correct
+    // together.
+    public function testGetResultsWithMixedBracketedAndUnquotedIdentifiersReturnsCorrectlyMappedRows(): void
+    {
+        $ip = TestDataHelper::uniqueIp();
+        $org = TestDataHelper::unique('org');
+        $admin = TestDataHelper::unique('admin');
+        $seeded = TestDataHelper::seedOrgAndUser(self::$db, $org, $admin, isOrgAdmin: true);
+        $projectKey = TestDataHelper::unique('P');
+        $projectId = TestDataHelper::seedProject(self::$db, $seeded['orgId'], $projectKey);
+
+        $columnId = Uuid::v4();
+        self::$db->prepare(
+            'INSERT INTO "Columns" ("Id", "ProjectId", "Name", "Done", "Order") VALUES (:id, :pid, \'Done\', true, 0)'
+        )->execute(['id' => $columnId, 'pid' => $projectId]);
+        self::$db->prepare(<<<SQL
+            INSERT INTO "Tasks" ("Id", "ProjectId", "Key", "Title", "Priority", "ColumnId", "Progress", "Archived", "DateCreated", "DateLastModified")
+            VALUES (:id, :pid, :key, 'Ship the release', 'medium', :columnId, 0, false, now(), now())
+        SQL)->execute(['id' => Uuid::v4(), 'pid' => $projectId, 'key' => $projectKey . '-1', 'columnId' => $columnId]);
+
+        $savedQueryId = Uuid::v4();
+        $sql = 'SELECT t.id, t.key, t.title, t.priority, c.name AS [column], t.dateLastModified ' .
+            'FROM tasks t JOIN [columns] c ON t.columnId = c.id WHERE c.done = true ORDER BY t.dateLastModified DESC';
+        self::$db->prepare(<<<SQL
+            INSERT INTO "SavedQueries" ("Id", "ProjectId", "Name", "Sql", "DateCreated", "ExposeViaApi")
+            VALUES (:id, :pid, 'Mixed quoting test', :sql, now(), true)
+        SQL)->execute(['id' => $savedQueryId, 'pid' => $projectId, 'sql' => $sql]);
+
+        $login = Http::post('/api/auth/login', ['username' => $admin, 'password' => TestDataHelper::DEFAULT_PASSWORD], null, ['X-Forwarded-For' => $ip]);
+        $keyResponse = Http::post('/api/organisations/me/api-key', [], $login['body']['token'], ['X-Forwarded-For' => $ip]);
+
+        $response = Http::get('/api/public/v1/queries/' . $savedQueryId . '/results', $keyResponse['body']['key']);
+
+        self::assertSame(200, $response['status']);
+        self::assertCount(1, $response['body']['rows']);
+        self::assertSame('Ship the release', $response['body']['rows'][0]['title']);
+        self::assertSame('medium', $response['body']['rows'][0]['priority']);
+        self::assertSame('Done', $response['body']['rows'][0]['column']);
+    }
+
     // Revoking the key must take effect immediately — no separate "logout" step for an API key.
     public function testGetResultsAfterKeyIsRevokedReturnsNotFound(): void
     {
