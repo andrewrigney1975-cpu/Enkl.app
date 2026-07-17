@@ -48,33 +48,42 @@ function makeFakeJwt(payload){
     return {columns: cols, rows: rows};
   }
 
-  // ── 1. Exact formatted output — SELECT list + WHERE + ORDER BY ────────────────────────────
+  // ── 1. Exact formatted output — SELECT list + WHERE + ORDER BY, all bare identifiers wrapped ─
   setSql("select id,title,priority from tasks where priority='high' order by title");
   doc.getElementById('projectQueryFormatBtn').click();
   await wait(20);
-  const expected1 = "SELECT id,\n  title,\n  priority\nFROM tasks\nWHERE priority = 'high'\nORDER BY title";
-  log('SELECT-list + WHERE + ORDER BY formats exactly as expected', sqlEl.value === expected1, JSON.stringify(sqlEl.value));
+  const expected1 = "SELECT [id],\n  [title],\n  [priority]\nFROM [tasks]\nWHERE [priority] = 'high'\nORDER BY [title]";
+  log('SELECT-list + WHERE + ORDER BY formats exactly as expected, every bare identifier bracketed', sqlEl.value === expected1, JSON.stringify(sqlEl.value));
 
-  // ── 2. Exact formatted output — aggregate + GROUP BY + ORDER BY ───────────────────────────
+  // ── 2. Exact formatted output — aggregate + GROUP BY + ORDER BY; alias also gets bracketed ──
   setSql('select priority, count(*) as taskCount from tasks group by priority order by taskCount desc');
   doc.getElementById('projectQueryFormatBtn').click();
   await wait(20);
-  const expected2 = 'SELECT priority,\n  COUNT(*) AS taskCount\nFROM tasks\nGROUP BY priority\nORDER BY taskCount DESC';
-  log('aggregate + GROUP BY + ORDER BY formats exactly as expected, no space before COUNT(', sqlEl.value === expected2, JSON.stringify(sqlEl.value));
+  const expected2 = 'SELECT [priority],\n  COUNT(*) AS [taskCount]\nFROM [tasks]\nGROUP BY [priority]\nORDER BY [taskCount] DESC';
+  log('aggregate + GROUP BY + ORDER BY formats exactly as expected, COUNT unwrapped (keyword) but its alias IS wrapped', sqlEl.value === expected2, JSON.stringify(sqlEl.value));
 
-  // ── 3. Exact formatted output — JOIN/ON with bracketed identifiers, correct nesting ───────
+  // ── 3. Exact formatted output — JOIN/ON; bare table names wrapped, already-bracketed ON
+  //      condition left untouched (not double-wrapped) ──────────────────────────────────────
   setSql('SELECT * FROM tasks JOIN columns ON [tasks].[columnId] = [columns].[id]');
   doc.getElementById('projectQueryFormatBtn').click();
   await wait(20);
-  const expected3 = 'SELECT *\nFROM tasks\nJOIN columns\n  ON [tasks].[columnId] = [columns].[id]';
-  log('JOIN/ON formats with ON indented under its JOIN, dotted brackets kept tight', sqlEl.value === expected3, JSON.stringify(sqlEl.value));
+  const expected3 = 'SELECT *\nFROM [tasks]\nJOIN [columns]\n  ON [tasks].[columnId] = [columns].[id]';
+  log('JOIN/ON formats with ON indented under its JOIN; bare FROM/JOIN table names get bracketed, already-bracketed ON condition is not double-wrapped', sqlEl.value === expected3, JSON.stringify(sqlEl.value));
 
-  // ── 4. AND/OR chain breaks one condition per line; content inside parens stays inline ─────
+  // ── 4. AND/OR chain breaks one condition per line; content inside parens stays inline;
+  //      identifiers inside parens still get bracketed even though the parens aren't broken ───
   setSql("select * from tasks where (priority = 'high' or priority = 'critical') and archived = 'false'");
   doc.getElementById('projectQueryFormatBtn').click();
   await wait(20);
-  const expected4 = "SELECT *\nFROM tasks\nWHERE (priority = 'high' OR priority = 'critical')\n  AND archived = 'false'";
-  log('AND breaks to a new indented line; OR inside parens stays inline, not broken', sqlEl.value === expected4, JSON.stringify(sqlEl.value));
+  const expected4 = "SELECT *\nFROM [tasks]\nWHERE ([priority] = 'high' OR [priority] = 'critical')\n  AND [archived] = 'false'";
+  log('AND breaks to a new indented line; OR inside parens stays inline; identifiers inside the parens are still bracketed', sqlEl.value === expected4, JSON.stringify(sqlEl.value));
+
+  // ── 4b. Bracket-wrapping specifics: no double-wrapping, numbers/literals untouched ─────────
+  setSql("SELECT id FROM tasks WHERE businessValue > 5 AND title = 'the great [escape]'");
+  doc.getElementById('projectQueryFormatBtn').click();
+  await wait(20);
+  log('a numeric literal (5) is never bracketed', sqlEl.value.indexOf('[5]') === -1 && sqlEl.value.indexOf(' 5') !== -1, JSON.stringify(sqlEl.value));
+  log('a string literal is left completely untouched, even one that itself contains bracket-looking text', sqlEl.value.indexOf("'the great [escape]'") !== -1, JSON.stringify(sqlEl.value));
 
   // ── 5. Spaces only, never tabs, and 2-space indentation specifically ──────────────────────
   log('formatted output contains no tab characters', sqlEl.value.indexOf('\t') === -1);
@@ -82,12 +91,13 @@ function makeFakeJwt(payload){
   log('continuation lines are indented exactly 2 spaces', indentedLine.slice(0, 2) === '  ' && indentedLine[2] !== ' ', JSON.stringify(indentedLine));
 
   // ── 6. Keywords drawn from the SAME list intellisense uses are upper-cased regardless of
-  //      how the user typed them; non-keyword identifiers are left untouched ─────────────────
+  //      how the user typed them; non-keyword identifiers keep their original casing (just
+  //      bracketed, not upper-cased) ──────────────────────────────────────────────────────────
   setSql('SeLeCt Id FrOm tasks WhErE priority = \'high\'');
   doc.getElementById('projectQueryFormatBtn').click();
   await wait(20);
   log('mixed-case keywords are normalized to upper case', sqlEl.value.indexOf('SELECT') !== -1 && sqlEl.value.indexOf('FROM') !== -1 && sqlEl.value.indexOf('WHERE') !== -1);
-  log('a non-keyword identifier (Id) is left exactly as typed, not upper-cased', sqlEl.value.indexOf('\n  Id\n') !== -1 || sqlEl.value.split('\n')[0] === 'SELECT Id', sqlEl.value);
+  log('a non-keyword identifier (Id) keeps its original casing, bracketed but not upper-cased', sqlEl.value.split('\n')[0] === 'SELECT [Id]', sqlEl.value);
 
   // ── 7. Idempotent — formatting an already-formatted query is a no-op ──────────────────────
   const alreadyFormatted = sqlEl.value;

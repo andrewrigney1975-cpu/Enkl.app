@@ -23,6 +23,13 @@ import { SQL_KEYWORDS } from './sql-intellisense.js';
      - Content inside parentheses (function calls, grouped conditions) is deliberately left inline,
        never broken/re-indented — a reasonable, common simplification for a lightweight formatter; only
        heavier tools (pgFormatter) attempt full recursive reformatting of nested expressions.
+     - Every bare (not already `[bracket]`-quoted) table/field/alias name gets wrapped in square
+       brackets, each dotted segment individually (`tasks.id` -> `[tasks].[id]`) — the same safety
+       rationale sql-intellisense.js's own inserted suggestions already follow (guards against an
+       identifier colliding with an AlaSQL-reserved word, same class of bug as the documented `total`
+       gotcha — an alias like `AS total` gets wrapped too, `AS [total]`, sidestepping that exact
+       collision). Keywords and numeric literals are never wrapped; string literals and already-
+       bracketed identifiers are left untouched.
    ========================================================= */
 
 var COMPOUND_CLAUSES = {GROUP: 'BY', ORDER: 'BY'};
@@ -34,6 +41,26 @@ var SPACE_BEFORE_PAREN_AFTER = {WHERE: 1, AND: 1, OR: 1, ON: 1, HAVING: 1, IN: 1
 
 function isFormatKeyword(upper){
   return SQL_KEYWORDS.indexOf(upper) !== -1;
+}
+
+var NUMERIC_LITERAL = /^[0-9]+(\.[0-9]+)?$/;
+var PLAIN_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_.]*$/;
+
+/* A "plain identifier" is any word-shaped token that isn't a recognized keyword and isn't a numeric
+   literal — i.e. a bare table/field/alias name the user typed without brackets. Everything else
+   (keywords, numbers, string literals, already-`[bracketed]` tokens, operators/punctuation) is left
+   completely alone; none of those token shapes ever match PLAIN_IDENTIFIER in the first place. */
+function isPlainIdentifier(raw, upper){
+  return !isFormatKeyword(upper) && !NUMERIC_LITERAL.test(raw) && PLAIN_IDENTIFIER.test(raw);
+}
+
+/* tasks.id -> [tasks].[id]; id -> [id] — each dot-separated segment wrapped individually, matching
+   the exact insertText shape features/sql-intellisense.js's own disambiguated suggestions already
+   produce (table.field -> [table].[field]), so a formatted query and an intellisense-inserted one
+   never look inconsistent side by side. */
+function bracketWrapIdentifier(raw){
+  return raw.split('.').filter(function(seg){ return seg.length > 0; })
+    .map(function(seg){ return '[' + seg + ']'; }).join('.');
 }
 
 /* Tokenizes into words/keywords (dots included, so "tasks.id" and "[tasks].[id]" both survive as
@@ -203,7 +230,9 @@ export function formatSql(sql){
     if(raw === '(') parenDepth++;
     if(raw === ')') parenDepth = Math.max(0, parenDepth - 1);
 
-    emit(isFormatKeyword(upper) ? upper : raw);
+    if(isFormatKeyword(upper)) emit(upper);
+    else if(isPlainIdentifier(raw, upper)) emit(bracketWrapIdentifier(raw));
+    else emit(raw);
     i += 1;
   }
   pushCurrentLine();
