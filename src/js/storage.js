@@ -261,6 +261,7 @@ export function migrateDB(){
       if(t.encryptedDescription === undefined){ t.encryptedDescription = null; changed = true; }
       if(t.encryptionIv === undefined){ t.encryptionIv = null; changed = true; }
       if(!Array.isArray(t.auditLog)){ t.auditLog = []; changed = true; }
+      if(!Array.isArray(t.comments)){ t.comments = []; changed = true; }
       if(t.parentTaskId === undefined){ t.parentTaskId = null; changed = true; }
       else if(t.parentTaskId && (t.parentTaskId === t.id || !p.tasks[t.parentTaskId])){ t.parentTaskId = null; changed = true; }
       /* One-time backfill: a task already sitting in a Done column

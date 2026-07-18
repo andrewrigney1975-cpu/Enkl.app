@@ -366,6 +366,25 @@
         <input type="text" class="kf-dep-search" id="depSearchInput" placeholder="Filter tasks...">
         <div class="kf-dep-list" id="depList"></div>
       </div>
+      <div id="taskCommentsSection" class="kf-comments-section kf-vis-hidden">
+        <div class="kf-comments-header">
+          <label style="margin:0;">Comments <span class="kf-audit-count" id="taskCommentsCount"></span></label>
+          <button type="button" class="kf-comments-sort-btn" id="taskCommentsSortBtn" title="Toggle sort order">
+            <span class="kf-icon" data-icon="chevronDown" data-size="12" id="taskCommentsSortIcon"></span>
+            <span id="taskCommentsSortLabel">Oldest first</span>
+          </button>
+        </div>
+        <div class="kf-comments-list" id="taskCommentsList"></div>
+        <div class="kf-field kf-vis-hidden" id="taskCommentAuthorRow">
+          <label for="taskCommentAuthorSelect">Posting as</label>
+          <select id="taskCommentAuthorSelect"></select>
+        </div>
+        <textarea class="kf-comments-input" id="taskCommentInput" rows="3" maxlength="4000" placeholder="Add a comment..."></textarea>
+        <div class="kf-comments-actions">
+          <button type="button" class="kf-btn kf-btn-secondary kf-btn-sm kf-vis-hidden" id="taskCommentCancelEditBtn">Cancel</button>
+          <button type="button" class="kf-btn kf-btn-secondary kf-btn-sm" id="taskCommentSubmitBtn">Add Comment</button>
+        </div>
+      </div>
       <div class="kf-checkbox-row">
         <input type="checkbox" id="taskArchivedCheckbox">
         <label for="taskArchivedCheckbox" style="text-transform:none;font-weight:500;">Archived <span style="color:var(--kf-text-faint);">(hidden from the board, list view, and dependency graph)</span></label>

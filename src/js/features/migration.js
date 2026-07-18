@@ -434,13 +434,16 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
       dateCreated: t.dateCreated, dateLastModified: t.dateLastModified, dateDone: t.dateDone || null,
       auditLog: (t.auditLog || []).map(function(a){
         return {timestamp: a.timestamp, field: a.field, oldValue: a.oldValue, newValue: a.newValue, changedBy: a.changedBy || null};
+      }),
+      comments: (t.comments || []).map(function(c){
+        return {id: c.id, text: c.text, dateCreated: c.dateCreated, authorId: c.authorId || null, authorName: c.authorName || ''};
       })
     };
     if(columnsById[t.columnId]) columnsById[t.columnId].order.push(t.id);
   });
 
   var members = detail.members.map(function(m){
-    return {id: m.id, name: m.displayName, email: m.email || null, color: m.color, role: m.role || null, allocatedFraction: m.allocatedFraction != null ? m.allocatedFraction : null, reportsToId: m.reportsToId || null, isProjectAdmin: !!m.isProjectAdmin};
+    return {id: m.id, userId: m.userId || null, name: m.displayName, email: m.email || null, color: m.color, role: m.role || null, allocatedFraction: m.allocatedFraction != null ? m.allocatedFraction : null, reportsToId: m.reportsToId || null, isProjectAdmin: !!m.isProjectAdmin};
   });
   var releases = (detail.releases || []).map(function(r){
     return {id: r.id, name: r.name, status: r.status, ownerId: r.ownerId || null, startDate: serverDateOnlyToIso(r.startDate), endDate: serverDateOnlyToIso(r.endDate), dateCreated: now, dateLastModified: now};

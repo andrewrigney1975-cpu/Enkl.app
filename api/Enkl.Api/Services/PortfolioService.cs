@@ -120,6 +120,7 @@ public class PortfolioService
             .Where(t => validProjectIds.Contains(t.ProjectId))
             .Include(t => t.Dependencies)
             .Include(t => t.AuditLog)
+            .Include(t => t.Comments)
             .ToListAsync();
         var tasks = taskEntities.Select(ProjectService.ToTaskDto).ToList();
 

@@ -256,7 +256,7 @@ final class TaskService
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    /** Shared with ProjectService::getProjectDetail — builds every task DTO (with dependencies + audit log) for a project in one pass. */
+    /** Shared with ProjectService::getProjectDetail — builds every task DTO (with dependencies + audit log + comments) for a project in one pass. */
     public static function fetchTaskDtos(PDO $db, string $projectId): array
     {
         $stmt = $db->prepare('SELECT * FROM "Tasks" WHERE "ProjectId" = :pid');
@@ -265,17 +265,19 @@ final class TaskService
 
         $depStmt = $db->prepare('SELECT "DependsOnTaskId" FROM "TaskDependencies" WHERE "TaskId" = :id');
         $auditStmt = $db->prepare('SELECT * FROM "TaskAuditLogEntries" WHERE "TaskId" = :id ORDER BY "Timestamp" DESC');
+        $commentStmt = $db->prepare('SELECT * FROM "TaskComments" WHERE "TaskId" = :id ORDER BY "DateCreated" ASC');
 
-        return array_map(function (array $t) use ($depStmt, $auditStmt): array {
+        return array_map(function (array $t) use ($depStmt, $auditStmt, $commentStmt): array {
             $depStmt->execute(['id' => $t['Id']]);
             $auditStmt->execute(['id' => $t['Id']]);
+            $commentStmt->execute(['id' => $t['Id']]);
             return self::mapTaskRow($t, $depStmt->fetchAll(PDO::FETCH_COLUMN), array_map(
                 static fn(array $a): array => [
                     'id' => $a['Id'], 'timestamp' => $a['Timestamp'], 'field' => $a['Field'],
                     'oldValue' => $a['OldValue'], 'newValue' => $a['NewValue'], 'changedBy' => $a['ChangedBy'],
                 ],
                 $auditStmt->fetchAll()
-            ));
+            ), self::mapComments($commentStmt->fetchAll()));
         }, $tasks);
     }
 
@@ -291,16 +293,28 @@ final class TaskService
         $auditStmt = $this->db->prepare('SELECT * FROM "TaskAuditLogEntries" WHERE "TaskId" = :id ORDER BY "Timestamp" DESC');
         $auditStmt->execute(['id' => $taskId]);
 
+        $commentStmt = $this->db->prepare('SELECT * FROM "TaskComments" WHERE "TaskId" = :id ORDER BY "DateCreated" ASC');
+        $commentStmt->execute(['id' => $taskId]);
+
         return self::mapTaskRow($task, $depStmt->fetchAll(PDO::FETCH_COLUMN), array_map(
             static fn(array $a): array => [
                 'id' => $a['Id'], 'timestamp' => $a['Timestamp'], 'field' => $a['Field'],
                 'oldValue' => $a['OldValue'], 'newValue' => $a['NewValue'], 'changedBy' => $a['ChangedBy'],
             ],
             $auditStmt->fetchAll()
-        ));
+        ), self::mapComments($commentStmt->fetchAll()));
     }
 
-    private static function mapTaskRow(array $t, array $dependsOnTaskIds, array $auditLog): array
+    /** @param array<int,array<string,mixed>> $rows */
+    private static function mapComments(array $rows): array
+    {
+        return array_map(static fn(array $c): array => [
+            'id' => $c['Id'], 'text' => $c['Text'], 'dateCreated' => $c['DateCreated'],
+            'authorId' => $c['AuthorId'], 'authorName' => $c['AuthorName'],
+        ], $rows);
+    }
+
+    private static function mapTaskRow(array $t, array $dependsOnTaskIds, array $auditLog, array $comments = []): array
     {
         return [
             'id' => $t['Id'], 'key' => $t['Key'], 'title' => $t['Title'], 'description' => $t['Description'],
@@ -317,6 +331,7 @@ final class TaskService
             'archived' => (bool) $t['Archived'],
             'dependsOnTaskIds' => $dependsOnTaskIds,
             'auditLog' => $auditLog,
+            'comments' => $comments,
         ];
     }
 

@@ -266,7 +266,7 @@ public class MigrationEntityBuilder
         return (byOldId, byKey, maxCounter);
     }
 
-    public void WireTaskRelations(List<ImportTaskNodeDto> flatTasks, Dictionary<string, TaskItem> taskByKey)
+    public void WireTaskRelations(List<ImportTaskNodeDto> flatTasks, Dictionary<string, TaskItem> taskByKey, Dictionary<string, ProjectMember> memberByOldId)
     {
         foreach (var t in flatTasks)
         {
@@ -295,6 +295,19 @@ public class MigrationEntityBuilder
                     Field = entry.Field,
                     OldValue = entry.OldValue,
                     NewValue = entry.NewValue
+                });
+            }
+
+            foreach (var comment in t.Comments ?? new List<ImportCommentDto>())
+            {
+                _db.TaskComments.Add(new TaskComment
+                {
+                    Id = Guid.NewGuid(),
+                    TaskId = task.Id,
+                    Text = comment.Text,
+                    DateCreated = ParseDateTime(comment.DateCreated) ?? DateTime.UtcNow,
+                    AuthorId = comment.AuthorId is not null && memberByOldId.TryGetValue(comment.AuthorId, out var author) ? author.Id : null,
+                    AuthorName = comment.AuthorName ?? ""
                 });
             }
         }

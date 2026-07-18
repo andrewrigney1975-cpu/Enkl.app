@@ -40,4 +40,5 @@ public class TaskItem
 
     public List<TaskDependency> Dependencies { get; set; } = new();
     public List<TaskAuditLogEntry> AuditLog { get; set; } = new();
+    public List<TaskComment> Comments { get; set; } = new();
 }

@@ -62,6 +62,9 @@ export function buildHierarchy(project){
       auditLog: (t.auditLog || []).map(function(e){
         return {timestamp: e.timestamp, field: e.field, oldValue: formatAuditValue(e.oldValue), newValue: formatAuditValue(e.newValue)};
       }),
+      comments: (t.comments || []).map(function(c){
+        return {id: c.id, text: c.text, dateCreated: c.dateCreated || null, authorId: c.authorId || null, authorName: c.authorName || ''};
+      }),
       /* The Sub-Tasks feature's parent link, keyed the same way
          dependsOn is above (by task key, not id — ids get regenerated
          on import) — unrelated to this function's own `subtasks` field

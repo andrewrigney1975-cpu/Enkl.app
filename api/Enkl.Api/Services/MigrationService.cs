@@ -83,7 +83,7 @@ public class MigrationService
         var decisionByOldId = _entityBuilder.CreateDecisions(request.Decisions, project.Id, memberByOldId, taskByOldId);
 
         // Phase 2: relational wiring, now every old-id/key -> new-entity map exists.
-        _entityBuilder.WireTaskRelations(flatTasks, taskByKey);
+        _entityBuilder.WireTaskRelations(flatTasks, taskByKey, memberByOldId);
         _entityBuilder.WireDocumentRelations(request.Documents, documentByOldId);
         _entityBuilder.WireRiskRelations(request.Risks, riskByOldId, documentByOldId, principleByOldId, objectiveByOldId);
         _entityBuilder.WireObjectiveRelations(request.Objectives, objectiveByOldId, principleByOldId);

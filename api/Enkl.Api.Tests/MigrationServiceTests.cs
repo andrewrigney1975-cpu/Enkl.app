@@ -158,6 +158,37 @@ public class MigrationServiceTests
     }
 
     [Fact]
+    public async Task Migrate_TaskWithComments_RemapsAuthorIdThroughMemberByOldId()
+    {
+        using var scope = _fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migration = scope.ServiceProvider.GetRequiredService<MigrationService>();
+
+        var node = new ImportTaskNodeDto(
+            Id: "t1", Key: "CMT-1", Title: "Task A", Description: null, Priority: "medium", Column: "c1",
+            AssigneeId: null, Assignee: null, Release: null, Type: null, DocumentationUrl: null,
+            DateCreated: null, DateLastModified: null, DateDone: null, StartDate: null, EndDate: null,
+            BusinessValue: null, TaskCost: null, Progress: 0, EstimatedEffort: null, ActualEffort: null,
+            Archived: false, DependsOn: null, AuditLog: null,
+            Comments: new List<ImportCommentDto> { new("c1", "Looks good to me", "2026-01-01T00:00:00Z", "m1", "Local Author") },
+            ParentKey: null, Subtasks: null);
+
+        var request = BuildRequest(TestDataHelper.Unique("org"), TestDataHelper.Unique("PRJ"),
+            new List<ImportMemberDto> { new("m1", "Local Author", "#4f46e5", Role: null, ReportsToId: null) },
+            new List<ImportTaskNodeDto> { node });
+
+        var result = await migration.MigrateAsync(request);
+
+        var task = await db.Tasks.SingleAsync(t => t.ProjectId == result.ProjectId && t.Key == "CMT-1");
+        var comment = await db.TaskComments.SingleAsync(c => c.TaskId == task.Id);
+        var member = await db.ProjectMembers.SingleAsync(m => m.ProjectId == result.ProjectId);
+
+        Assert.Equal("Looks good to me", comment.Text);
+        Assert.Equal("Local Author", comment.AuthorName);
+        Assert.Equal(member.Id, comment.AuthorId);
+    }
+
+    [Fact]
     public async Task Migrate_TaskHierarchyWithDependencyCycle_ThrowsValidationException()
     {
         using var scope = _fixture.CreateScope();
@@ -168,7 +199,7 @@ public class MigrationServiceTests
             AssigneeId: null, Assignee: null, Release: null, Type: null, DocumentationUrl: null,
             DateCreated: null, DateLastModified: null, DateDone: null, StartDate: null, EndDate: null,
             BusinessValue: null, TaskCost: null, Progress: 0, EstimatedEffort: null, ActualEffort: null,
-            Archived: false, DependsOn: new List<string> { "CYC-2" }, AuditLog: null, ParentKey: null, Subtasks: null);
+            Archived: false, DependsOn: new List<string> { "CYC-2" }, AuditLog: null, Comments: null, ParentKey: null, Subtasks: null);
         var taskB = taskA with { Id = "t2", Key = "CYC-2", Title = "Task B", DependsOn = new List<string> { "CYC-1" } };
 
         var request = BuildRequest(TestDataHelper.Unique("org"), TestDataHelper.Unique("PRJ"),
