@@ -458,7 +458,7 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
     return {id: r.id, key: r.key, title: r.title, description: r.description || '', likelihood: r.likelihood, impact: r.impact, mitigations: r.mitigations || '', ownerId: r.ownerId || null, taskId: r.taskId || null, documentIds: r.documentIds || [], principleIds: r.principleIds || [], objectiveIds: r.objectiveIds || [], status: r.status, dateToClose: serverDateOnlyToIso(r.dateToClose), dateClosed: serverDateOnlyToIso(r.dateClosed), dateCreated: now, dateLastModified: now};
   });
   var savedQueries = (detail.savedQueries || []).map(function(q){
-    return {id: q.id, name: q.name, sql: q.sql, dateCreated: q.dateCreated || now};
+    return {id: q.id, name: q.name, sql: q.sql, dateCreated: q.dateCreated || now, exposeViaApi: !!q.exposeViaApi};
   });
   var objectives = (detail.objectives || []).map(function(o){
     return {id: o.id, key: o.key, title: o.title, description: o.description || '', principleIds: o.principleIds || [], dateCreated: now, dateLastModified: now};
