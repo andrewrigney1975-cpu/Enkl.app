@@ -29,7 +29,7 @@ import { connectEventStream, disconnectEventStream } from './features/live-updat
 import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck, setImportToast, setImportRenderAll, setImportResetFilters } from './features/import.js';
 import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder } from './features/session-alerts.js';
 import { setBulkEditDeps, openBulkEditOverlay, closeBulkEditOverlay, isBulkEditOverlayOpen, saveBulkEditChanges } from './features/bulk-edit.js';
-import { getArchivedTasks, openArchivedTasksOverlay, closeArchivedTasksOverlay, isArchivedTasksOverlayOpen, renderArchivedTasksList, reactivateSelectedArchivedTasks } from './features/archived-tasks.js';
+import { getArchivedTasks, openArchivedTasksOverlay, closeArchivedTasksOverlay, isArchivedTasksOverlayOpen, renderArchivedTasksList, reactivateSelectedArchivedTasks, archiveDoneTasksFromModal } from './features/archived-tasks.js';
 import { closeAllExportAsPanels, toggleExportAsPanel, exportSvgElementAsSvgFile, exportSvgElementAsPng } from './features/svg-export.js';
 
 /* ---- Modals ---- */
@@ -711,6 +711,7 @@ function wireEvents(){
     renderArchivedTasksList();
   });
   document.getElementById('reactivateSelectedBtn').addEventListener('click', reactivateSelectedArchivedTasks);
+  document.getElementById('archiveDoneTasksBtn').addEventListener('click', archiveDoneTasksFromModal);
 
   document.getElementById('depMapBtn').addEventListener('click', openDepMapOverlay);
   document.getElementById('depMapClose').addEventListener('click', closeDepMapOverlay);

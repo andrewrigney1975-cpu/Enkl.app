@@ -1515,6 +1515,19 @@ export function reactivateTasks(project, taskIds){
   return count;
 }
 
+export function archiveTasks(project, taskIds){
+  var count = 0;
+  taskIds.forEach(function(taskId){
+    var t = project.tasks[taskId];
+    if(!t || t.archived) return;
+    t.archived = true;
+    t.dateLastModified = new Date().toISOString();
+    count++;
+  });
+  if(count > 0) saveDB();
+  return count;
+}
+
 export function moveTaskToColumn(project, taskId, targetColumnId, index){
   var t = project.tasks[taskId];
   if(!t) return;

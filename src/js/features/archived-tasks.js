@@ -4,7 +4,7 @@ import { getCurrentProject } from '../store.js';
 import { getTasksArray } from '../utils.js';
 import { iconSvg } from '../icons.js';
 import { escapeHTML, renderBoard } from '../views/board.js';
-import { reactivateTasks } from '../mutations.js';
+import { reactivateTasks, archiveTasks } from '../mutations.js';
 import { isServerAuthoritative, setTasksArchivedOnServer } from './migration.js';
 
 export function getArchivedTasks(project){
@@ -110,4 +110,40 @@ export function reactivateSelectedArchivedTasks(){
   renderBoard();
   refreshArchivedCountBadge();
   toast('Reactivated ' + count + ' task' + (count === 1 ? '' : 's') + '.');
+}
+
+/* "Archive Done Tasks" button (Archived Tasks modal footer) — a bulk shortcut for the common
+   end-of-sprint cleanup: every active (non-archived) task sitting in a "Done" column (Column.done,
+   see utils.js's getColumn()/board.js's moveTaskToColumn() for the same flag) gets archived in one
+   go, rather than archiving each task individually via its own modal's Archived checkbox. Not
+   selection-driven (unlike reactivateSelectedArchivedTasks) — it always acts on every qualifying
+   task, so there's nothing to select first. */
+export function archiveDoneTasksFromModal(){
+  var project = getCurrentProject();
+  if(!project) return;
+  var doneColumnIds = project.columns.filter(function(c){ return c.done; }).map(function(c){ return c.id; });
+  var ids = getTasksArray(project)
+    .filter(function(t){ return !t.archived && doneColumnIds.indexOf(t.columnId) !== -1; })
+    .map(function(t){ return t.id; });
+
+  if(ids.length === 0){ toast('No active tasks in a Done column to archive.'); return; }
+
+  function afterArchive(count){
+    renderBoard();
+    openArchivedTasksOverlay();
+    refreshArchivedCountBadge();
+    toast('Archived ' + count + ' task' + (count === 1 ? '' : 's') + '.');
+  }
+
+  if(isServerAuthoritative(project)){
+    setTasksArchivedOnServer(project, ids, true).then(function(){
+      afterArchive(ids.length);
+    }, function(err){
+      toast('Could not archive on the server: ' + (err.message || 'unknown error'));
+    });
+    return;
+  }
+
+  var count = archiveTasks(project, ids);
+  afterArchive(count);
 }
