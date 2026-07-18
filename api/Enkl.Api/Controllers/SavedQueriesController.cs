@@ -11,10 +11,12 @@ namespace Enkl.Api.Controllers;
 public class SavedQueriesController : ControllerBase
 {
     private readonly SavedQueryService _savedQueries;
+    private readonly PublicQueryExecutionService _execution;
 
-    public SavedQueriesController(SavedQueryService savedQueries)
+    public SavedQueriesController(SavedQueryService savedQueries, PublicQueryExecutionService execution)
     {
         _savedQueries = savedQueries;
+        _execution = execution;
     }
 
     [HttpPost]
@@ -35,5 +37,23 @@ public class SavedQueriesController : ControllerBase
     public async Task<IActionResult> Delete(Guid projectId, Guid queryId)
     {
         return await _savedQueries.DeleteAsync(projectId, queryId) ? NoContent() : NotFound();
+    }
+
+    /// <summary>
+    /// "Test API (GET)" button (Advanced Query tab, next to an exposed saved query's public URL) —
+    /// runs the SAME PublicQueryExecutionService code path PublicQueryController's real public
+    /// endpoint uses, but authenticated by the caller's own project-member JWT instead of an org API
+    /// key (the raw key isn't retrievable after generation, so there's no key for the frontend to
+    /// actually send here — see SAVED-QUERY-API.md). Results are identical to what a real API caller
+    /// with a valid key would see; this only changes how the caller authenticates, not what runs.
+    /// </summary>
+    [HttpGet("{queryId:guid}/test")]
+    public async Task<IActionResult> Test(Guid projectId, Guid queryId, CancellationToken ct)
+    {
+        var sql = await _savedQueries.GetSqlAsync(projectId, queryId);
+        if (sql is null) return NotFound();
+
+        var result = await _execution.ExecuteAsync(projectId, sql, ct);
+        return Ok(new { rows = result.Rows, truncated = result.Truncated });
     }
 }

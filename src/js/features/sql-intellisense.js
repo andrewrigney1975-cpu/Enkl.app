@@ -16,10 +16,15 @@ import { TABLE_SCHEMAS, TABLE_RELATIONSHIPS } from './query-engine.js';
 // naturally — a real SQL tokenizer would suggest the same way. Matches whatever AlaSQL's SELECT-only
 // grammar accepts, per query-engine.js's own FORBIDDEN_PATTERN (write/DDL keywords are the only ones
 // actually blocked there).
+// TRUE/FALSE are boolean literals, not identifiers — they must be listed here (not just NULL)
+// specifically so sql-formatter.js's isPlainIdentifier() doesn't bracket-wrap them as if they were
+// column names (found live: `archived = false` was being reformatted to `[archived] = [false]`,
+// which fails since there's no column literally named "false" — see CLAUDE.md §16's auto-format-
+// on-save entry for the full story of why this matters now that formatting is no longer optional).
 export var SQL_KEYWORDS = [
   'SELECT', 'FROM', 'WHERE', 'JOIN', 'INNER', 'LEFT', 'RIGHT', 'ON', 'GROUP', 'BY', 'HAVING', 'ORDER',
-  'AS', 'AND', 'OR', 'NOT', 'IN', 'LIKE', 'IS', 'NULL', 'BETWEEN', 'DISTINCT', 'TOP', 'LIMIT', 'ASC',
-  'DESC', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'UNION', 'ALL'
+  'AS', 'AND', 'OR', 'NOT', 'IN', 'LIKE', 'IS', 'NULL', 'TRUE', 'FALSE', 'BETWEEN', 'DISTINCT', 'TOP',
+  'LIMIT', 'ASC', 'DESC', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'UNION', 'ALL'
 ];
 
 function isWordChar(ch){

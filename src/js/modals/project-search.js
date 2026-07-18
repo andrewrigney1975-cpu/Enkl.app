@@ -19,7 +19,7 @@ import { openTeamsCommitteesOverlay, showTeamCommitteeFormView } from './teams-c
 import { confirmDialog } from './confirm.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 import { addSavedQuery, updateSavedQuery, deleteSavedQuery } from '../mutations.js';
-import { savedQueryApi } from '../api.js';
+import { savedQueryApi, testSavedQueryApi } from '../api.js';
 import { computeIntellisense, getCaretPixelPosition } from '../features/sql-intellisense.js';
 import { formatSql } from '../features/sql-formatter.js';
 
@@ -187,6 +187,10 @@ export function showProjectSearchQueryView(){
   document.getElementById('projectSearchQueryFooter').classList.remove('hidden');
   document.getElementById('projectQuerySaveRow').classList.add('hidden');
   document.getElementById('projectQuerySavedPanel').classList.add('hidden');
+  // Expose via API has no meaning for a local-only project — there's no server row of any kind to
+  // attach an API key or a view-filter to (see CLAUDE.md §20) — so the control isn't offered at all,
+  // not merely disabled, same exemption every other server-only permission gate in this app makes.
+  document.getElementById('projectQueryExposeApiRow').classList.toggle('hidden', !isServerAuthoritative(getCurrentProject()));
   openProjectQuerySchemaPanel(); // Tables & Columns is shown by default when the Advanced Query view opens
   hideProjectQueryIntellisense();
   clearLoadedSavedQuery();
@@ -412,11 +416,73 @@ function updateSaveQueryButtonLabel(){
   document.getElementById('projectQuerySaveBtn').textContent = loadedSavedQueryId ? 'Update Query' : 'Save Query';
 }
 
-function setLoadedSavedQuery(id, name, sql){
+// Builds the public URL a 3rd-party caller would hit for this saved query — same-origin path per
+// api.js's own convention (nginx reverse-proxies /api/* alongside the frontend, see PublicQueryController's
+// own note on the /api/public/v1/ prefix), so no separate base-URL config is needed here.
+function projectQueryApiUrl(queryId){
+  return window.location.origin + '/api/public/v1/queries/' + queryId + '/results';
+}
+
+// The saved query id the "Test API" button should actually call — tracked separately from
+// loadedSavedQueryId since showProjectQueryApiUrl() is also called right after a brand-new query is
+// created (confirmSaveProjectQuery doesn't load the new query, see its own comment), when
+// loadedSavedQueryId is still null.
+var currentApiUrlQueryId = null;
+
+function showProjectQueryApiUrl(queryId){
+  currentApiUrlQueryId = queryId;
+  document.getElementById('projectQueryApiUrlText').textContent = projectQueryApiUrl(queryId);
+  document.getElementById('projectQueryApiUrlRow').classList.remove('hidden');
+  hideProjectQueryApiTestPanel();
+}
+
+function hideProjectQueryApiUrl(){
+  currentApiUrlQueryId = null;
+  document.getElementById('projectQueryApiUrlRow').classList.add('hidden');
+  hideProjectQueryApiTestPanel();
+}
+
+function hideProjectQueryApiTestPanel(){
+  document.getElementById('projectQueryApiTestPanel').classList.add('hidden');
+  document.getElementById('projectQueryApiTestResult').textContent = '';
+  document.getElementById('projectQueryApiTestStatus').textContent = '';
+  document.getElementById('projectQueryApiTestStatus').className = 'kf-query-api-test-status';
+}
+
+// "Test API (GET)" button — see api.js's testSavedQueryApi() for why this goes through an
+// authenticated project endpoint rather than the real public one (no retrievable API key to send).
+export async function testProjectQueryApi(){
+  var project = getCurrentProject();
+  if(!project || !currentApiUrlQueryId) return;
+
+  var statusEl = document.getElementById('projectQueryApiTestStatus');
+  var resultEl = document.getElementById('projectQueryApiTestResult');
+  document.getElementById('projectQueryApiTestPanel').classList.remove('hidden');
+  statusEl.className = 'kf-query-api-test-status';
+  statusEl.textContent = 'Running...';
+  resultEl.textContent = '';
+
+  try {
+    var result = await testSavedQueryApi(project.serverProjectId, currentApiUrlQueryId);
+    statusEl.className = 'kf-query-api-test-status kf-query-api-test-status-ok';
+    statusEl.textContent = '200 OK — ' + result.rows.length + ' row' + (result.rows.length === 1 ? '' : 's') +
+      (result.truncated ? ' (truncated)' : '');
+    resultEl.textContent = JSON.stringify(result, null, 2);
+  } catch(e){
+    statusEl.className = 'kf-query-api-test-status kf-query-api-test-status-error';
+    statusEl.textContent = 'Request failed';
+    resultEl.textContent = e.message || 'Unknown error';
+  }
+}
+
+function setLoadedSavedQuery(id, name, sql, exposeViaApi){
   loadedSavedQueryId = id;
   loadedSavedQueryName = name;
   loadedSavedQuerySql = sql;
   updateSaveQueryButtonLabel();
+  document.getElementById('projectQueryExposeApiCheckbox').checked = !!exposeViaApi;
+  if(exposeViaApi) showProjectQueryApiUrl(id);
+  else hideProjectQueryApiUrl();
 }
 
 export function clearLoadedSavedQuery(){
@@ -424,6 +490,8 @@ export function clearLoadedSavedQuery(){
   loadedSavedQueryName = null;
   loadedSavedQuerySql = null;
   updateSaveQueryButtonLabel();
+  document.getElementById('projectQueryExposeApiCheckbox').checked = false;
+  hideProjectQueryApiUrl();
 }
 
 // "Dirty" only has meaning relative to a saved baseline — a query that was never saved has nothing
@@ -475,7 +543,7 @@ export function handleProjectQuerySavedListClick(e){
   document.getElementById('projectQuerySql').value = query.sql;
   document.getElementById('projectQuerySavedPanel').classList.add('hidden');
   hideProjectQueryIntellisense();
-  setLoadedSavedQuery(query.id, query.name, query.sql);
+  setLoadedSavedQuery(query.id, query.name, query.sql, query.exposeViaApi);
 }
 
 function deleteSavedQueryRow(queryId){
@@ -523,16 +591,27 @@ export function handleProjectQuerySaveOrUpdateClick(){
 async function performSavedQueryUpdate(onSaved){
   var project = getCurrentProject();
   if(!project) return;
-  var sql = document.getElementById('projectQuerySql').value;
+  // Always formatted before persisting (§18's own bracket-wrap-every-identifier convention) — not
+  // just a style nicety: an unformatted, unbracketed query is exactly the shape that broke the
+  // Public Query API against Postgres (see CLAUDE.md §20's two live-bug writeups), so persisting the
+  // formatted form is a real defensive measure, not only cosmetic. The textarea is updated to match
+  // so what's displayed never silently diverges from what's actually saved.
+  var textarea = document.getElementById('projectQuerySql');
+  var sql = formatSql(textarea.value);
+  textarea.value = sql;
+  hideProjectQueryIntellisense();
   var queryId = loadedSavedQueryId;
   var name = loadedSavedQueryName;
+  var exposeViaApi = document.getElementById('projectQueryExposeApiCheckbox').checked;
 
   if(isServerAuthoritative(project)){
     try {
-      await savedQueryApi.update(project.serverProjectId, queryId, {name: name, sql: sql});
+      await savedQueryApi.update(project.serverProjectId, queryId, {name: name, sql: sql, exposeViaApi: exposeViaApi});
       await refreshProjectFromServer(project.id);
       toast('Query updated.');
       loadedSavedQuerySql = sql;
+      if(exposeViaApi) showProjectQueryApiUrl(queryId);
+      else hideProjectQueryApiUrl();
       if(onSaved) onSaved();
     } catch(e){
       toast('Could not update query on the server: ' + (e.message || 'unknown error'));
@@ -607,16 +686,24 @@ export async function confirmSaveProjectQuery(){
   var project = getCurrentProject();
   if(!project) return;
   var name = document.getElementById('projectQuerySaveNameInput').value.trim();
-  var sql = document.getElementById('projectQuerySql').value;
+  var textarea = document.getElementById('projectQuerySql');
   if(!name){ toast('Please enter a name for the query.'); return; }
-  if(!sql.trim()){ toast('Enter a query first.'); return; }
+  if(!textarea.value.trim()){ toast('Enter a query first.'); return; }
+  // Always formatted before persisting — see performSavedQueryUpdate's own comment for why this is
+  // a real defensive measure (bracket-wraps every identifier), not just a style nicety.
+  var sql = formatSql(textarea.value);
+  textarea.value = sql;
+  hideProjectQueryIntellisense();
 
   if(isServerAuthoritative(project)){
+    var exposeViaApi = document.getElementById('projectQueryExposeApiCheckbox').checked;
     try {
-      await savedQueryApi.create(project.serverProjectId, {name: name, sql: sql});
+      var created = await savedQueryApi.create(project.serverProjectId, {name: name, sql: sql, exposeViaApi: exposeViaApi});
       await refreshProjectFromServer(project.id);
       toast('Query saved.');
       hideProjectQuerySaveRow();
+      if(exposeViaApi) showProjectQueryApiUrl(created.id);
+      else hideProjectQueryApiUrl();
     } catch(e){
       toast('Could not save query on the server: ' + (e.message || 'unknown error'));
     }
@@ -734,6 +821,20 @@ export function exportProjectQueryResultsAsCsv(){
   var filename = (project ? project.key : 'query') + '-query-' + new Date().toISOString().slice(0,10) + '.csv';
   downloadBlob(blob, filename);
   toast('Exported ' + filename);
+}
+
+export function copyProjectQueryApiUrl(){
+  var url = document.getElementById('projectQueryApiUrlText').textContent;
+  if(!url) return;
+  if(!navigator.clipboard || !navigator.clipboard.writeText){
+    toast('Clipboard access is not available in this browser.');
+    return;
+  }
+  navigator.clipboard.writeText(url).then(function(){
+    toast('Copied API URL to clipboard.');
+  }, function(){
+    toast('Could not copy to clipboard.');
+  });
 }
 
 export function copyProjectQueryResultsAsJson(){

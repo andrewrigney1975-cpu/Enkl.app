@@ -49,6 +49,15 @@ public class PostgresApiFixture : IAsyncLifetime
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:Default"] = _container.GetConnectionString(),
+                    // The AddSavedQueryApiExposure migration creates the enkl_public_query role
+                    // directly inside THIS Testcontainers instance (same raw-SQL path production
+                    // uses), so PublicQueryExecutionService just needs a connection string pointing
+                    // at the same host/port/database under that role's credentials — same dev
+                    // placeholder password the migration itself uses, safe here since Development
+                    // skips Program.cs's non-Dev placeholder-password guard entirely.
+                    ["ConnectionStrings:PublicQuery"] =
+                        $"Host={_container.Hostname};Port={_container.GetMappedPublicPort(5432)};" +
+                        "Database=enkl_test;Username=enkl_public_query;Password=enkl_public_query_dev_password",
                     // Program.cs's own MigrateDatabaseWithRetryAsync applies EF Core migrations on
                     // startup when this is true — reused as-is rather than re-implementing migration
                     // application here, so the test database's schema is produced by exactly the same

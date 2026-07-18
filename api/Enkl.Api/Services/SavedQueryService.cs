@@ -25,7 +25,8 @@ public class SavedQueryService
             ProjectId = projectId,
             Name = request.Name,
             Sql = request.Sql,
-            DateCreated = DateTime.UtcNow
+            DateCreated = DateTime.UtcNow,
+            ExposeViaApi = request.ExposeViaApi
         };
         _db.SavedQueries.Add(query);
         await _db.SaveChangesAsync();
@@ -39,8 +40,20 @@ public class SavedQueryService
 
         query.Name = request.Name;
         query.Sql = request.Sql;
+        query.ExposeViaApi = request.ExposeViaApi;
         await _db.SaveChangesAsync();
         return ToDto(query);
+    }
+
+    /// <summary>Raw Sql text for the "Test API" button (Controllers/SavedQueriesController.cs's
+    /// Test action) — a dedicated, minimal existence+ownership lookup rather than pulling the whole
+    /// SavedQueryDto shape through for one field.</summary>
+    public async Task<string?> GetSqlAsync(Guid projectId, Guid queryId)
+    {
+        return await _db.SavedQueries.AsNoTracking()
+            .Where(q => q.Id == queryId && q.ProjectId == projectId)
+            .Select(q => q.Sql)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<bool> DeleteAsync(Guid projectId, Guid queryId)
@@ -53,5 +66,5 @@ public class SavedQueryService
         return true;
     }
 
-    private static SavedQueryDto ToDto(SavedQuery q) => new(q.Id, q.Name, q.Sql, q.DateCreated);
+    private static SavedQueryDto ToDto(SavedQuery q) => new(q.Id, q.Name, q.Sql, q.DateCreated, q.ExposeViaApi);
 }

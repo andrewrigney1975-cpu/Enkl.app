@@ -41,7 +41,7 @@ import { openColumnModal, closeColumnModal, saveColumnFromModal, deleteColumnFro
 import { openProjectModal, closeProjectModal, saveProjectFromModal } from './modals/project.js';
 import { openTeamModal, closeTeamModal, addMemberFromModal } from './modals/team.js';
 import { openOrgUsersModal, closeOrgUsersModal, createOrgUserFromModal } from './modals/organisation.js';
-import { openSsoConfigModal, closeSsoConfigModal, saveSsoConfigFromModal, generateScimTokenFromModal } from './modals/sso.js';
+import { openSsoConfigModal, closeSsoConfigModal, saveSsoConfigFromModal, generateScimTokenFromModal, generateApiKeyFromModal, revokeApiKeyFromModal } from './modals/sso.js';
 import { openSaveAsTemplateModal, closeSaveAsTemplateModal, saveAsTemplateFromModal, openTemplatesModal, closeTemplatesModal } from './modals/templates.js';
 import { openTodoOverlay, closeTodoOverlay, isTodoOverlayOpen, addTodoListFromModal } from './modals/todo.js';
 import { openTaskTypesModal, closeTaskTypesModal, addTaskTypeFromModal } from './modals/task-types.js';
@@ -58,7 +58,7 @@ import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen,
 import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen, showObjectivesFormView, showObjectivesListView, renderObjectivesList, saveObjectiveFromModal, deleteObjectiveFromModal } from './modals/objectives.js';
 import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitteesOverlayOpen, showTeamCommitteeFormView, showTeamsCommitteesListView, renderTeamsCommitteesList, saveTeamCommitteeFromModal, deleteTeamCommitteeFromModal } from './modals/teams-committees.js';
 import { openReportOverlay, closeReportOverlay, isReportOverlayOpen, printReport, openProjectManagementReportOverlay } from './features/reports.js';
-import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick, showProjectSearchSimpleView, showProjectSearchQueryView, toggleProjectQuerySchemaPanel, toggleProjectQuerySavedPanel, handleProjectQuerySavedListClick, handleProjectQuerySaveOrUpdateClick, handleProjectQueryNewClick, hideProjectQuerySaveRow, confirmSaveProjectQuery, showProjectQueryResultsTableView, showProjectQueryResultsJsonView, runProjectQuery, formatProjectQuerySql, exportProjectQueryResultsAsCsv, copyProjectQueryResultsAsJson, exportProjectQueryResultsAsJson, printProjectQueryResults, erdZoomState, setProjectQueryErdZoom, resetProjectQueryErdZoom, zoomProjectQueryErdAtPoint, updateProjectQueryIntellisense, repositionProjectQueryIntellisense, hideProjectQueryIntellisense, isProjectQueryIntellisenseOpen, moveProjectQueryIntellisenseActive, acceptProjectQueryIntellisenseSuggestion, handleProjectQueryIntellisenseClick } from './modals/project-search.js';
+import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick, showProjectSearchSimpleView, showProjectSearchQueryView, toggleProjectQuerySchemaPanel, toggleProjectQuerySavedPanel, handleProjectQuerySavedListClick, handleProjectQuerySaveOrUpdateClick, handleProjectQueryNewClick, hideProjectQuerySaveRow, confirmSaveProjectQuery, showProjectQueryResultsTableView, showProjectQueryResultsJsonView, runProjectQuery, formatProjectQuerySql, exportProjectQueryResultsAsCsv, copyProjectQueryResultsAsJson, copyProjectQueryApiUrl, testProjectQueryApi, exportProjectQueryResultsAsJson, printProjectQueryResults, erdZoomState, setProjectQueryErdZoom, resetProjectQueryErdZoom, zoomProjectQueryErdAtPoint, updateProjectQueryIntellisense, repositionProjectQueryIntellisense, hideProjectQueryIntellisense, isProjectQueryIntellisenseOpen, moveProjectQueryIntellisenseActive, acceptProjectQueryIntellisenseSuggestion, handleProjectQueryIntellisenseClick } from './modals/project-search.js';
 import { openAboutModal, closeAboutModal, isAboutModalOpen } from './modals/about.js';
 import { openProjectStorageModal, closeProjectStorageModal, isProjectStorageModalOpen } from './modals/project-storage.js';
 import { openUfoModal, closeUfoModal, isUfoModalOpen } from './modals/ufo.js';
@@ -536,6 +536,8 @@ function wireEvents(){
   document.getElementById('projectQuerySaveBtn').addEventListener('click', handleProjectQuerySaveOrUpdateClick);
   document.getElementById('projectQuerySaveCancelBtn').addEventListener('click', hideProjectQuerySaveRow);
   document.getElementById('projectQuerySaveConfirmBtn').addEventListener('click', confirmSaveProjectQuery);
+  document.getElementById('projectQueryApiUrlCopyBtn').addEventListener('click', copyProjectQueryApiUrl);
+  document.getElementById('projectQueryApiTestBtn').addEventListener('click', testProjectQueryApi);
   document.getElementById('projectQueryViewTableBtn').addEventListener('click', showProjectQueryResultsTableView);
   document.getElementById('projectQueryViewJsonBtn').addEventListener('click', showProjectQueryResultsJsonView);
   document.getElementById('projectQueryExportCsvBtn').addEventListener('click', exportProjectQueryResultsAsCsv);
@@ -1286,6 +1288,8 @@ function wireEvents(){
   });
   document.getElementById('ssoConfigSaveBtn').addEventListener('click', saveSsoConfigFromModal);
   document.getElementById('ssoGenerateScimTokenBtn').addEventListener('click', generateScimTokenFromModal);
+  document.getElementById('ssoGenerateApiKeyBtn').addEventListener('click', generateApiKeyFromModal);
+  document.getElementById('ssoRevokeApiKeyBtn').addEventListener('click', revokeApiKeyFromModal);
 
   document.getElementById('saveAsTemplateLink').addEventListener('click', function(e){
     e.preventDefault();

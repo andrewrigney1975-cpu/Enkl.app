@@ -49,6 +49,21 @@ if (!builder.Environment.IsDevelopment())
             "The database connection string is missing or still uses the checked-in development " +
             "password. Set a real DB_PASSWORD before starting outside Development.");
     }
+
+    if (string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("PublicQuery")))
+    {
+        throw new InvalidOperationException("ConnectionStrings:PublicQuery is not configured.");
+    }
+    // Deliberately NOT held to the same "reject the checked-in dev password" standard as the main
+    // DB connection above: the enkl_public_query role's password is a literal baked into the
+    // AddSavedQueryApiExposure migration's own SQL (see that file's own note), not a
+    // deployment-supplied secret like DB_PASSWORD is — Postgres' own POSTGRES_PASSWORD env only
+    // sets the *main* "enkl" role's password at container-init time. There is currently no
+    // deployment-time mechanism to make the migration create the role with a per-deployment
+    // password instead, so rejecting the placeholder here would make every real deployment fail to
+    // start for no actual security benefit. This role's safety boundary is its grants (SELECT-only
+    // on ten hard-filtered views, nothing else) enforced by Postgres itself, not secrecy of this
+    // particular password — see PublicQueryExecutionService's own doc comment.
 }
 
 builder.Services.AddControllers();
@@ -107,6 +122,8 @@ builder.Services.AddScoped<OrganisationSsoConfigService>();
 builder.Services.AddScoped<ScimUserService>();
 builder.Services.AddScoped<ScimGroupService>();
 builder.Services.AddScoped<TelemetryService>();
+builder.Services.AddScoped<OrganisationApiKeyService>();
+builder.Services.AddScoped<PublicQueryExecutionService>();
 builder.Services.AddSingleton<SseBroadcaster>();
 builder.Services.AddSingleton<SsoExchangeCodeStore>();
 builder.Services.AddSingleton<SamlRequestIdStore>();
@@ -182,6 +199,28 @@ builder.Services.AddRateLimiter(options =>
             SegmentsPerWindow = 4,
             QueueLimit = 0
         }));
+    // PublicQueryController: partitioned by the presented API key itself (hashed, so a raw secret
+    // never sits in the rate limiter's in-memory partition table), not by IP — a 3rd-party caller
+    // may be server-side/NAT'd and share an IP with unrelated traffic, and conversely a legitimate
+    // high-volume integration for one org shouldn't be capped by what other traffic from the same IP
+    // is doing. This evaluates before ApiKeyAuthFilter (rate-limiting middleware runs ahead of MVC's
+    // authorization filters), so it partitions on whatever bearer value was presented regardless of
+    // whether it later turns out to be valid — that's fine, it only needs to bucket per-caller.
+    options.AddPolicy("public-query", httpContext =>
+    {
+        var authHeader = httpContext.Request.Headers.Authorization.ToString();
+        const string prefix = "Bearer ";
+        var partitionKey = authHeader.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && authHeader.Length > prefix.Length
+            ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(authHeader[prefix.Length..])))
+            : httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 4,
+            QueueLimit = 0
+        });
+    });
 });
 
 var app = builder.Build();

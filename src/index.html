@@ -614,6 +614,18 @@
         <p class="kf-sso-hint">Groups synced in from your identity provider via SCIM. Your identity provider owns this membership — apply a team to the currently open project to add its members there and set up an org chart team from it.</p>
         <div id="ssoOrgTeamsList" class="kf-member-list"></div>
       </div>
+
+      <div class="kf-field">
+        <label>Public API key</label>
+        <p class="kf-sso-hint">Authenticates 3rd-party requests to any Saved Query with "Expose via API" turned on (Advanced Query tab). One key per organisation — generating a new one immediately invalidates the last.</p>
+        <button class="kf-btn kf-btn-secondary" id="ssoGenerateApiKeyBtn">Generate new API key</button>
+        <button class="kf-btn kf-btn-secondary" id="ssoRevokeApiKeyBtn" style="margin-left:8px;">Revoke</button>
+        <p id="ssoApiKeyStatus" class="kf-sso-hint"></p>
+        <div id="ssoApiKeyReveal" class="kf-sso-token-reveal hidden">
+          <input type="text" id="ssoApiKeyOutput" readonly>
+          <p class="kf-sso-hint kf-sso-warning">Copy this now — it won't be shown again. Generating a new key immediately invalidates this one.</p>
+        </div>
+      </div>
     </div>
     <div class="kf-modal-footer">
       <button class="kf-btn kf-btn-secondary" id="ssoConfigDoneBtn">Close</button>
@@ -2493,6 +2505,23 @@
           <input type="text" id="projectQuerySaveNameInput" placeholder="Query name" maxlength="200">
           <button type="button" class="kf-btn kf-btn-primary kf-btn-sm" id="projectQuerySaveConfirmBtn">Save</button>
           <button type="button" class="kf-btn kf-btn-ghost kf-btn-sm" id="projectQuerySaveCancelBtn">Cancel</button>
+        </div>
+        <div id="projectQueryExposeApiRow" class="kf-query-expose-api-row hidden">
+          <label>
+            <input type="checkbox" id="projectQueryExposeApiCheckbox">
+            Expose via API
+          </label>
+        </div>
+        <div id="projectQueryApiUrlRow" class="kf-query-api-url-row hidden">
+          <button type="button" class="kf-btn kf-btn-success kf-btn-sm" id="projectQueryApiTestBtn">Test API (GET)</button>
+          <span id="projectQueryApiUrlText" class="kf-query-api-url-text"></span>
+          <button type="button" class="kf-btn kf-btn-ghost kf-btn-sm" id="projectQueryApiUrlCopyBtn">Copy URL</button>
+        </div>
+        <div id="projectQueryApiTestPanel" class="kf-query-api-test-panel hidden">
+          <div class="kf-query-api-test-header">
+            <span id="projectQueryApiTestStatus" class="kf-query-api-test-status"></span>
+          </div>
+          <pre id="projectQueryApiTestResult" class="kf-query-api-test-result"></pre>
         </div>
         <div id="projectQuerySavedPanel" class="kf-query-saved-panel hidden">
           <div id="projectQuerySavedList"></div>

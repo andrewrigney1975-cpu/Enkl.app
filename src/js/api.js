@@ -243,6 +243,16 @@ export function generateScimTokenApi(){
   return apiFetch('/organisations/me/sso-config/scim-token', {method: 'POST'});
 }
 
+export function getApiKeyApi(){
+  return apiFetch('/organisations/me/api-key', {method: 'GET'});
+}
+export function generateApiKeyApi(){
+  return apiFetch('/organisations/me/api-key', {method: 'POST'});
+}
+export function revokeApiKeyApi(){
+  return apiFetch('/organisations/me/api-key', {method: 'DELETE'});
+}
+
 /* Read-only — SCIM/the IdP owns Org Team membership (see OrgTeam's own server-side doc comment).
    The only mutating action available here is applyOrgTeamToProjectApi below. */
 export function getOrgTeamsApi(){
@@ -362,6 +372,13 @@ export var principleApi = makeEntityApi('principles');
 export var documentApi = makeEntityApi('documents');
 export var riskApi = makeEntityApi('risks');
 export var savedQueryApi = makeEntityApi('saved-queries');
+// "Test API (GET)" button (modals/project-search.js) — runs the saved query through the same
+// server-side PublicQueryExecutionService the real public endpoint uses, authenticated by the
+// caller's own project-member session rather than an org API key (see SAVED-QUERY-API.md for why:
+// the raw key isn't retrievable after generation, so there's no key for the frontend to send here).
+export function testSavedQueryApi(projectId, queryId){
+  return apiFetch('/projects/' + projectId + '/saved-queries/' + queryId + '/test', {method: 'GET'});
+}
 export var objectiveApi = makeEntityApi('objectives');
 export var teamCommitteeApi = makeEntityApi('teams-committees');
 export var decisionApi = makeEntityApi('decisions');

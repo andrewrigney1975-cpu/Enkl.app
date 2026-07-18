@@ -25,15 +25,28 @@ use Slim\Psr7\Response;
  * Default (no constructor args) reproduces the original "auth" policy exactly (10/min) for every
  * existing bare `RateLimitMiddleware::class` call site in routes.php — pass an already-constructed
  * instance (e.g. `new RateLimitMiddleware('telemetry', 30)`) for a route needing a different policy.
+ *
+ * $identityResolver (optional 3rd constructor arg): by default the partition identity is the
+ * caller's IP (clientIp()) — PublicQueryController needs partitioning by the presented API key
+ * instead (a 3rd-party caller may be server-side/NAT'd and share an IP with unrelated traffic), so
+ * it passes a closure that reads the raw bearer token off the request. Runs before
+ * ApiKeyAuthMiddleware (this middleware sits outside it in the route group, so it evaluates first),
+ * so it partitions on whatever bearer value was presented regardless of whether it later turns out
+ * to be valid — that's fine, it only needs to bucket per-caller.
  */
 final class RateLimitMiddleware implements MiddlewareInterface
 {
     private const WINDOW_SECONDS = 60;
 
+    /** @var (\Closure(ServerRequestInterface): string)|null */
+    private readonly ?\Closure $identityResolver;
+
     public function __construct(
         private readonly string $policyName = 'auth',
-        private readonly int $permitLimit = 10
+        private readonly int $permitLimit = 10,
+        ?\Closure $identityResolver = null
     ) {
+        $this->identityResolver = $identityResolver;
     }
 
     // ARCHITECTURE-REVIEW.md finding 3.2 (second half): a full-table prune on every single
@@ -46,7 +59,8 @@ final class RateLimitMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $partitionKey = $this->policyName . ':' . $this->clientIp($request);
+        $identity = $this->identityResolver !== null ? ($this->identityResolver)($request) : $this->clientIp($request);
+        $partitionKey = $this->policyName . ':' . $identity;
         $db = Database::connection();
 
         if (random_int(1, self::PRUNE_PROBABILITY_DENOMINATOR) === 1) {

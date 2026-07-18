@@ -24,10 +24,11 @@ final class SavedQueryService
 
         $id = Uuid::v4();
         $this->db->prepare(<<<SQL
-            INSERT INTO "SavedQueries" ("Id", "ProjectId", "Name", "Sql", "DateCreated")
-            VALUES (:id, :pid, :name, :sql, now())
+            INSERT INTO "SavedQueries" ("Id", "ProjectId", "Name", "Sql", "DateCreated", "ExposeViaApi")
+            VALUES (:id, :pid, :name, :sql, now(), :exposeViaApi)
         SQL)->execute([
             'id' => $id, 'pid' => $projectId, 'name' => $request['name'] ?? '', 'sql' => $request['sql'] ?? '',
+            'exposeViaApi' => (int) ($request['exposeViaApi'] ?? false),
         ]);
 
         return $this->toDto($id);
@@ -42,12 +43,24 @@ final class SavedQueryService
         }
 
         $this->db->prepare(<<<SQL
-            UPDATE "SavedQueries" SET "Name" = :name, "Sql" = :sql WHERE "Id" = :id
+            UPDATE "SavedQueries" SET "Name" = :name, "Sql" = :sql, "ExposeViaApi" = :exposeViaApi WHERE "Id" = :id
         SQL)->execute([
             'name' => $request['name'] ?? '', 'sql' => $request['sql'] ?? '', 'id' => $queryId,
+            'exposeViaApi' => (int) ($request['exposeViaApi'] ?? false),
         ]);
 
         return $this->toDto($queryId);
+    }
+
+    /** Raw Sql text for the "Test API" button (Controllers/SavedQueriesController.php::test) — the
+     * saved-query CRUD DTO (toDto()) already returns Sql too, but this is a dedicated, minimal
+     * existence+ownership check rather than pulling the whole DTO shape through for one field. */
+    public function getSql(string $projectId, string $queryId): ?string
+    {
+        $stmt = $this->db->prepare('SELECT "Sql" FROM "SavedQueries" WHERE "Id" = :id AND "ProjectId" = :pid');
+        $stmt->execute(['id' => $queryId, 'pid' => $projectId]);
+        $sql = $stmt->fetchColumn();
+        return $sql === false ? null : $sql;
     }
 
     public function delete(string $projectId, string $queryId): bool
@@ -65,6 +78,7 @@ final class SavedQueryService
 
         return [
             'id' => $q['Id'], 'name' => $q['Name'], 'sql' => $q['Sql'], 'dateCreated' => $q['DateCreated'],
+            'exposeViaApi' => (bool) $q['ExposeViaApi'],
         ];
     }
 }

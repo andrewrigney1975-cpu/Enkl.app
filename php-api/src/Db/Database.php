@@ -38,6 +38,28 @@ final class Database
     }
 
     /**
+     * A separate connection authenticated as the dedicated, SELECT-only enkl_public_query Postgres
+     * role (created by 023_add_saved_query_api_exposure.sql) — used only by
+     * Services/PublicQueryExecutionService.php to run a saved query's SQL text. Never the shared
+     * singleton/request connection above: that one runs as the app's own high-privilege DB user,
+     * which this deliberately must not be able to reach. See CLAUDE.md's public-query-execution
+     * entry for why a locked-down Postgres role, not text-sandboxing, is the actual safety boundary
+     * here.
+     */
+    public static function publicQueryConnection(): PDO
+    {
+        $dsn = Config::dbDsn();
+        $user = Config::get('DB_PUBLIC_QUERY_USER', 'enkl_public_query');
+        $password = Config::get('DB_PUBLIC_QUERY_PASSWORD', 'enkl_public_query_dev_password');
+
+        return new PDO($dsn, $user, $password, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ]);
+    }
+
+    /**
      * Mirrors Program.cs's MigrateDatabaseWithRetryAsync — a standalone Postgres instance the
      * organisation manages themselves may not be reachable the instant this process starts (network
      * hiccup, Postgres still starting up on their end, etc.), so the first connection attempt gets a

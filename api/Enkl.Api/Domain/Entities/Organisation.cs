@@ -14,4 +14,7 @@ public class Organisation
 
     // 1:1 — may be null until an OrgAdmin first opens the SSO & Provisioning settings screen.
     public OrganisationSsoConfig? SsoConfig { get; set; }
+
+    // 1:1 — may be null until an OrgAdmin first generates a public API key.
+    public OrganisationApiKey? ApiKey { get; set; }
 }
