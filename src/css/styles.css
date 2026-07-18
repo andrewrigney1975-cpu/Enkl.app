@@ -1,6 +1,8 @@
   :root {
     --kf-blue: #0c66e4;
     --kf-blue-dark: #09419e;
+    --kf-green: #216e4e;
+    --kf-green-dark: #164b35;
     --kf-navy: #0c2a52;
     --kf-navy-light: #163a6b;
     --kf-bg: #f7f8f9;
@@ -47,6 +49,8 @@
   :root[data-theme="dark"] {
     --kf-blue: #579dff;
     --kf-blue-dark: #388bff;
+    --kf-green: #2f9e6e;
+    --kf-green-dark: #237a54;
     --kf-bg: #14171a;
     --kf-surface: #22272b;
     --kf-column-bg: #1d2125;
@@ -962,6 +966,15 @@
 
   .kf-btn-primary:hover {
     background: var(--kf-blue-dark);
+  }
+
+  .kf-btn-success {
+    background: var(--kf-green);
+    color: #fff;
+  }
+
+  .kf-btn-success:hover {
+    background: var(--kf-green-dark);
   }
 
   .kf-btn-secondary {
@@ -3289,7 +3302,7 @@
   .kf-query-api-test-result {
     margin: 0;
     padding: 10px;
-    max-height: 260px;
+    max-height: 130px;
     overflow: auto;
     font-family: monospace;
     font-size: 12px;
