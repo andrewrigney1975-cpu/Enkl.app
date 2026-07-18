@@ -24,7 +24,7 @@ var BOX_PADDING_TOP = 6;
 var BOX_PADDING_BOTTOM = 8;
 var COL_GAP = 70;
 var ROW_GAP = 26;
-var COLUMNS = 3;
+var COLUMNS = 5;
 var MARGIN = 20;
 // Fixed spacing between two edges' parallel segments whenever they'd otherwise sit exactly on top of
 // each other (same corridor between two columns, same same-column detour lane, or the same box's
