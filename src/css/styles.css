@@ -4010,6 +4010,7 @@
   .kf-modal-body {
     padding: 18px 20px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     flex: 1;
   }
 
