@@ -3444,6 +3444,35 @@
     display: none;
   }
 
+  /* Full-screen ERD (projectQueryErdFullscreenBtn) — pops the same panel out to cover the whole
+     viewport rather than standing up a second overlay/modal with a duplicate toolbar+scroll area.
+     Sits in the same "above the modal's own 1000/1050 tier" band the SQL intellisense dropdown
+     already uses (1090), so it visually covers the entire Project Search modal underneath it. */
+  #projectQuerySchemaPanel.kf-erd-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    flex: none;
+    height: auto;
+    width: auto;
+    border-radius: 0;
+  }
+
+  /* Scoped to the full-screen state only -- #projectQueryErdScroll otherwise shares the plain
+     .kf-depmap-scroll/.kf-depmap-inner idiom with dependency-map.js/org-chart.js/gov-map.js/
+     cost-benefit.js (an inline-block child left-aligned in a block container), and changing that
+     shared behavior would affect all of them. Centering only matters here because
+     fitProjectQueryErdToViewport() picks a zoom level specifically so the whole diagram fits
+     within both axes with no overflow -- once nothing needs scrolling, "sits at the top-left
+     corner" and "is centered" look meaningfully different, and centered reads as intentional.
+     Still `overflow: auto` (inherited from .kf-depmap-scroll), so manually zooming in further
+     from here stays fully pannable, symmetric in every direction from the centered start. */
+  #projectQuerySchemaPanel.kf-erd-fullscreen #projectQueryErdScroll {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .kf-erd-toolbar {
     display: flex;
     align-items: center;

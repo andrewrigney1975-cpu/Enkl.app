@@ -51,6 +51,9 @@ export function openProjectSearchOverlay(){
 export function closeProjectSearchOverlay(){
   clearTimeout(projectSearchDebounceId);
   document.getElementById('projectSearchOverlay').classList.add('hidden');
+  // Defensive: don't leave the ERD stuck full-screen (covering the whole viewport, above this very
+  // overlay) the next time Project Search is reopened.
+  closeProjectQueryErdFullscreen();
 }
 
 export function isProjectSearchOverlayOpen(){
@@ -342,6 +345,34 @@ export function resetProjectQueryErdZoom(){
   if(scroll){ scroll.scrollLeft = 0; scroll.scrollTop = 0; }
 }
 
+// Breathing room (px) left around the diagram at fit-to-screen zoom, so it doesn't touch the
+// viewport's edges.
+var ERD_FIT_PADDING = 48;
+
+/* Picks whichever zoom level fits the WHOLE diagram inside the current #projectQueryErdScroll
+   viewport on both axes (classic "zoom to fit" — same contain-not-cover idea as CSS
+   background-size:contain), then resets scroll to 0,0. Deliberately NOT capped at 100%: a small
+   diagram should zoom IN to fill the screen just as readily as a large one zooms out to fit,
+   which is the whole point of a "fill the screen as best as possible" full-screen view. Reads
+   scroll.clientWidth/Height, so this only gives the right answer once the caller's own layout
+   change (e.g. adding .kf-erd-fullscreen) has actually taken effect -- querying a layout property
+   like clientWidth forces the browser to flush that first, so no extra delay/rAF is needed as
+   long as this runs AFTER the class toggle, not before. */
+function fitProjectQueryErdToViewport(){
+  var scroll = document.getElementById('projectQueryErdScroll');
+  if(!scroll || !lastErdLayout || lastErdLayout.width <= 0 || lastErdLayout.height <= 0){
+    resetProjectQueryErdZoom();
+    return;
+  }
+  var availableWidth = Math.max(50, scroll.clientWidth - ERD_FIT_PADDING);
+  var availableHeight = Math.max(50, scroll.clientHeight - ERD_FIT_PADDING);
+  var fitScale = Math.min(availableWidth / lastErdLayout.width, availableHeight / lastErdLayout.height);
+  erdZoomState.scale = Math.max(ERD_MIN_ZOOM, Math.min(ERD_MAX_ZOOM, Math.round(fitScale * 100) / 100));
+  applyErdZoom();
+  scroll.scrollLeft = 0;
+  scroll.scrollTop = 0;
+}
+
 /* Zoom by `deltaScale`, keeping the point under (clientX, clientY) visually fixed — see
    zoomDepMapAtPoint()'s own doc comment in views/dependency-map.js for the identical technique. */
 export function zoomProjectQueryErdAtPoint(deltaScale, clientX, clientY){
@@ -369,6 +400,52 @@ export function zoomProjectQueryErdAtPoint(deltaScale, clientX, clientY){
   var newHeight = lastErdLayout.height * newScale;
   scroll.scrollLeft = fracX * newWidth - offsetX;
   scroll.scrollTop = fracY * newHeight - offsetY;
+}
+
+/* Full-screen ERD: a pure CSS state toggle (see #projectQuerySchemaPanel.kf-erd-fullscreen in
+   styles.css) that pops the existing panel out to cover the whole viewport, above the Project
+   Search modal itself — no separate overlay/modal element, no second copy of the toolbar/scroll
+   markup to keep in sync. Entry fits+centers the diagram to the new, much bigger viewport (see
+   fitProjectQueryErdToViewport()); exit resets to the small panel's own normal 100% starting
+   point, same as opening the panel itself already does. */
+var erdFullscreenActive = false;
+
+export function isProjectQueryErdFullscreenOpen(){
+  return erdFullscreenActive;
+}
+
+function setErdFullscreenButtonState(active){
+  var btn = document.getElementById('projectQueryErdFullscreenBtn');
+  if(!btn) return;
+  var icon = btn.querySelector('.kf-icon');
+  if(icon){
+    icon.setAttribute('data-icon', active ? 'collapse' : 'expand');
+    hydrateIcons(btn);
+  }
+  btn.title = active ? 'Exit Full Screen' : 'View Full Screen';
+}
+
+export function openProjectQueryErdFullscreen(){
+  if(erdFullscreenActive) return;
+  erdFullscreenActive = true;
+  document.getElementById('projectQuerySchemaPanel').classList.add('kf-erd-fullscreen');
+  setErdFullscreenButtonState(true);
+  // Must come after the class toggle above -- fitProjectQueryErdToViewport() reads the scroll
+  // container's now-full-viewport clientWidth/Height, not its old small-panel size.
+  fitProjectQueryErdToViewport();
+}
+
+export function closeProjectQueryErdFullscreen(){
+  if(!erdFullscreenActive) return;
+  erdFullscreenActive = false;
+  document.getElementById('projectQuerySchemaPanel').classList.remove('kf-erd-fullscreen');
+  setErdFullscreenButtonState(false);
+  resetProjectQueryErdZoom();
+}
+
+export function toggleProjectQueryErdFullscreen(){
+  if(erdFullscreenActive) closeProjectQueryErdFullscreen();
+  else openProjectQueryErdFullscreen();
 }
 
 export function openProjectQuerySchemaPanel(){

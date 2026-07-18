@@ -58,7 +58,7 @@ import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen,
 import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen, showObjectivesFormView, showObjectivesListView, renderObjectivesList, saveObjectiveFromModal, deleteObjectiveFromModal } from './modals/objectives.js';
 import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitteesOverlayOpen, showTeamCommitteeFormView, showTeamsCommitteesListView, renderTeamsCommitteesList, saveTeamCommitteeFromModal, deleteTeamCommitteeFromModal } from './modals/teams-committees.js';
 import { openReportOverlay, closeReportOverlay, isReportOverlayOpen, printReport, openProjectManagementReportOverlay } from './features/reports.js';
-import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick, showProjectSearchSimpleView, showProjectSearchQueryView, toggleProjectQuerySchemaPanel, toggleProjectQuerySavedPanel, handleProjectQuerySavedListClick, handleProjectQuerySaveOrUpdateClick, handleProjectQueryNewClick, hideProjectQuerySaveRow, confirmSaveProjectQuery, showProjectQueryResultsTableView, showProjectQueryResultsJsonView, runProjectQuery, formatProjectQuerySql, exportProjectQueryResultsAsCsv, copyProjectQueryResultsAsJson, copyProjectQueryApiUrl, testProjectQueryApi, exportProjectQueryResultsAsJson, printProjectQueryResults, erdZoomState, setProjectQueryErdZoom, resetProjectQueryErdZoom, zoomProjectQueryErdAtPoint, updateProjectQueryIntellisense, repositionProjectQueryIntellisense, hideProjectQueryIntellisense, isProjectQueryIntellisenseOpen, moveProjectQueryIntellisenseActive, acceptProjectQueryIntellisenseSuggestion, handleProjectQueryIntellisenseClick } from './modals/project-search.js';
+import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick, showProjectSearchSimpleView, showProjectSearchQueryView, toggleProjectQuerySchemaPanel, toggleProjectQuerySavedPanel, handleProjectQuerySavedListClick, handleProjectQuerySaveOrUpdateClick, handleProjectQueryNewClick, hideProjectQuerySaveRow, confirmSaveProjectQuery, showProjectQueryResultsTableView, showProjectQueryResultsJsonView, runProjectQuery, formatProjectQuerySql, exportProjectQueryResultsAsCsv, copyProjectQueryResultsAsJson, copyProjectQueryApiUrl, testProjectQueryApi, exportProjectQueryResultsAsJson, printProjectQueryResults, erdZoomState, setProjectQueryErdZoom, resetProjectQueryErdZoom, zoomProjectQueryErdAtPoint, toggleProjectQueryErdFullscreen, closeProjectQueryErdFullscreen, isProjectQueryErdFullscreenOpen, updateProjectQueryIntellisense, repositionProjectQueryIntellisense, hideProjectQueryIntellisense, isProjectQueryIntellisenseOpen, moveProjectQueryIntellisenseActive, acceptProjectQueryIntellisenseSuggestion, handleProjectQueryIntellisenseClick } from './modals/project-search.js';
 import { openAboutModal, closeAboutModal, isAboutModalOpen } from './modals/about.js';
 import { openProjectStorageModal, closeProjectStorageModal, isProjectStorageModalOpen } from './modals/project-storage.js';
 import { openApiEndpointsModal, closeApiEndpointsModal, handleApiEndpointsListClick } from './modals/api-endpoints.js';
@@ -588,6 +588,7 @@ function wireEvents(){
   document.getElementById('projectQueryErdZoomInBtn').addEventListener('click', function(){ setProjectQueryErdZoom(0.1); });
   document.getElementById('projectQueryErdZoomOutBtn').addEventListener('click', function(){ setProjectQueryErdZoom(-0.1); });
   document.getElementById('projectQueryErdResetBtn').addEventListener('click', resetProjectQueryErdZoom);
+  document.getElementById('projectQueryErdFullscreenBtn').addEventListener('click', toggleProjectQueryErdFullscreen);
   document.getElementById('projectQueryErdExportAsBtn').addEventListener('click', function(e){
     e.stopPropagation();
     toggleExportAsPanel('projectQueryErdExportAsPanel');
@@ -1602,10 +1603,15 @@ function wireEvents(){
 
   document.addEventListener('keydown', function(e){
     if(e.key !== 'Escape') return;
+    // Full-screen ERD covers the whole viewport above the Project Search modal itself (and, while
+    // showing, the SQL textarea underneath it can't be focused, so intellisense can't be open at
+    // the same time) — must be checked first, or Escape would fall through to closing the modal
+    // behind it instead of just leaving full-screen.
+    if(isProjectQueryErdFullscreenOpen()) closeProjectQueryErdFullscreen();
     // Second line of defense alongside the textarea's own keydown handler (which stopPropagation's
     // when it handles Escape itself) — closes just the intellisense dropdown, not the whole Project
     // Search modal, in case this ever fires first.
-    if(isProjectQueryIntellisenseOpen()) hideProjectQueryIntellisense();
+    else if(isProjectQueryIntellisenseOpen()) hideProjectQueryIntellisense();
     else if(!document.getElementById('unlockPrivateTaskOverlay').classList.contains('hidden')) closeUnlockPrivateTaskModal();
     else if(!document.getElementById('setPrivateKeyOverlay').classList.contains('hidden')) closeSetPrivateKeyModal();
     else if(!document.getElementById('taskOverlay').classList.contains('hidden')) closeTaskModal();
