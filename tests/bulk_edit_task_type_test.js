@@ -25,7 +25,7 @@ function rowFor(doc, title){
   log('Type header appears immediately after Priority', typeIdx === priorityIdx + 1, headerLabels.join(','));
   log('Type header appears immediately before Assignee', assigneeIdx === typeIdx + 1, headerLabels.join(','));
 
-  const designRow = rowFor(doc, 'Design data schema');
+  const designRow = rowFor(doc, 'Configure project modules, columns and details');
   const selects = designRow.querySelectorAll('select');
   log('row has 5 selects (Column, Release, Priority, Type, Assignee)', selects.length === 5, selects.length);
   const typeSelect = selects[3];
@@ -52,7 +52,7 @@ function rowFor(doc, title){
   typeSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
   await wait(10);
 
-  const storageRow = rowFor(doc, 'Set up local storage layer');
+  const storageRow = rowFor(doc, 'Draft project objectives');
   const storageTypeSelect = storageRow.querySelectorAll('select')[3];
   const bugOpt = Array.from(storageTypeSelect.options).find(o => o.textContent === 'Bug');
   storageTypeSelect.value = bugOpt.value;
@@ -66,14 +66,14 @@ function rowFor(doc, title){
 
   const raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   const proj = raw.projects[raw.currentProjectId];
-  const designTask = Object.values(proj.tasks).find(t => t.title === 'Design data schema');
-  const storageTask = Object.values(proj.tasks).find(t => t.title === 'Set up local storage layer');
-  log('Design data schema correctly assigned to Feature', designTask.typeId === featureOpt.value, designTask.typeId);
-  log('Set up local storage layer correctly assigned to Bug', storageTask.typeId === bugOpt.value, storageTask.typeId);
+  const designTask = Object.values(proj.tasks).find(t => t.title === 'Configure project modules, columns and details');
+  const storageTask = Object.values(proj.tasks).find(t => t.title === 'Draft project objectives');
+  log('Configure project modules, columns and details correctly assigned to Feature', designTask.typeId === featureOpt.value, designTask.typeId);
+  log('Draft project objectives correctly assigned to Bug', storageTask.typeId === bugOpt.value, storageTask.typeId);
 
   doc.getElementById('bulkEditBtn').click();
   await wait(20);
-  const designRowAgain = rowFor(doc, 'Design data schema');
+  const designRowAgain = rowFor(doc, 'Configure project modules, columns and details');
   const designTypeSelectAgain = designRowAgain.querySelectorAll('select')[3];
   log('reopening shows the previously saved type selected', designTypeSelectAgain.value === featureOpt.value);
 
@@ -85,12 +85,12 @@ function rowFor(doc, title){
 
   const raw2 = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   const proj2 = raw2.projects[raw2.currentProjectId];
-  const designTaskAfter = Object.values(proj2.tasks).find(t => t.title === 'Design data schema');
+  const designTaskAfter = Object.values(proj2.tasks).find(t => t.title === 'Configure project modules, columns and details');
   log('un-assigning via "No type" in Bulk Edit persists typeId:null', designTaskAfter.typeId === null);
 
   doc.getElementById('bulkEditBtn').click();
   await wait(20);
-  const storageRowAgain = rowFor(doc, 'Set up local storage layer');
+  const storageRowAgain = rowFor(doc, 'Draft project objectives');
   const storageTypeSelectAgain = storageRowAgain.querySelectorAll('select')[3];
   log('Cancel test starts from the previously saved Bug assignment', storageTypeSelectAgain.value === bugOpt.value);
   storageTypeSelectAgain.value = '';
@@ -101,7 +101,7 @@ function rowFor(doc, title){
 
   const raw3 = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   const proj3 = raw3.projects[raw3.currentProjectId];
-  const storageTaskAfterCancel = Object.values(proj3.tasks).find(t => t.title === 'Set up local storage layer');
+  const storageTaskAfterCancel = Object.values(proj3.tasks).find(t => t.title === 'Draft project objectives');
   log('Cancel does not persist the discarded type change', storageTaskAfterCancel.typeId === bugOpt.value, storageTaskAfterCancel.typeId);
 
   console.log('\nBulk Edit Task Type management test complete.');

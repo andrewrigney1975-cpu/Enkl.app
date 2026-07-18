@@ -33,7 +33,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('archived count badge hidden when nothing is archived', doc.getElementById('archivedCountBadge').classList.contains('kf-vis-hidden'));
 
   // ── 3. Task modal has an Archived checkbox, unchecked by default ─────────
-  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Research competitor boards') !== -1);
+  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Look at Project and App Settings') !== -1);
   card.click();
   await wait(10);
   log('task modal has an Archived checkbox', doc.getElementById('taskArchivedCheckbox') !== null);
@@ -45,12 +45,12 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   await wait(20);
 
   const cardsAfter = Array.from(doc.querySelectorAll('.kf-card'));
-  log('archived task no longer appears on the board', !cardsAfter.some(c => c.textContent.indexOf('Research competitor boards') !== -1), cardsAfter.length);
+  log('archived task no longer appears on the board', !cardsAfter.some(c => c.textContent.indexOf('Look at Project and App Settings') !== -1), cardsAfter.length);
   log('board card count dropped to 4', cardsAfter.length === 4, cardsAfter.length);
 
   raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   proj = raw.projects[raw.currentProjectId];
-  const archivedTaskId = Object.keys(proj.tasks).find(id => proj.tasks[id].title === 'Research competitor boards');
+  const archivedTaskId = Object.keys(proj.tasks).find(id => proj.tasks[id].title === 'Look at Project and App Settings');
   log('archived flag persisted to localStorage', proj.tasks[archivedTaskId].archived === true);
 
   const backlogCol = Array.from(doc.querySelectorAll('.kf-column')).find(c => c.querySelector('.kf-column-name').textContent.trim() === 'Backlog');
@@ -61,7 +61,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   await wait(20);
   const listRows = doc.querySelectorAll('.kf-tasklist-row');
   log('List View shows only 4 tasks (archived one excluded)', listRows.length === 4, listRows.length);
-  log('archived task title does not appear in the list', !Array.from(listRows).some(r => r.textContent.indexOf('Research competitor boards') !== -1));
+  log('archived task title does not appear in the list', !Array.from(listRows).some(r => r.textContent.indexOf('Look at Project and App Settings') !== -1));
   doc.getElementById('taskListClose').click();
   await wait(10);
 
@@ -71,16 +71,16 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const nodes = doc.querySelectorAll('.kf-depnode');
   log('dependency graph shows only 4 nodes (archived one excluded)', nodes.length === 4, nodes.length);
   const nodeTitles = doc.querySelector('#depMapInner svg').innerHTML;
-  log('archived task does not appear as a node', nodeTitles.indexOf('Research competitor') === -1);
+  log('archived task does not appear as a node', nodeTitles.indexOf('Look at Project and App Settings') === -1);
   doc.getElementById('depMapClose').click();
   await wait(10);
 
   // ── 7. Archived task excluded from the "Depends on" picker for OTHER tasks ──
-  const otherCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Design data schema') !== -1);
+  const otherCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Configure project modules, columns and details') !== -1);
   otherCard.click();
   await wait(10);
   const depRows = doc.querySelectorAll('#depList .kf-dep-row');
-  log('archived task is not offered as a new dependency candidate', !Array.from(depRows).some(r => r.textContent.indexOf('Research competitor boards') !== -1), depRows.length);
+  log('archived task is not offered as a new dependency candidate', !Array.from(depRows).some(r => r.textContent.indexOf('Look at Project and App Settings') !== -1), depRows.length);
   doc.getElementById('taskCancelBtn').click();
   await wait(10);
 
@@ -117,14 +117,14 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('archived count badge hides again once nothing is archived', doc.getElementById('archivedCountBadge').classList.contains('kf-vis-hidden'));
 
   // ── 10. Select-all checkbox works for multiple archived tasks ────────────
-  const card2 = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Research competitor boards') !== -1);
+  const card2 = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Look at Project and App Settings') !== -1);
   card2.click();
   await wait(10);
   doc.getElementById('taskArchivedCheckbox').checked = true;
   doc.getElementById('taskSaveBtn').click();
   await wait(20);
 
-  const card3 = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Write project README') !== -1);
+  const card3 = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Draft project objectives') !== -1);
   card3.click();
   await wait(10);
   doc.getElementById('taskArchivedCheckbox').checked = true;
@@ -147,7 +147,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   await wait(10);
 
   // ── 11. Export and import preserve the archived flag ─────────────────────
-  const card4 = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Write project README') !== -1);
+  const card4 = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Draft project objectives') !== -1);
   card4.click();
   await wait(10);
   doc.getElementById('taskArchivedCheckbox').checked = true;
@@ -165,9 +165,9 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
     }
     return null;
   }
-  const exportedNode = findNode(exported.hierarchy, 'Write project README');
+  const exportedNode = findNode(exported.hierarchy, 'Draft project objectives');
   log('exported node includes archived:true', exportedNode.archived === true, JSON.stringify(exportedNode.archived));
-  const otherNode = findNode(exported.hierarchy, 'Design data schema');
+  const otherNode = findNode(exported.hierarchy, 'Configure project modules, columns and details');
   log('exported node for a non-archived task includes archived:false', otherNode.archived === false);
 
   const fileInput = doc.getElementById('importFileInput');
@@ -179,11 +179,11 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
     await wait(20);
   }
   const importedCardsVisible = doc.querySelectorAll('.kf-card');
-  log('imported board hides the archived task on the board', !Array.from(importedCardsVisible).some(c => c.textContent.indexOf('Write project README') !== -1));
+  log('imported board hides the archived task on the board', !Array.from(importedCardsVisible).some(c => c.textContent.indexOf('Draft project objectives') !== -1));
   doc.getElementById('archivedTasksBtn').click();
   await wait(20);
   log('imported project shows the archived task in the reactivation modal', doc.querySelectorAll('.kf-archived-row').length === 1, doc.querySelectorAll('.kf-archived-row').length);
-  log('imported archived row is the README task', doc.querySelector('.kf-archived-row').textContent.indexOf('Write project README') !== -1);
+  log('imported archived row is the expected task', doc.querySelector('.kf-archived-row').textContent.indexOf('Draft project objectives') !== -1);
   doc.getElementById('archivedTasksClose').click();
   await wait(10);
 

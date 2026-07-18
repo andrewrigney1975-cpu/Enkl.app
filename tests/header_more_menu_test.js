@@ -42,8 +42,13 @@ function loadFixture(project){
     doc.getElementById('appSettingsBtn').click();
     await wait(20);
     // App Settings was later restructured into categorized ".kf-setting-row" rows — the old
-    // ".kf-risk-doc-picker-row" class this looked for doesn't exist anymore.
-    const rowIds = Array.from(doc.querySelectorAll('#appSettingsOverlay .kf-setting-row')).map(r => r.querySelector('input').id);
+    // ".kf-risk-doc-picker-row" class this looked for doesn't exist anymore. Not every row is a
+    // plain checkbox toggle either (e.g. "Authentication and Provisioning" links out to SSO/SAML/
+    // SCIM config instead), so rows with no <input> are filtered out rather than assumed away.
+    const rowIds = Array.from(doc.querySelectorAll('#appSettingsOverlay .kf-setting-row'))
+      .map(r => r.querySelector('input'))
+      .filter(Boolean)
+      .map(input => input.id);
     log('App Settings is ordered Health Dashboard first, matching the header',
         rowIds[0] === 'settingsShowHealthBtn', rowIds.join(','));
   }
@@ -139,11 +144,14 @@ function loadFixture(project){
     const mediaStartMatch = style.match(/@media\s*\(\s*max-width:\s*1024px\s*\)/);
     const mediaStart = mediaStartMatch ? mediaStartMatch.index : -1;
     const mobileBlock = mediaStart !== -1 ? style.slice(mediaStart) : '';
+    // The minifier also merges multiple selectors sharing identical declarations into one
+    // comma-separated group (".kf-header-consolidated,.some-other-class{display:none}"), so
+    // ".kf-header-consolidated" is not always immediately followed by "{" — only by "," or "{".
     log('mobile CSS restores consolidated items back to visible (display:flex), so the mobile menu always shows everything flat',
-        /\.kf-header-consolidated\{display:\s*flex/.test(mobileBlock));
+        /\.kf-header-consolidated[,{][^{]*\{display:\s*flex/.test(mobileBlock));
     // The minifier also drops the trailing ';' before a rule's closing '}' when it's the last (only)
     // declaration — ".kf-header-consolidated{display:none}" with no semicolon is equally valid.
-    const consolidatedDefaultMatch = style.match(/\.kf-header-consolidated\{display:none;?\}/);
+    const consolidatedDefaultMatch = style.match(/\.kf-header-consolidated[,{][^{]*\{display:none;?[^}]*\}/);
     log('the consolidation class is display:none by default, BEFORE the media query (correct source order)',
         !!consolidatedDefaultMatch && consolidatedDefaultMatch.index < mediaStart);
     log('mobile CSS forces the desktop More wrap to display:none too (the dropdown mechanism is desktop-only)', /\.kf-header-more-wrap\{[^}]*display:\s*none/.test(mobileBlock));

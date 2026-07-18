@@ -1,4 +1,6 @@
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const { execSync } = require('child_process');
 
 function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra!==undefined?' :: '+extra:'')); }
@@ -33,17 +35,32 @@ function pngDimensions(buf){
     log(`manifest icon declared as ${icon.sizes} actually decodes to that size`, width === expected && height === expected, `${width}x${height}`);
   });
 
+  // Uses the OS temp dir (not a hardcoded "/tmp", which is a real Unix-only path Node happily
+  // "writes" to verbatim on Windows too, silently resolving to e.g. "F:\tmp\..." — a directory that
+  // doesn't exist there) and tolerates python3/Pillow not being installed at all (true here, and
+  // this repo's CI frontend job never installs them either — see .github/workflows/ci.yml) by
+  // skipping just these two pixel-color checks instead of crashing the whole file.
   function decodePngCornerPixel(buf){
-    fs.writeFileSync('/tmp/_icon_check.png', buf);
-    const out = execSync('python3 -c "from PIL import Image; im = Image.open(\'/tmp/_icon_check.png\').convert(\'RGBA\'); print(im.getpixel((0,0)))"').toString().trim();
-    return out;
+    const tmpFile = path.join(os.tmpdir(), '_icon_check_' + process.pid + '.png');
+    fs.writeFileSync(tmpFile, buf);
+    try {
+      return execSync('python3 -c "from PIL import Image; im = Image.open(\'' + tmpFile.replace(/\\/g, '\\\\') + '\').convert(\'RGBA\'); print(im.getpixel((0,0)))"', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    } catch (e) {
+      return null;
+    } finally {
+      fs.unlinkSync(tmpFile);
+    }
   }
 
   const touchIcon512 = Buffer.from(touchIconMatches[2][1], 'base64');
   const cornerPixel = decodePngCornerPixel(touchIcon512);
-  log('the top-left corner pixel of the 512x512 icon is now opaque (alpha=255), confirming the background is full-bleed with no rounding',
-      /,\s*255\)$/.test(cornerPixel), cornerPixel);
-  log('the corner pixel is the expected blue (#0c66e4 = 12, 102, 228)', cornerPixel.startsWith('(12, 102, 228'), cornerPixel);
+  if (cornerPixel === null) {
+    console.log('SKIP - corner-pixel colour checks (python3/Pillow not available in this environment)');
+  } else {
+    log('the top-left corner pixel of the 512x512 icon is now opaque (alpha=255), confirming the background is full-bleed with no rounding',
+        /,\s*255\)$/.test(cornerPixel), cornerPixel);
+    log('the corner pixel is the expected blue (#0c66e4 = 12, 102, 228)', cornerPixel.startsWith('(12, 102, 228'), cornerPixel);
+  }
 
   console.log('\nApp icon square/full-bleed redesign test complete.');
   process.exit(0);

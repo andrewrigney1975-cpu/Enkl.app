@@ -10,7 +10,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Research competitor boards') !== -1);
+  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Look at Project and App Settings') !== -1);
   card.click();
   await wait(10);
   doc.getElementById('taskArchivedCheckbox').checked = true;
@@ -34,7 +34,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   log('archived task now appears (5 points)', points.length === 5, points.length);
   const archivedPoints = doc.querySelectorAll('.kf-cb-point-archived');
   log('exactly one point gets the archived (greyed-out) class', archivedPoints.length === 1, archivedPoints.length);
-  log('the archived point is the right task', archivedPoints[0].innerHTML.indexOf('Research competitor') !== -1, archivedPoints[0].innerHTML.slice(0,150));
+  log('the archived point is the right task', archivedPoints[0].innerHTML.indexOf('Look at Project and App Settings') !== -1, archivedPoints[0].innerHTML.slice(0,150));
   log('tooltip marks it as [Archived]', archivedPoints[0].querySelector('title').textContent.indexOf('[Archived]') !== -1, archivedPoints[0].querySelector('title').textContent);
 
   // ── 3. Legend reflects toggle state ───────────────────────────────────────
@@ -45,7 +45,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   archivedPoints[0].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await wait(20);
   log('clicking the archived point closes the chart', doc.getElementById('costBenefitOverlay').classList.contains('hidden'));
-  log('and opens the task modal for it', doc.getElementById('taskTitleInput').value === 'Research competitor boards');
+  log('and opens the task modal for it', doc.getElementById('taskTitleInput').value === 'Look at Project and App Settings');
   doc.getElementById('taskCancelBtn').click();
   await wait(10);
 

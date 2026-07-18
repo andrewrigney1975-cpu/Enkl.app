@@ -10,7 +10,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Research competitor boards') !== -1);
+  const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Create project board') !== -1);
   card.click();
   await wait(10);
   doc.getElementById('taskArchivedCheckbox').checked = true;
@@ -36,7 +36,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   const archivedNodes = doc.querySelectorAll('.kf-depnode-archived');
   log('exactly one node gets the archived (greyed-out) class', archivedNodes.length === 1, archivedNodes.length);
-  log('the archived node corresponds to the right task', archivedNodes[0].innerHTML.indexOf('Research competitor') !== -1, archivedNodes[0].innerHTML.slice(0,200));
+  log('the archived node corresponds to the right task', archivedNodes[0].innerHTML.indexOf('Create project board') !== -1, archivedNodes[0].innerHTML.slice(0,200));
 
   const nonArchivedCount = Array.from(nodes).filter(n => !n.classList.contains('kf-depnode-archived')).length;
   log('the other 4 nodes are not greyed out', nonArchivedCount === 4, nonArchivedCount);
@@ -50,7 +50,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   archivedNode.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await wait(20);
   log('clicking the archived node closes the dependency map', doc.getElementById('depMapOverlay').classList.contains('hidden'));
-  log('clicking the archived node opens the task modal for it', doc.getElementById('taskTitleInput').value === 'Research competitor boards', doc.getElementById('taskTitleInput').value);
+  log('clicking the archived node opens the task modal for it', doc.getElementById('taskTitleInput').value === 'Create project board', doc.getElementById('taskTitleInput').value);
   log('task modal shows it as archived', doc.getElementById('taskArchivedCheckbox').checked === true);
   doc.getElementById('taskCancelBtn').click();
   await wait(10);
