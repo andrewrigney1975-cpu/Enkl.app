@@ -231,6 +231,12 @@ export function resetFilters(){
   ui.cbColumnFilter = new Set();
   var searchInput = document.getElementById('searchInput');
   if(searchInput) searchInput.value = '';
+  // Not imported from board-filters.js (would risk a circular import back into this module) - plain
+  // direct DOM manipulation instead, matching how this function already touches #searchInput itself.
+  var searchClearBtn = document.getElementById('searchClearBtn');
+  if(searchClearBtn) searchClearBtn.classList.add('kf-vis-hidden');
+  var searchHashtagPanel = document.getElementById('searchHashtagPanel');
+  if(searchHashtagPanel) searchHashtagPanel.classList.add('hidden');
 }
 
 export function toast(message){

@@ -739,6 +739,7 @@
     background: var(--kf-bg);
     min-width: 180px;
     color: var(--kf-text-secondary);
+    position: relative;
   }
 
   .kf-search input {
@@ -747,6 +748,23 @@
     outline: none;
     flex: 1;
     color: var(--kf-text);
+  }
+
+  /* Board toolbar's "Search tasks..." box only — shown once there's a value to clear, hidden via the
+     generic kf-vis-hidden utility (no compound selector needed, it's a real global class). */
+  .kf-search-clear-btn {
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    flex-shrink: 0;
+    color: var(--kf-text-faint);
+    cursor: pointer;
+  }
+
+  .kf-search-clear-btn:hover {
+    color: var(--kf-danger);
   }
 
   .kf-search-row {
@@ -889,7 +907,8 @@
     cursor: pointer;
   }
 
-  .kf-dropdown-filter-row:hover {
+  .kf-dropdown-filter-row:hover,
+  .kf-dropdown-filter-row.active {
     background: var(--kf-column-bg);
   }
 

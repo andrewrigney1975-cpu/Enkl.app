@@ -14,7 +14,7 @@ import { evaluateColumnMove, isWorkflowEnabled } from '../features/workflow-engi
 import { isGovernanceMapEnabled } from './governance-map.js';
 import { isServerAuthoritative, isServerLoggedIn, moveTaskToColumnOnServer, refreshProjectFromServer, reorderColumnsOnServer, deleteColumnOnServer } from '../features/migration.js';
 import { updateProjectSettingsApi, isOrgAdmin, isProjectAdmin, getOrgName, isApiReachable, pollApiReachability } from '../api.js';
-import { renderPriorityFilterChips, renderTeamFilterChips, renderAssigneeFilterChips, renderTaskTypeFilterChips, renderStatusFilterChips, taskMatchesFilters } from './board-filters.js';
+import { renderPriorityFilterChips, renderTeamFilterChips, renderAssigneeFilterChips, renderTaskTypeFilterChips, renderStatusFilterChips, taskMatchesFilters, updateSearchClearButtonVisibility, clearBoardSearch, updateSearchHashtagIntellisense, closeSearchHashtagPanel, isSearchHashtagPanelOpen, acceptSearchHashtagOption, onSearchInputKeydown } from './board-filters.js';
 import { fitBoardForTaskModal, restoreBoardAfterTaskModal, refitBoardForOpenTaskModal } from './board-layout.js';
 
 // Re-exported for the many modals that already do `import { escapeHTML } from '../views/board.js'`
@@ -47,7 +47,14 @@ export {
   renderStatusFilterChips,
   toggleStatusFilterPanel,
   closeStatusFilterPanel,
-  taskMatchesFilters
+  taskMatchesFilters,
+  updateSearchClearButtonVisibility,
+  clearBoardSearch,
+  updateSearchHashtagIntellisense,
+  closeSearchHashtagPanel,
+  isSearchHashtagPanelOpen,
+  acceptSearchHashtagOption,
+  onSearchInputKeydown
 } from './board-filters.js';
 export { fitBoardForTaskModal, restoreBoardAfterTaskModal, refitBoardForOpenTaskModal } from './board-layout.js';
 

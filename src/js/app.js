@@ -12,7 +12,7 @@ import { reportPageLoadTiming } from './features/page-load-telemetry.js';
 import { deleteProject, closeAllTaskTypeIconPanels, setMutationsToast } from './mutations.js';
 
 /* ---- Views ---- */
-import { renderAll, renderBoard, renderToolbar, setBoardDeps, closeTeamFilterPanel, closeAssigneeFilterPanel, closeTaskTypeFilterPanel, closeStatusFilterPanel, toggleTeamFilterPanel, toggleAssigneeFilterPanel, toggleTaskTypeFilterPanel, toggleStatusFilterPanel, openAppSettingsOverlay, closeAppSettingsOverlay, isAppSettingsOverlayOpen, updateHeaderButtonVisibilitySetting, renderPriorityFilterChips, refitBoardForOpenTaskModal } from './views/board.js';
+import { renderAll, renderBoard, renderToolbar, setBoardDeps, closeTeamFilterPanel, closeAssigneeFilterPanel, closeTaskTypeFilterPanel, closeStatusFilterPanel, toggleTeamFilterPanel, toggleAssigneeFilterPanel, toggleTaskTypeFilterPanel, toggleStatusFilterPanel, openAppSettingsOverlay, closeAppSettingsOverlay, isAppSettingsOverlayOpen, updateHeaderButtonVisibilitySetting, renderPriorityFilterChips, refitBoardForOpenTaskModal, updateSearchClearButtonVisibility, clearBoardSearch, updateSearchHashtagIntellisense, closeSearchHashtagPanel, isSearchHashtagPanelOpen, acceptSearchHashtagOption, onSearchInputKeydown } from './views/board.js';
 import { setTaskListDeps, openTaskListOverlay, closeTaskListOverlay, isTaskListOpen, renderTaskListBody, collapseAllTaskListGroups, expandAllTaskListGroups, exportTaskListAsCsv } from './views/task-list.js';
 import { setDepMapDeps, depMapState, lastDepLayout, openDepMapOverlay, closeDepMapOverlay, isDepMapOpen, renderDependencyMap, toggleDepMapShowArchived, toggleDepMapColumnFilterPanel, closeDepMapColumnFilterPanel, setDepMapZoom, resetDepMapZoom, zoomDepMapAtPoint } from './views/dependency-map.js';
 import { setOrgChartDeps, orgChartState, lastOrgChartLayout, openOrgChartOverlay, closeOrgChartOverlay, isOrgChartOpen, toggleOrgChartFilter, setOrgChartZoom, resetOrgChartZoom, zoomOrgChartAtPoint, openOrgChartMemberPopover, closeOrgChartMemberPopover, isOrgChartMemberPopoverOpen } from './views/org-chart.js';
@@ -1424,7 +1424,20 @@ function wireEvents(){
 
   document.getElementById('searchInput').addEventListener('input', function(e){
     ui.searchTerm = e.target.value.trim();
+    updateSearchClearButtonVisibility();
+    updateSearchHashtagIntellisense();
     renderBoard();
+  });
+  document.getElementById('searchInput').addEventListener('keydown', onSearchInputKeydown);
+  document.getElementById('searchClearBtn').addEventListener('click', clearBoardSearch);
+  document.getElementById('searchHashtagPanel').addEventListener('mousedown', function(e){
+    // mousedown (not click), with preventDefault, so this wins the race against #searchInput's own
+    // blur - same convention every other intellisense dropdown in this app uses (rich-text/editor.js,
+    // sql-intellisense.js's own dropdown wiring).
+    var row = e.target.closest ? e.target.closest('[data-index]') : null;
+    if(!row) return;
+    e.preventDefault();
+    acceptSearchHashtagOption(parseInt(row.getAttribute('data-index'), 10));
   });
 
   document.getElementById('teamFilterBtn').addEventListener('click', function(e){
@@ -1464,6 +1477,8 @@ function wireEvents(){
     if(portfolioProjectWrap && !portfolioProjectWrap.contains(e.target)) closeProjectFilterPanel();
     var portfolioPlannerCategoryWrap = document.getElementById('portfolioPlannerCategoryFilterWrap');
     if(portfolioPlannerCategoryWrap && !portfolioPlannerCategoryWrap.contains(e.target)) closePortfolioPlannerCategoryFilterPanel();
+    var searchWrap = document.getElementById('searchWrap');
+    if(searchWrap && !searchWrap.contains(e.target)) closeSearchHashtagPanel();
   });
 
   document.getElementById('taskModalClose').addEventListener('click', closeTaskModal);
@@ -1647,6 +1662,7 @@ function wireEvents(){
     else if(!document.getElementById('statusFilterPanel').classList.contains('hidden')) closeStatusFilterPanel();
     else if(isProjectFilterPanelOpen()) closeProjectFilterPanel();
     else if(!document.getElementById('portfolioPlannerCategoryFilterPanel').classList.contains('hidden')) closePortfolioPlannerCategoryFilterPanel();
+    else if(isSearchHashtagPanelOpen()) closeSearchHashtagPanel();
     else if(isMobileDrawerOpen()) closeMobileDrawer();
     else if(isUfoModalOpen()) closeUfoModal();
     else if(isOpeningExperienceModalOpen()) closeOpeningExperienceModal();

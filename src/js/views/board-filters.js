@@ -7,6 +7,7 @@ import { ui, getPriority } from '../ui.js';
 import { getTeamsCommitteesForMember } from '../mutations.js';
 import { normalizeHeaderButtonVisibility } from '../storage.js';
 import { renderBoard } from './board.js';
+import { getProjectHashtags, filterHashtags, HASHTAG_NAME_RE } from '../features/hashtags.js';
 
 /* =========================================================
    BOARD FILTERS — the priority/team/assignee/task-type filter-chip dropdowns, extracted from
@@ -437,4 +438,110 @@ export function taskMatchesFilters(task){
     if(hay.indexOf(term) === -1) return false;
   }
   return true;
+}
+
+/* =========================================================
+   BOARD SEARCH — the toolbar's "Search tasks..." box: a clear ("x") button once there's a value to
+   clear, and a "#" hashtag intellisense dropdown (features/hashtags.js) offering the project's
+   existing tags when the search term starts with one. This is purely an input-composition
+   convenience, not a new filtering mode — taskMatchesFilters above already does a plain substring
+   match against each task's raw description text, and a hashtag is just "#name" text sitting inside
+   that description (see hashtags.js's own doc comment), so typing/accepting "#urgent" as the whole
+   search term already finds the right tasks with zero changes to the matching logic itself.
+   ========================================================= */
+
+var searchHashtagState = null; // {options, activeIndex} - non-null only while the dropdown is open.
+
+export function updateSearchClearButtonVisibility(){
+  var input = document.getElementById('searchInput');
+  var btn = document.getElementById('searchClearBtn');
+  if(!input || !btn) return;
+  btn.classList.toggle('kf-vis-hidden', input.value.length === 0);
+}
+
+export function clearBoardSearch(){
+  var input = document.getElementById('searchInput');
+  input.value = '';
+  ui.searchTerm = '';
+  updateSearchClearButtonVisibility();
+  closeSearchHashtagPanel();
+  renderBoard();
+  input.focus();
+}
+
+function renderSearchHashtagPanel(){
+  var panel = document.getElementById('searchHashtagPanel');
+  panel.innerHTML = searchHashtagState.options.map(function(tag, i){
+    return '<div class="kf-dropdown-filter-row' + (i === searchHashtagState.activeIndex ? ' active' : '') + '" data-index="' + i + '">' +
+      '<span class="kf-dropdown-filter-name">#' + escapeHTML(tag) + '</span></div>';
+  }).join('');
+}
+
+/* Only ever triggers when the WHOLE search term starts with "#" (per the ask - "if a user starts a
+   search with a hash"), not merely contains one anywhere - a search for "release #urgent" is left as
+   plain substring search, unaffected. No "create new" option here unlike the rich-text editor's own
+   hashtag intellisense (features/hashtags.js's other consumer) - a search box has nothing to create,
+   only existing tags are ever useful to suggest. */
+export function updateSearchHashtagIntellisense(){
+  var input = document.getElementById('searchInput');
+  var panel = document.getElementById('searchHashtagPanel');
+  if(!input || !panel) return;
+  var value = input.value;
+  if(value.charAt(0) !== '#'){ closeSearchHashtagPanel(); return; }
+
+  var prefix = value.slice(1);
+  if(prefix && !HASHTAG_NAME_RE.test(prefix)){ closeSearchHashtagPanel(); return; }
+
+  var matches = filterHashtags(getProjectHashtags(getCurrentProject()), prefix);
+  if(matches.length === 0){ closeSearchHashtagPanel(); return; }
+
+  searchHashtagState = {options: matches, activeIndex: 0};
+  renderSearchHashtagPanel();
+  panel.classList.remove('hidden');
+}
+
+export function closeSearchHashtagPanel(){
+  searchHashtagState = null;
+  var panel = document.getElementById('searchHashtagPanel');
+  if(panel) panel.classList.add('hidden');
+}
+
+export function isSearchHashtagPanelOpen(){
+  var panel = document.getElementById('searchHashtagPanel');
+  return !!(panel && !panel.classList.contains('hidden'));
+}
+
+export function acceptSearchHashtagOption(index){
+  if(!searchHashtagState || !searchHashtagState.options[index]) return;
+  var input = document.getElementById('searchInput');
+  input.value = '#' + searchHashtagState.options[index];
+  ui.searchTerm = input.value.trim();
+  closeSearchHashtagPanel();
+  updateSearchClearButtonVisibility();
+  renderBoard();
+  input.focus();
+}
+
+/* Tab selects the highlighted tag (per the ask), matching the SQL Intellisense convention (§17) this
+   whole "Tab accepts, arrows navigate, Escape cancels" shape is drawn from - unlike the rich-text
+   editor's own hashtag autocomplete, Space is deliberately NOT an accept key here: a search box is
+   plausibly followed by more typed text, so Space needs to stay an ordinary character. */
+export function onSearchInputKeydown(e){
+  if(!searchHashtagState) return;
+  if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    searchHashtagState.activeIndex = (searchHashtagState.activeIndex + 1) % searchHashtagState.options.length;
+    renderSearchHashtagPanel();
+  } else if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    searchHashtagState.activeIndex = (searchHashtagState.activeIndex - 1 + searchHashtagState.options.length) % searchHashtagState.options.length;
+    renderSearchHashtagPanel();
+  } else if(e.key === 'Tab'){
+    e.preventDefault();
+    acceptSearchHashtagOption(searchHashtagState.activeIndex);
+  } else if(e.key === 'Escape'){
+    e.preventDefault();
+    e.stopPropagation();
+    closeSearchHashtagPanel();
+  }
 }
