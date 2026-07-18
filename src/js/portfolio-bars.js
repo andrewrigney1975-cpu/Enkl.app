@@ -34,6 +34,28 @@ export function priorityMarkerSVG(priority, cx, cy){
     '<title>' + escapeHTML(prio.label) + ' priority</title></circle>';
 }
 
+/* WCAG relative-luminance formula (sRGB, no gamma-correction shortcuts) — used only to pick
+   black-vs-white text for the Planner's on-bar project-key label below. Kept local to this file
+   (not date-utils.js's lightenHexColor/darkenHexColor, which blend toward white/black for subtle
+   background tints, not decide a readable foreground) since this is its only consumer. */
+function relativeLuminance(hex){
+  var rgb = [1, 3, 5].map(function(i){
+    var c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+}
+
+/* Picks whichever of pure black/white has the higher WCAG contrast ratio against bgHex — correct for
+   any accent color without hand-tuning per swatch, so this keeps working automatically if
+   PRIORITY_COLORS' accents ever change. */
+function contrastTextColor(bgHex){
+  var l = relativeLuminance(bgHex);
+  var contrastWithWhite = 1.05 / (l + 0.05);
+  var contrastWithBlack = (l + 0.05) / 0.05;
+  return contrastWithWhite >= contrastWithBlack ? '#ffffff' : '#000000';
+}
+
 /**
  * Renders one project's Gantt row content (bar + resize handles, or the click-only "no dates"
  * placeholder + priority marker) — x/y/width/height describe the bar/placeholder's own position,
@@ -92,6 +114,29 @@ export function projectBarSVG(p, x, y, width, height, color, handleWidth, priori
         ? 'fill="' + prio.accent + '" stroke="' + prio.accent + '" stroke-width="1.5"'
         : 'fill="' + prio.accent + '" fill-opacity="0.15" stroke="' + prio.accent + '" stroke-width="1.5"')
     : (isActive ? 'fill="' + color + '"' : inactiveAttrs);
+
+  // Planner-only (priorityColored), and only for an ACTIVE bar: that's the one case whose fill is a
+  // solid, known color (the raw priority accent) a contrast ratio can actually be computed against —
+  // an inactive bar's fill is that same accent at 15% opacity over the chart's own background, which
+  // this module (deliberately zero-DOM-dependency, see file header) has no way to resolve to a
+  // concrete color, and the marker already remains the priority cue for inactive bars regardless (see
+  // showMarker above). Text is measured with a rough monospace-ish average-char-width estimate (SVG
+  // has no synchronous "will this text fit" query without a real DOM measurement, which would break
+  // this file's purity) — conservative enough that a false negative (room exists, label skipped) is
+  // far more likely than a false positive (label overflows the bar).
+  var keyLabelHTML = '';
+  if(priorityColored && isActive && p.key){
+    var keyLabelX = x + height / 2 + 5 + 4; // marker's right edge (cx + r) + a small gap
+    var keyLabelFontSize = 11;
+    var estCharWidth = keyLabelFontSize * 0.62;
+    var availableWidth = (barEndX - hw / 2 - 4) - keyLabelX; // stop short of the resize-end handle
+    if(availableWidth >= p.key.length * estCharWidth){
+      keyLabelHTML = '<text x="' + keyLabelX + '" y="' + (y + height / 2) + '" dominant-baseline="central" ' +
+        'font-size="' + keyLabelFontSize + '" font-weight="600" fill="' + contrastTextColor(prio.accent) + '" ' +
+        'pointer-events="none">' + escapeHTML(p.key) + '</text>';
+    }
+  }
+
   return '<g class="kf-portfolio-timeline-row">' +
     '<rect class="kf-portfolio-timeline-bar" data-project-id="' + p.id + '" data-role="move" ' +
     'x="' + x + '" y="' + y + '" width="' + width + '" height="' + height + '" rx="4" ' + barAttrs + '>' +
@@ -100,5 +145,6 @@ export function projectBarSVG(p, x, y, width, height, color, handleWidth, priori
     'x="' + (x - hw / 2) + '" y="' + y + '" width="' + hw + '" height="' + height + '" rx="2"></rect>' +
     '<rect class="kf-portfolio-timeline-handle" data-project-id="' + p.id + '" data-role="resize-end" ' +
     'x="' + (barEndX - hw / 2) + '" y="' + y + '" width="' + hw + '" height="' + height + '" rx="2"></rect>' +
+    keyLabelHTML +
     '</g>' + markerHTML;
 }

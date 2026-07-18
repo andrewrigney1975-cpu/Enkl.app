@@ -21,6 +21,11 @@ import { iconSvg } from '../icons.js';
 
 var PLANNER_HANDLE_WIDTH = 8;
 var PLANNER_DRAG_CLICK_THRESHOLD = 4;
+// A plain click's own "open the Dates modal" action is delayed by this long before actually firing —
+// long enough for a genuine double-click's second mousedown/mouseup to arrive and cancel it (see
+// scheduleBarSingleClick/onPortfolioPlannerBarDblClick), short enough that a real single click still
+// feels instant.
+var PLANNER_CLICK_DELAY_MS = 250;
 
 var _categories = [];
 var _allProjects = [];
@@ -48,6 +53,7 @@ var _plannerActiveCategories = new Set();
 // _timelineLayout in portfolio-dashboard.js.
 var _plannerLayout = null;
 var _plannerDrag = null;
+var _plannerClickTimer = null;
 
 export function openPortfolioPlannerOverlay(){
   if(!isOrgAdmin()){ toast('Only an organisation admin can open the Portfolio Planner.'); return; }
@@ -858,9 +864,10 @@ export function onPortfolioPlannerBarPointerDown(e){
   if(!project) return;
 
   // "no dates" placeholder bars have nothing to drag from — same as the Dashboard's chart, clicking
-  // one always opens the dates modal directly.
+  // one opens the dates modal (delayed — see scheduleBarSingleClick — so a double-click can still
+  // cancel this and open Resources instead).
   if(role === 'click-only'){
-    openPortfolioPlannerProjectDatesModal(projectId);
+    scheduleBarSingleClick(projectId);
     return;
   }
 
@@ -938,7 +945,7 @@ function onPortfolioPlannerDragEnd(){
   _plannerDrag = null;
 
   if(!d.moved){
-    openPortfolioPlannerProjectDatesModal(d.projectId);
+    scheduleBarSingleClick(d.projectId);
     return;
   }
 
@@ -949,6 +956,30 @@ function onPortfolioPlannerDragEnd(){
   var endVal = toServerDateOnly(newEndDate);
 
   applyProjectDatesUpdate(d.projectId, startVal, endVal);
+}
+
+// Delays a plain click's "open Dates modal" action just long enough for a genuine double-click's
+// second click to arrive and cancel it (see onPortfolioPlannerBarDblClick) — always clears any
+// already-pending timer first, so at most one is ever outstanding regardless of how quickly repeat
+// clicks land, and a dblclick landing anywhere in that window cleanly cancels exactly the right one.
+function scheduleBarSingleClick(projectId){
+  if(_plannerClickTimer) clearTimeout(_plannerClickTimer);
+  _plannerClickTimer = setTimeout(function(){
+    _plannerClickTimer = null;
+    openPortfolioPlannerProjectDatesModal(projectId);
+  }, PLANNER_CLICK_DELAY_MS);
+}
+
+// Double-clicking any project bar (dated or the "no dates" placeholder) opens Resources instead of
+// Dates — cancels whichever single-click Dates-modal open is currently pending (native dblclick fires
+// after both clicks' own mousedown/mouseup/click cycles, so by this point exactly one such timer is
+// always the outstanding one, per scheduleBarSingleClick's own always-clear-first behavior) so the
+// Dates modal never flashes open first.
+export function onPortfolioPlannerBarDblClick(e){
+  var target = e.target.closest ? e.target.closest('[data-project-id]') : null;
+  if(!target) return;
+  if(_plannerClickTimer){ clearTimeout(_plannerClickTimer); _plannerClickTimer = null; }
+  openPortfolioPlannerResourcesModal(target.getAttribute('data-project-id'));
 }
 
 /* Minimal fallback for browsers/environments without window.CSS.escape (project ids are GUIDs, so
