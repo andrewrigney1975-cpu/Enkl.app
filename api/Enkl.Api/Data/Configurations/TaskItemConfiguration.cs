@@ -71,3 +71,26 @@ public class TaskAuditLogEntryConfiguration : IEntityTypeConfiguration<TaskAudit
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+public class TaskCommentConfiguration : IEntityTypeConfiguration<TaskComment>
+{
+    public void Configure(EntityTypeBuilder<TaskComment> b)
+    {
+        b.HasKey(c => c.Id);
+        b.Property(c => c.Text).IsRequired();
+        b.Property(c => c.AuthorName).HasMaxLength(200).IsRequired();
+
+        b.HasOne(c => c.Task)
+            .WithMany(t => t.Comments)
+            .HasForeignKey(c => c.TaskId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Nullable, SetNull — removing a member must not break existing comments (AuthorName's
+        // creation-time snapshot keeps the comment attributable regardless), same resilience pattern
+        // as Risk.OwnerId/Document.OwnerId.
+        b.HasOne(c => c.Author)
+            .WithMany()
+            .HasForeignKey(c => c.AuthorId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+}

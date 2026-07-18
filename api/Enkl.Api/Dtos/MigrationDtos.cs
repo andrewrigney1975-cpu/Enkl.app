@@ -28,6 +28,12 @@ public record ImportDecisionDto(
     List<string>? DocumentIds, List<string>? RiskIds, List<string>? PrincipleIds, List<string>? ObjectiveIds,
     string? DateCreated, string? DateLastModified);
 public record ImportAuditLogEntryDto(string? Timestamp, string Field, string? OldValue, string? NewValue);
+/// <summary>AuthorId is the local (pre-migration) member id — remapped through the same
+/// memberByOldId dictionary used for Document/Risk/Release OwnerId (MigrationEntityBuilder.cs).
+/// AuthorName is carried through as a plain snapshot string exactly as the local comment stored it
+/// (a local-only project has no "live" author identity to re-resolve from at migration time, same
+/// reasoning as ImportMemberDto.Name being a plain string rather than a User reference).</summary>
+public record ImportCommentDto(string Id, string Text, string? DateCreated, string? AuthorId, string? AuthorName);
 
 public record ImportTaskNodeDto(
     string Id, string Key, string Title, string? Description, string Priority, string Column,
@@ -35,8 +41,8 @@ public record ImportTaskNodeDto(
     string? DocumentationUrl, string? DateCreated, string? DateLastModified, string? DateDone,
     string? StartDate, string? EndDate, int? BusinessValue, int? TaskCost, int Progress,
     decimal? EstimatedEffort, decimal? ActualEffort, bool Archived,
-    List<string>? DependsOn, List<ImportAuditLogEntryDto>? AuditLog, string? ParentKey,
-    List<ImportTaskNodeDto>? Subtasks);
+    List<string>? DependsOn, List<ImportAuditLogEntryDto>? AuditLog, List<ImportCommentDto>? Comments,
+    string? ParentKey, List<ImportTaskNodeDto>? Subtasks);
 
 public record MigrationImportRequest(
     string OrganisationName,

@@ -47,6 +47,7 @@ public class TaskService
             .Take(pageSize)
             .Include(t => t.Dependencies)
             .Include(t => t.AuditLog)
+            .Include(t => t.Comments)
             .ToListAsync();
 
         var items = pageEntities.Select(ProjectService.ToTaskDto).ToList();
@@ -203,6 +204,7 @@ public class TaskService
             .AsNoTracking()
             .Include(t => t.Dependencies)
             .Include(t => t.AuditLog)
+            .Include(t => t.Comments)
             .FirstAsync(t => t.Id == taskId);
         return ProjectService.ToTaskDto(task);
     }

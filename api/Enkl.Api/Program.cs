@@ -93,6 +93,7 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<ColumnService>();
 builder.Services.AddScoped<TaskService>();
+builder.Services.AddScoped<TaskCommentService>();
 builder.Services.AddScoped<MigrationOrganisationResolver>();
 builder.Services.AddScoped<MigrationEntityBuilder>();
 builder.Services.AddScoped<MigrationService>();

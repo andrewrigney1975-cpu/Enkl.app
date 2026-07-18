@@ -4813,6 +4813,117 @@
     font-size: 11px;
   }
 
+  .kf-comments-section {
+    margin-top: 4px;
+    border-top: 1px solid var(--kf-border);
+    padding-top: 10px;
+  }
+
+  .kf-comments-section.kf-vis-hidden {
+    display: none;
+  }
+
+  .kf-comments-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .kf-comments-sort-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--kf-text-secondary);
+    padding: 2px 4px;
+  }
+
+  .kf-comments-sort-btn:hover {
+    color: var(--kf-blue);
+  }
+
+  .kf-comments-sort-btn .kf-icon {
+    transition: transform .15s ease;
+  }
+
+  .kf-comments-sort-btn.kf-comments-sort-desc .kf-icon {
+    transform: rotate(180deg);
+  }
+
+  .kf-comments-list {
+    max-height: 260px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .kf-comment-entry {
+    font-size: 12px;
+    padding: 8px 10px;
+    background: var(--kf-column-bg);
+    border-radius: var(--kf-radius);
+  }
+
+  .kf-comment-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .kf-comment-entry-author {
+    font-weight: 600;
+    color: var(--kf-text);
+  }
+
+  .kf-comment-entry-time {
+    color: var(--kf-text-faint);
+    font-size: 11px;
+    flex: 1;
+  }
+
+  .kf-comment-entry-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  .kf-comment-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--kf-text-faint);
+    display: flex;
+    padding: 2px;
+  }
+
+  .kf-comment-action-btn:hover {
+    color: var(--kf-blue);
+  }
+
+  .kf-comment-entry-text {
+    color: var(--kf-text-secondary);
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  .kf-comments-input {
+    width: 100%;
+    resize: vertical;
+  }
+
+  .kf-comments-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
   .kf-empty-note {
     padding: 10px;
     color: var(--kf-text-faint);

@@ -1353,12 +1353,50 @@ export function addTask(project, data){
        immediately rather than staying null until some later edit. */
     dateDone: col.done ? now : null,
     auditLog: [],
+    comments: [],
     parentTaskId: data.parentTaskId || null
   };
   project.tasks[t.id] = t;
   col.order.push(t.id);
   saveDB();
   return t.id;
+}
+
+/* Local-only path — no session identity to enforce against, so (unlike the server, which always
+   derives AuthorId/AuthorName server-side) this trusts whatever authorId/authorName the caller
+   (modals/task.js's member-picker for a local-only project) hands it, same "everything is trusted
+   locally" convention as every other local-mode mutation. */
+export function addTaskComment(project, task, authorId, authorName, text){
+  var trimmed = (text || '').trim();
+  if(!trimmed) return null;
+  if(!Array.isArray(task.comments)) task.comments = [];
+  var comment = {
+    id: uid('comment'),
+    text: trimmed.slice(0, 4000),
+    dateCreated: new Date().toISOString(),
+    authorId: authorId || null,
+    authorName: authorName || ''
+  };
+  task.comments.push(comment);
+  saveDB();
+  return comment;
+}
+export function updateTaskComment(project, task, commentId, text){
+  var trimmed = (text || '').trim();
+  if(!trimmed) return null;
+  var comment = (task.comments || []).filter(function(c){ return c.id === commentId; })[0];
+  if(!comment) return null;
+  comment.text = trimmed.slice(0, 4000);
+  saveDB();
+  return comment;
+}
+export function deleteTaskComment(project, task, commentId){
+  if(!Array.isArray(task.comments)) return false;
+  var before = task.comments.length;
+  task.comments = task.comments.filter(function(c){ return c.id !== commentId; });
+  if(task.comments.length === before) return false;
+  saveDB();
+  return true;
 }
 
 /* Returns null on success, or {allowed:false, message} if a workflow-

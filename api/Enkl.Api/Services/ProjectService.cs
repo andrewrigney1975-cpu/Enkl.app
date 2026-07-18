@@ -51,6 +51,7 @@ public class ProjectService
             .Include(p => p.Columns)
             .Include(p => p.Tasks).ThenInclude(t => t.Dependencies)
             .Include(p => p.Tasks).ThenInclude(t => t.AuditLog)
+            .Include(p => p.Tasks).ThenInclude(t => t.Comments)
             .Include(p => p.Releases)
             .Include(p => p.TaskTypes)
             .Include(p => p.Principles)
@@ -318,7 +319,11 @@ public class ProjectService
         t.DateCreated, t.DateLastModified, t.DateDone, t.StartDate, t.EndDate,
         t.BusinessValue, t.TaskCost, t.Progress, t.EstimatedEffort, t.ActualEffort, t.Archived,
         t.Dependencies.Select(d => d.DependsOnTaskId).ToList(),
-        t.AuditLog.Select(a => new TaskAuditLogEntryDto(a.Id, a.Timestamp, a.Field, a.OldValue, a.NewValue, a.ChangedBy)).ToList());
+        t.AuditLog.Select(a => new TaskAuditLogEntryDto(a.Id, a.Timestamp, a.Field, a.OldValue, a.NewValue, a.ChangedBy)).ToList(),
+        // Server-side order is a sensible default (oldest first) — the frontend's own sort toggle is
+        // what actually controls display order, this just avoids leaving it as unspecified/EF-natural-
+        // order the way AuditLog above does (a known parity nuance, not one worth replicating here).
+        t.Comments.OrderBy(c => c.DateCreated).Select(c => new TaskCommentDto(c.Id, c.Text, c.DateCreated, c.AuthorId, c.AuthorName)).ToList());
 
     public static RetrospectiveDto ToRetrospectiveDto(Retrospective r) => new(
         r.Id, r.Key, r.ReleaseId, r.Team, r.Background, r.RetroDate, r.LastTimerDurationSeconds,

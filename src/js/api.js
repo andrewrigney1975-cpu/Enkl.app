@@ -97,6 +97,17 @@ export function getOrgName(){
   return (payload && payload.orgName) || null;
 }
 
+/* The logged-in user's own id (JWT "sub" claim) — used to resolve "which ProjectMember row is me" for
+   auto-stamping Task Comment authorship (project.members[].userId, see features/migration.js), same
+   display-only trust model as every other decode here: the server independently derives the real
+   author from the caller's own ProjectMembers row, this is never sent as the author itself. */
+export function getCurrentUserId(){
+  var token = getToken();
+  if(!token) return null;
+  var payload = decodeTokenPayload(token);
+  return (payload && payload.sub) || null;
+}
+
 /* Whether the API tier behind /health is currently reachable — used to hide "Migrate to Server" (see
    views/board.js's renderToolbar) when there's no backend to migrate to, whichever tier (.NET or PHP,
    both expose the identical GET /health at their own root — see web/nginx.conf) happens to be
@@ -366,6 +377,23 @@ function makeEntityApi(resource){
 }
 
 export var taskApi = makeEntityApi('tasks');
+
+/* Comments are nested under a specific task (not a flat per-project entity), so they don't fit
+   makeEntityApi's single-{resource} shape — POST/PUT/DELETE /projects/{projectId}/tasks/{taskId}/comments[/{commentId}],
+   see TaskCommentsController.cs for the definitive route list. AuthorId/AuthorName are always derived
+   server-side from the caller's own session; the request body is just {text}. */
+export var taskCommentApi = {
+  create: function(projectId, taskId, text){
+    return apiFetch('/projects/' + projectId + '/tasks/' + taskId + '/comments', {method: 'POST', body: JSON.stringify({text: text})});
+  },
+  update: function(projectId, taskId, commentId, text){
+    return apiFetch('/projects/' + projectId + '/tasks/' + taskId + '/comments/' + commentId, {method: 'PUT', body: JSON.stringify({text: text})});
+  },
+  remove: function(projectId, taskId, commentId){
+    return apiFetch('/projects/' + projectId + '/tasks/' + taskId + '/comments/' + commentId, {method: 'DELETE'});
+  }
+};
+
 export var releaseApi = makeEntityApi('releases');
 export var taskTypeApi = makeEntityApi('task-types');
 export var principleApi = makeEntityApi('principles');

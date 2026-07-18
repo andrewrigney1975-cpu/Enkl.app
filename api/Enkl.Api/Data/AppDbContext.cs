@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<TaskDependency> TaskDependencies => Set<TaskDependency>();
     public DbSet<TaskAuditLogEntry> TaskAuditLogEntries => Set<TaskAuditLogEntry>();
+    public DbSet<TaskComment> TaskComments => Set<TaskComment>();
     public DbSet<Release> Releases => Set<Release>();
     public DbSet<TaskType> TaskTypes => Set<TaskType>();
     public DbSet<Document> Documents => Set<Document>();

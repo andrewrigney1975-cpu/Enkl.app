@@ -90,7 +90,7 @@ final class MigrationService
             $decisionByOldId = $this->createDecisions($request['decisions'] ?? [], $projectId, $memberByOldId, $taskByOldId);
 
             // Phase 2: relational wiring, now every old-id/key -> new-entity map exists.
-            $this->wireTaskRelations($flatTasks, $taskByKey);
+            $this->wireTaskRelations($flatTasks, $taskByKey, $memberByOldId);
             $this->wireDocumentRelations($request['documents'] ?? [], $documentByOldId);
             $this->wireRiskRelations($request['risks'] ?? [], $riskByOldId, $documentByOldId, $principleByOldId, $objectiveByOldId);
             $this->wireObjectiveRelations($request['objectives'] ?? [], $objectiveByOldId, $principleByOldId);
@@ -408,13 +408,17 @@ final class MigrationService
         return [$byOldId, $byKey, $maxCounter];
     }
 
-    private function wireTaskRelations(array $flatTasks, array $taskByKey): void
+    private function wireTaskRelations(array $flatTasks, array $taskByKey, array $memberByOldId): void
     {
         $parentStmt = $this->db->prepare('UPDATE "Tasks" SET "ParentTaskId" = :parentId WHERE "Id" = :id');
         $depStmt = $this->db->prepare('INSERT INTO "TaskDependencies" ("TaskId", "DependsOnTaskId") VALUES (:tid, :did)');
         $auditStmt = $this->db->prepare(<<<SQL
             INSERT INTO "TaskAuditLogEntries" ("Id", "TaskId", "Timestamp", "Field", "OldValue", "NewValue")
             VALUES (:id, :taskId, :timestamp, :field, :oldValue, :newValue)
+        SQL);
+        $commentStmt = $this->db->prepare(<<<SQL
+            INSERT INTO "TaskComments" ("Id", "TaskId", "Text", "DateCreated", "AuthorId", "AuthorName")
+            VALUES (:id, :taskId, :text, :dateCreated, :authorId, :authorName)
         SQL);
 
         foreach ($flatTasks as $t) {
@@ -438,6 +442,15 @@ final class MigrationService
                     'id' => Uuid::v4(), 'taskId' => $taskId,
                     'timestamp' => $this->parseDateTime($entry['timestamp'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
                     'field' => $entry['field'], 'oldValue' => $entry['oldValue'] ?? null, 'newValue' => $entry['newValue'] ?? null,
+                ]);
+            }
+
+            foreach ($t['comments'] ?? [] as $c) {
+                $commentStmt->execute([
+                    'id' => Uuid::v4(), 'taskId' => $taskId, 'text' => $c['text'],
+                    'dateCreated' => $this->parseDateTime($c['dateCreated'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                    'authorId' => $memberByOldId[$c['authorId'] ?? ''] ?? null,
+                    'authorName' => $c['authorName'] ?? '',
                 ]);
             }
         }

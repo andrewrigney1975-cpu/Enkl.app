@@ -6,7 +6,7 @@ import { clampTaskScore, clampProgress, clampEffortHours, utcISOToLocalDateValue
 import { iconSvg } from '../icons.js';
 import { PRIORITY_ORDER } from '../config.js';
 import { escapeHTML, renderBoard, fitBoardForTaskModal, restoreBoardAfterTaskModal } from '../views/board.js';
-import { addTask, updateTask, deleteTask, normalizeDocumentationUrl, getAuditFieldLabel, setTaskSubtasks } from '../mutations.js';
+import { addTask, updateTask, deleteTask, normalizeDocumentationUrl, getAuditFieldLabel, setTaskSubtasks, addTaskComment, updateTaskComment, deleteTaskComment } from '../mutations.js';
 import { normalizeHeaderButtonVisibility, isSubTasksEnabled } from '../storage.js';
 import { confirmDialog } from './confirm.js';
 import { getReachableColumnIds, evaluateColumnMove } from '../features/workflow-engine.js';
@@ -14,8 +14,9 @@ import { encryptText } from '../features/crypto.js';
 import { openSetPrivateKeyModal } from './private-key-set.js';
 import { openUnlockPrivateTaskModal } from './private-key-unlock.js';
 import { setTaskHash, clearTaskHash } from '../features/hash-router.js';
-import { taskApi } from '../api.js';
+import { taskApi, taskCommentApi, getCurrentUserId } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+import { canCurrentUserManageProject } from '../views/board.js';
 import { createRichTextEditor } from '../rich-text/editor.js';
 
 // Lazily created on first populateFullForm() call and reused for the whole app session — the task
@@ -230,6 +231,8 @@ function populateFullForm(project, task, descriptionValue){
   renderSubtaskPicker(project);
   renderDependencyPicker();
   renderAuditTrail(project, task);
+  resetCommentComposer();
+  renderComments(project, task);
   document.getElementById('taskOverlay').classList.remove('hidden');
   fitBoardForTaskModal();
   document.getElementById('taskTitleInput').focus();
@@ -308,6 +311,208 @@ export function toggleAuditTrail(){
   var wasHidden = body.classList.contains('kf-vis-hidden');
   body.classList.toggle('kf-vis-hidden', !wasHidden);
   document.getElementById('taskAuditChevron').classList.toggle('expanded', wasHidden);
+}
+
+/* Comments — ephemeral, module-level UI state (sort direction, which comment is mid-edit), reset to
+   defaults every time the task modal opens (resetCommentComposer), same as Audit Trail's collapse
+   state already does. Sort defaults ASC (oldest first) per the request. */
+var commentsSortDesc = false;
+var editingCommentId = null;
+
+function resetCommentComposer(){
+  commentsSortDesc = false;
+  editingCommentId = null;
+  document.getElementById('taskCommentInput').value = '';
+  document.getElementById('taskCommentSubmitBtn').textContent = 'Add Comment';
+  document.getElementById('taskCommentCancelEditBtn').classList.add('kf-vis-hidden');
+}
+
+/* Whether the current viewer could plausibly edit this comment — purely a display convenience for
+   deciding which icon buttons to render; the server independently re-derives and enforces the real
+   author-only rule on every request (see TaskCommentService.cs). A local-only project has no session
+   identity at all, so (same "everything is trusted locally" convention as every other local-mode
+   permission gate in this app) every comment is editable there. */
+function commentCanEdit(project, comment){
+  if(!isServerAuthoritative(project)) return true;
+  var myUserId = getCurrentUserId();
+  if(!myUserId) return false;
+  var myMember = (project.members || []).filter(function(m){ return m.userId === myUserId; })[0];
+  return !!(myMember && comment.authorId === myMember.id);
+}
+/* Author OR Project/Org Admin (moderation) — mirrors the server's DeleteAsync fallback. */
+function commentCanDelete(project, comment){
+  if(commentCanEdit(project, comment)) return true;
+  return canCurrentUserManageProject();
+}
+
+function renderTaskCommentEntry(project, comment){
+  var canEdit = commentCanEdit(project, comment);
+  var canDelete = commentCanDelete(project, comment);
+  var actions = '';
+  if(canEdit){
+    actions += '<button type="button" class="kf-comment-action-btn" data-action="edit" data-id="' + comment.id + '" aria-label="Edit comment">' + iconSvg('edit', 13) + '</button>';
+  }
+  if(canDelete){
+    actions += '<button type="button" class="kf-comment-action-btn" data-action="delete" data-id="' + comment.id + '" aria-label="Delete comment">' + iconSvg('trash', 13) + '</button>';
+  }
+  return '<div class="kf-comment-entry" data-comment-id="' + comment.id + '">' +
+    '<div class="kf-comment-entry-header">' +
+      '<span class="kf-comment-entry-author">' + escapeHTML(comment.authorName || 'Unknown') + '</span>' +
+      '<span class="kf-comment-entry-time">' + escapeHTML(utcISOToLocalDisplayDateTime(comment.dateCreated)) + '</span>' +
+      '<span class="kf-comment-entry-actions">' + actions + '</span>' +
+    '</div>' +
+    '<div class="kf-comment-entry-text">' + escapeHTML(comment.text) + '</div>' +
+  '</div>';
+}
+
+/* Local-only projects have no login concept, so the "posting as" identity can't be auto-derived the
+   way a server-authoritative project's getCurrentUserId()/project.members[].userId match does —
+   shown as a required member-picker instead (see the plan's Author decision). */
+function renderTaskCommentAuthorPicker(project){
+  var row = document.getElementById('taskCommentAuthorRow');
+  var select = document.getElementById('taskCommentAuthorSelect');
+  if(isServerAuthoritative(project)){
+    row.classList.add('kf-vis-hidden');
+    return;
+  }
+  row.classList.remove('kf-vis-hidden');
+  var prevValue = select.value;
+  select.innerHTML = '';
+  (project.members || []).forEach(function(m){
+    var opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name;
+    select.appendChild(opt);
+  });
+  if(prevValue && (project.members || []).some(function(m){ return m.id === prevValue; })){
+    select.value = prevValue;
+  }
+}
+
+export function renderComments(project, task){
+  var section = document.getElementById('taskCommentsSection');
+  if(!task){
+    section.classList.add('kf-vis-hidden');
+    return;
+  }
+  section.classList.remove('kf-vis-hidden');
+
+  var entries = (Array.isArray(task.comments) ? task.comments.slice() : []).sort(function(a, b){
+    var d = new Date(a.dateCreated).getTime() - new Date(b.dateCreated).getTime();
+    return commentsSortDesc ? -d : d;
+  });
+
+  document.getElementById('taskCommentsCount').textContent = entries.length > 0 ? '(' + entries.length + ')' : '';
+  document.getElementById('taskCommentsSortLabel').textContent = commentsSortDesc ? 'Newest first' : 'Oldest first';
+  document.getElementById('taskCommentsSortBtn').classList.toggle('kf-comments-sort-desc', commentsSortDesc);
+
+  var list = document.getElementById('taskCommentsList');
+  list.innerHTML = entries.length === 0
+    ? '<div class="kf-empty-note">No comments yet.</div>'
+    : entries.map(function(c){ return renderTaskCommentEntry(project, c); }).join('');
+
+  Array.prototype.forEach.call(list.querySelectorAll('.kf-comment-action-btn'), function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-id');
+      if(btn.getAttribute('data-action') === 'edit') startEditTaskComment(id);
+      else deleteTaskCommentFromModal(id);
+    });
+  });
+
+  renderTaskCommentAuthorPicker(project);
+}
+
+export function toggleCommentsSortOrder(){
+  commentsSortDesc = !commentsSortDesc;
+  var project = getCurrentProject();
+  renderComments(project, project.tasks[ui.editingTaskId]);
+}
+
+function startEditTaskComment(commentId){
+  var project = getCurrentProject();
+  var task = project.tasks[ui.editingTaskId];
+  var comment = (task.comments || []).filter(function(c){ return c.id === commentId; })[0];
+  if(!comment) return;
+  editingCommentId = commentId;
+  document.getElementById('taskCommentInput').value = comment.text;
+  document.getElementById('taskCommentInput').focus();
+  document.getElementById('taskCommentSubmitBtn').textContent = 'Update Comment';
+  document.getElementById('taskCommentCancelEditBtn').classList.remove('kf-vis-hidden');
+}
+
+export function cancelEditTaskComment(){
+  resetCommentComposer();
+}
+
+export async function submitTaskComment(){
+  var project = getCurrentProject();
+  var task = project.tasks[ui.editingTaskId];
+  if(!task) return;
+  var text = document.getElementById('taskCommentInput').value;
+  if(!text.trim()){
+    toast('Please enter comment text.');
+    return;
+  }
+
+  if(isServerAuthoritative(project)){
+    try {
+      if(editingCommentId){
+        await taskCommentApi.update(project.serverProjectId, task.id, editingCommentId, text);
+      } else {
+        await taskCommentApi.create(project.serverProjectId, task.id, text);
+      }
+      var wasEdit = !!editingCommentId;
+      var refreshed = await refreshProjectFromServer(project.id);
+      resetCommentComposer();
+      renderComments(refreshed, refreshed.tasks[task.id]);
+      toast(wasEdit ? 'Comment updated.' : 'Comment added.');
+    } catch(e){
+      toast('Could not save comment on the server: ' + (e.message || 'unknown error'));
+    }
+    return;
+  }
+
+  var authorSelect = document.getElementById('taskCommentAuthorSelect');
+  var authorMember = (project.members || []).filter(function(m){ return m.id === authorSelect.value; })[0];
+  if(!authorMember){
+    toast('Please select who is posting this comment.');
+    return;
+  }
+
+  if(editingCommentId){
+    updateTaskComment(project, task, editingCommentId, text);
+  } else {
+    addTaskComment(project, task, authorMember.id, authorMember.name, text);
+  }
+  resetCommentComposer();
+  renderComments(project, task);
+}
+
+function deleteTaskCommentFromModal(commentId){
+  var project = getCurrentProject();
+  var task = project.tasks[ui.editingTaskId];
+  if(!task) return;
+  confirmDialog(
+    'Delete comment?',
+    'This will permanently remove this comment.',
+    async function(){
+      if(isServerAuthoritative(project)){
+        try {
+          await taskCommentApi.remove(project.serverProjectId, task.id, commentId);
+          var refreshed = await refreshProjectFromServer(project.id);
+          if(editingCommentId === commentId) resetCommentComposer();
+          renderComments(refreshed, refreshed.tasks[task.id]);
+          toast('Comment deleted.');
+        } catch(e){
+          toast('Could not delete comment on the server: ' + (e.message || 'unknown error'));
+        }
+        return;
+      }
+      deleteTaskComment(project, task, commentId);
+      if(editingCommentId === commentId) resetCommentComposer();
+      renderComments(project, task);
+    }
+  );
 }
 
 export function updatePriorityIcon(){

@@ -34,6 +34,7 @@ use Enkl\Api\Controllers\SavedQueriesController;
 use Enkl\Api\Controllers\SamlController;
 use Enkl\Api\Controllers\ScimGroupsController;
 use Enkl\Api\Controllers\ScimUsersController;
+use Enkl\Api\Controllers\TaskCommentsController;
 use Enkl\Api\Controllers\TasksController;
 use Enkl\Api\Controllers\TaskTypesController;
 use Enkl\Api\Controllers\TeamsCommitteesController;
@@ -232,6 +233,12 @@ function registerRoutes(App $app): void
         })->add(ProjectAdminMiddleware::class);
 
         registerEntityRoutes($group, '/tasks', TasksController::class, 'taskId');
+        // Comments are nested under a specific task (not a flat per-project entity, so they don't fit
+        // registerEntityRoutes' single-{idParam} shape) — POST/PUT/DELETE mirror
+        // TaskCommentsController.cs's route exactly.
+        $group->post('/tasks/{taskId}/comments', [TaskCommentsController::class, 'create']);
+        $group->put('/tasks/{taskId}/comments/{commentId}', [TaskCommentsController::class, 'update']);
+        $group->delete('/tasks/{taskId}/comments/{commentId}', [TaskCommentsController::class, 'delete']);
         registerEntityRoutes($group, '/releases', ReleasesController::class, 'id');
         registerEntityRoutes($group, '/task-types', TaskTypesController::class, 'id');
         registerEntityRoutes($group, '/principles', PrinciplesController::class, 'id');

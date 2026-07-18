@@ -24,6 +24,16 @@ public record ColumnDto(Guid Id, string Name, bool Done, string? Color, int Orde
 
 public record TaskAuditLogEntryDto(Guid Id, DateTime Timestamp, string Field, string? OldValue, string? NewValue, string? ChangedBy);
 
+/// <summary>AuthorName is the creation-time display-name snapshot (TaskComment.AuthorName) — always
+/// present even if AuthorId later goes null (the member was removed). See TaskComment's own doc
+/// comment.</summary>
+public record TaskCommentDto(Guid Id, string Text, DateTime DateCreated, Guid? AuthorId, string AuthorName);
+/// <summary>No AuthorId field — a comment's author is always derived server-side from the caller's
+/// own ProjectMembers row, never accepted from the client (§4's standing "never trust the client's id
+/// list" rule).</summary>
+public record CreateTaskCommentRequest(string Text);
+public record UpdateTaskCommentRequest(string Text);
+
 public record TaskDto(
     Guid Id, string Key, string Title, string? Description, string Priority,
     Guid ColumnId, Guid? AssigneeId, Guid? ReleaseId, Guid? TypeId, Guid? ParentTaskId, string? DocumentationUrl,
@@ -31,7 +41,7 @@ public record TaskDto(
     DateOnly? StartDate, DateOnly? EndDate,
     int? BusinessValue, int? TaskCost, int Progress,
     decimal? EstimatedEffort, decimal? ActualEffort, bool Archived,
-    List<Guid> DependsOnTaskIds, List<TaskAuditLogEntryDto> AuditLog);
+    List<Guid> DependsOnTaskIds, List<TaskAuditLogEntryDto> AuditLog, List<TaskCommentDto> Comments);
 
 public record ReleaseDto(Guid Id, string Name, string Status, Guid? OwnerId, DateOnly? StartDate, DateOnly? EndDate);
 public record TaskTypeDto(Guid Id, string Name, string? IconName);
