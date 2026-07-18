@@ -12,13 +12,14 @@ import { confirmDialog } from './confirm.js';
 import { riskApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 import { createRichTextEditor } from '../rich-text/editor.js';
+import { getProjectHashtags } from '../features/hashtags.js';
 
 // Lazily created on first showRisksFormView() call and reused for the whole app session — same
 // pattern as modals/task.js's taskDescEditor.
 var riskDescEditor = null;
 function getRiskDescEditor(){
   if(!riskDescEditor){
-    riskDescEditor = createRichTextEditor(document.getElementById('riskDescEditor'), document.getElementById('riskDescToolbar'), { maxLength: 4000 });
+    riskDescEditor = createRichTextEditor(document.getElementById('riskDescEditor'), document.getElementById('riskDescToolbar'), { maxLength: 4000, getHashtags: function(){ return getProjectHashtags(getCurrentProject()); } });
   }
   return riskDescEditor;
 }

@@ -12,13 +12,14 @@ import { confirmDialog } from './confirm.js';
 import { teamCommitteeApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 import { createRichTextEditor } from '../rich-text/editor.js';
+import { getProjectHashtags } from '../features/hashtags.js';
 
 // Lazily created on first showTeamCommitteeFormView() call and reused for the whole app session —
 // same pattern as modals/task.js's taskDescEditor.
 var tcDescEditor = null;
 function getTcDescEditor(){
   if(!tcDescEditor){
-    tcDescEditor = createRichTextEditor(document.getElementById('tcDescEditor'), document.getElementById('tcDescToolbar'), { maxLength: 4000 });
+    tcDescEditor = createRichTextEditor(document.getElementById('tcDescEditor'), document.getElementById('tcDescToolbar'), { maxLength: 4000, getHashtags: function(){ return getProjectHashtags(getCurrentProject()); } });
   }
   return tcDescEditor;
 }

@@ -11,13 +11,14 @@ import { confirmDialog } from './confirm.js';
 import { principleApi, organisationPrincipleApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 import { createRichTextEditor } from '../rich-text/editor.js';
+import { getProjectHashtags } from '../features/hashtags.js';
 
 // Lazily created on first showPrinciplesFormView() call and reused for the whole app session — same
 // pattern as modals/task.js's taskDescEditor.
 var principleDescEditor = null;
 function getPrincipleDescEditor(){
   if(!principleDescEditor){
-    principleDescEditor = createRichTextEditor(document.getElementById('principleDescEditor'), document.getElementById('principleDescToolbar'), { maxLength: 4000 });
+    principleDescEditor = createRichTextEditor(document.getElementById('principleDescEditor'), document.getElementById('principleDescToolbar'), { maxLength: 4000, getHashtags: function(){ return getProjectHashtags(getCurrentProject()); } });
   }
   return principleDescEditor;
 }

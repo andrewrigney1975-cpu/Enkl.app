@@ -12,6 +12,7 @@ import { scheduleDocumentSuggestions, disposeDocumentSuggestionWorker } from '..
 import { documentApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 import { createRichTextEditor } from '../rich-text/editor.js';
+import { getProjectHashtags } from '../features/hashtags.js';
 
 // Lazily created on first showDocumentsFormView() call and reused for the whole app session — same
 // pattern as modals/task.js's taskDescEditor (see its comment for why "create once, reuse via
@@ -19,7 +20,7 @@ import { createRichTextEditor } from '../rich-text/editor.js';
 var documentDescEditor = null;
 function getDocumentDescEditor(){
   if(!documentDescEditor){
-    documentDescEditor = createRichTextEditor(document.getElementById('documentDescEditor'), document.getElementById('documentDescToolbar'), { maxLength: 1000 });
+    documentDescEditor = createRichTextEditor(document.getElementById('documentDescEditor'), document.getElementById('documentDescToolbar'), { maxLength: 1000, getHashtags: function(){ return getProjectHashtags(getCurrentProject()); } });
   }
   return documentDescEditor;
 }

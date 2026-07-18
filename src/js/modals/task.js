@@ -18,6 +18,7 @@ import { taskApi, taskCommentApi, getCurrentUserId } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 import { canCurrentUserManageProject } from '../views/board.js';
 import { createRichTextEditor } from '../rich-text/editor.js';
+import { getProjectHashtags } from '../features/hashtags.js';
 
 // Lazily created on first populateFullForm() call and reused for the whole app session — the task
 // modal's DOM subtree is static (closeTaskModal only toggles #taskOverlay's hidden class, it never
@@ -27,7 +28,7 @@ import { createRichTextEditor } from '../rich-text/editor.js';
 var taskDescEditor = null;
 function getTaskDescEditor(){
   if(!taskDescEditor){
-    taskDescEditor = createRichTextEditor(document.getElementById('taskDescEditor'), document.getElementById('taskDescToolbar'), { maxLength: 4000 });
+    taskDescEditor = createRichTextEditor(document.getElementById('taskDescEditor'), document.getElementById('taskDescToolbar'), { maxLength: 4000, getHashtags: function(){ return getProjectHashtags(getCurrentProject()); } });
   }
   return taskDescEditor;
 }

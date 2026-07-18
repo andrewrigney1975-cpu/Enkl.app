@@ -7,13 +7,18 @@ import { renderAll, escapeHTML } from '../views/board.js';
 import { checkProjectAlerts } from '../features/session-alerts.js';
 import { isServerAuthoritative, isServerLoggedIn, createProjectOnServer, updateProjectOnServer, fetchTemplatesFromServer } from '../features/migration.js';
 import { createRichTextEditor } from '../rich-text/editor.js';
+import { getProjectHashtags } from '../features/hashtags.js';
 
 // Lazily created on first openProjectModal() call and reused for the whole app session — same
 // pattern as modals/task.js's taskDescEditor.
 var projectDescEditor = null;
 function getProjectDescEditor(){
   if(!projectDescEditor){
-    projectDescEditor = createRichTextEditor(document.getElementById('projectDescEditor'), document.getElementById('projectDescToolbar'), { maxLength: 4000 });
+    // Whatever project is currently open (state.db.currentProjectId) — for a brand-new project
+    // (mode !== 'edit') that's whichever project was open before this modal, or none at all, in
+    // which case getProjectHashtags(null) just returns an empty list; the callback is only ever
+    // invoked lazily while typing, never at editor-creation time.
+    projectDescEditor = createRichTextEditor(document.getElementById('projectDescEditor'), document.getElementById('projectDescToolbar'), { maxLength: 4000, getHashtags: function(){ return getProjectHashtags(state.db.projects[state.db.currentProjectId] || null); } });
   }
   return projectDescEditor;
 }

@@ -12,13 +12,14 @@ import { confirmDialog } from './confirm.js';
 import { decisionApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 import { createRichTextEditor } from '../rich-text/editor.js';
+import { getProjectHashtags } from '../features/hashtags.js';
 
 // Lazily created on first showDecisionsFormView() call and reused for the whole app session — same
 // pattern as modals/task.js's taskDescEditor.
 var decisionDescEditor = null;
 function getDecisionDescEditor(){
   if(!decisionDescEditor){
-    decisionDescEditor = createRichTextEditor(document.getElementById('decisionDescEditor'), document.getElementById('decisionDescToolbar'), { maxLength: 4000 });
+    decisionDescEditor = createRichTextEditor(document.getElementById('decisionDescEditor'), document.getElementById('decisionDescToolbar'), { maxLength: 4000, getHashtags: function(){ return getProjectHashtags(getCurrentProject()); } });
   }
   return decisionDescEditor;
 }

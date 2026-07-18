@@ -10,13 +10,14 @@ import { confirmDialog } from './confirm.js';
 import { objectiveApi } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 import { createRichTextEditor } from '../rich-text/editor.js';
+import { getProjectHashtags } from '../features/hashtags.js';
 
 // Lazily created on first showObjectivesFormView() call and reused for the whole app session — same
 // pattern as modals/task.js's taskDescEditor.
 var objectiveDescEditor = null;
 function getObjectiveDescEditor(){
   if(!objectiveDescEditor){
-    objectiveDescEditor = createRichTextEditor(document.getElementById('objectiveDescEditor'), document.getElementById('objectiveDescToolbar'), { maxLength: 4000 });
+    objectiveDescEditor = createRichTextEditor(document.getElementById('objectiveDescEditor'), document.getElementById('objectiveDescToolbar'), { maxLength: 4000, getHashtags: function(){ return getProjectHashtags(getCurrentProject()); } });
   }
   return objectiveDescEditor;
 }

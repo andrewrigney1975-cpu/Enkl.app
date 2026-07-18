@@ -1,5 +1,6 @@
 "use strict";
 import { escapeHTML } from '../utils.js';
+import { HASHTAG_SCAN_RE, hashtagChipHtml } from '../features/hashtags.js';
 
 /* =========================================================
    MARKDOWN <-> HTML — a hand-rolled, deliberately scoped conversion pair (not a full CommonMark
@@ -41,6 +42,12 @@ function inlineNodeToMarkdown(node){
   if(tag === 'STRONG' || tag === 'B') return '**' + inlineChildrenToMarkdown(node) + '**';
   if(tag === 'EM' || tag === 'I') return '*' + inlineChildrenToMarkdown(node) + '*';
   if(tag === 'A') return '[' + inlineChildrenToMarkdown(node) + '](' + (node.getAttribute('href') || '') + ')';
+  // A hashtag chip (features/hashtags.js's hashtagChipHtml) round-trips back to its plain "#name"
+  // text — checked before the generic fallback below, which would otherwise just read the chip's
+  // own "#name" text content anyway (harmless here since it happens to match), but relying on that
+  // coincidence would silently break the moment the chip's rendered content ever diverges from its
+  // data-hashtag attribute (e.g. a future "show tag usage count" badge inside the chip).
+  if(tag === 'SPAN' && node.hasAttribute && node.hasAttribute('data-hashtag')) return '#' + node.getAttribute('data-hashtag');
   // Any other inline wrapper shouldn't occur (only toolbar commands ever write into this DOM), but
   // recurse into its children defensively rather than silently dropping content.
   return inlineChildrenToMarkdown(node);
@@ -137,14 +144,20 @@ function applyBoldItalic(text){
 var NUL = String.fromCharCode(0);
 var LINK_PLACEHOLDER_RE = new RegExp(NUL + '(\\d+)' + NUL, 'g');
 
-/* Applies link, then bold/italic, to one already-escaped line/segment of text. Links are extracted
-   into placeholder tokens first and swapped back in AFTER the bold/italic pass, rather than letting
-   bold/italic run over the whole string including freshly-generated <a> markup - otherwise a stray
-   asterisk inside a URL (query strings do this) could be wrongly consumed as formatting syntax
-   spanning across the tag boundary. */
+// A distinct control character from the link placeholder's NUL above, so the two placeholder
+// schemes can never collide with (or be mistaken for) each other during restoration.
+var SOH = String.fromCharCode(1);
+var HASHTAG_PLACEHOLDER_RE = new RegExp(SOH + '(\\d+)' + SOH, 'g');
+
+/* Applies link, then hashtag, then bold/italic, to one already-escaped line/segment of text. Links
+   and hashtags are both extracted into placeholder tokens first and swapped back in AFTER the
+   bold/italic pass, rather than letting bold/italic run over the whole string including freshly-
+   generated <a>/chip markup - otherwise a stray asterisk inside a URL (query strings do this), or a
+   plain "*" character that happens to sit right next to a chip, could be wrongly consumed as
+   formatting syntax spanning across a tag boundary. */
 function inlineToHtml(text){
   var links = [];
-  var withPlaceholders = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(match, label, url){
+  var withLinkPlaceholders = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(match, label, url){
     var html;
     if(SAFE_URL_RE.test(url)){
       html = '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + applyBoldItalic(label) + '</a>';
@@ -157,9 +170,21 @@ function inlineToHtml(text){
     return NUL + (links.length - 1) + NUL;
   });
 
-  var withFormatting = applyBoldItalic(withPlaceholders);
+  // Boundary-aware (see features/hashtags.js's HASHTAG_SCAN_RE doc comment): only a "#name" that
+  // starts a line or follows whitespace is a hashtag, so "issue#42" in prose is left alone. The
+  // leading boundary character itself is preserved in the replacement, only the "#name" part becomes
+  // a placeholder.
+  var tags = [];
+  var withHashtagPlaceholders = withLinkPlaceholders.replace(HASHTAG_SCAN_RE, function(match, lead, tag){
+    tags.push(hashtagChipHtml(tag));
+    return lead + SOH + (tags.length - 1) + SOH;
+  });
 
-  return withFormatting.replace(LINK_PLACEHOLDER_RE, function(m, idx){ return links[idx]; });
+  var withFormatting = applyBoldItalic(withHashtagPlaceholders);
+
+  return withFormatting
+    .replace(HASHTAG_PLACEHOLDER_RE, function(m, idx){ return tags[idx]; })
+    .replace(LINK_PLACEHOLDER_RE, function(m, idx){ return links[idx]; });
 }
 
 function blockToHtml(block){
