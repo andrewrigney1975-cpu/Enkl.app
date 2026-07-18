@@ -3491,6 +3491,25 @@
     padding: 16px;
   }
 
+  /* Relationship highlighting (modals/project-search.js's handleSchemaErdClick) — clicking a table
+     or connector dims everything not connected to it down to 10% opacity. Tables get a pointer
+     cursor since they're the more obviously-clickable of the two (a thin connector line relies on
+     schema-erd.js's own fat invisible hit-path instead of a cursor cue). Transition is on both
+     classes so dimming AND un-dimming (whitespace click) animate the same way. */
+  .kf-erd-table,
+  .kf-erd-edge {
+    transition: opacity 0.15s ease;
+  }
+
+  .kf-erd-table {
+    cursor: pointer;
+  }
+
+  .kf-erd-table.kf-erd-dimmed,
+  .kf-erd-edge.kf-erd-dimmed {
+    opacity: 0.1;
+  }
+
   .kf-query-saved-panel {
     max-height: 360px;
     overflow: auto;

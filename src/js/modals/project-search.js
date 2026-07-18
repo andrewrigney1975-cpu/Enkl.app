@@ -471,6 +471,66 @@ export function toggleProjectQuerySchemaPanel(){
 }
 
 /* =========================================================
+   ERD RELATIONSHIP HIGHLIGHTING
+   Click a table -> everything not connected to it (by any relationship) dims to 25% opacity (a 75%
+   dim, per the ask). Click a relationship connector -> only its own two tables and that one edge
+   stay at full opacity, everything else dims, INCLUDING other edges between that same table pair
+   (dimming is scoped to "this one connector", not "every connector touching either endpoint"). Click
+   whitespace (the scroll container's own background, or the SVG canvas outside any table/edge) ->
+   clears back to the fully-visible starting state. Dimming is a single `.kf-erd-dimmed` CSS class
+   (styles.css) applied per <g class="kf-erd-table"|"kf-erd-edge"> element — schema-erd.js is what
+   stamps those data-table/data-from/data-to attributes on, so this file never has to re-derive the
+   diagram's own layout/adjacency, only read what's already in the DOM.
+   ========================================================= */
+function clearSchemaErdHighlight(){
+  var inner = document.getElementById('projectQuerySchemaErdInner');
+  if(!inner) return;
+  inner.querySelectorAll('.kf-erd-dimmed').forEach(function(el){ el.classList.remove('kf-erd-dimmed'); });
+}
+
+function highlightSchemaErdTable(tableName){
+  var inner = document.getElementById('projectQuerySchemaErdInner');
+  if(!inner) return;
+  var connected = {};
+  connected[tableName] = true;
+  inner.querySelectorAll('.kf-erd-edge').forEach(function(edge){
+    var from = edge.getAttribute('data-from'), to = edge.getAttribute('data-to');
+    if(from === tableName) connected[to] = true;
+    if(to === tableName) connected[from] = true;
+  });
+  inner.querySelectorAll('.kf-erd-table').forEach(function(box){
+    box.classList.toggle('kf-erd-dimmed', !connected[box.getAttribute('data-table')]);
+  });
+  inner.querySelectorAll('.kf-erd-edge').forEach(function(edge){
+    var from = edge.getAttribute('data-from'), to = edge.getAttribute('data-to');
+    edge.classList.toggle('kf-erd-dimmed', !(from === tableName || to === tableName));
+  });
+}
+
+function highlightSchemaErdEdge(edgeEl){
+  var inner = document.getElementById('projectQuerySchemaErdInner');
+  if(!inner) return;
+  var from = edgeEl.getAttribute('data-from'), to = edgeEl.getAttribute('data-to');
+  var relIndex = edgeEl.getAttribute('data-rel-index');
+  inner.querySelectorAll('.kf-erd-table').forEach(function(box){
+    var name = box.getAttribute('data-table');
+    box.classList.toggle('kf-erd-dimmed', !(name === from || name === to));
+  });
+  inner.querySelectorAll('.kf-erd-edge').forEach(function(edge){
+    edge.classList.toggle('kf-erd-dimmed', edge.getAttribute('data-rel-index') !== relIndex);
+  });
+}
+
+export function handleSchemaErdClick(e){
+  if(erdZoomState.panMoved) return;
+  var edge = e.target.closest('.kf-erd-edge');
+  if(edge){ highlightSchemaErdEdge(edge); return; }
+  var table = e.target.closest('.kf-erd-table');
+  if(table){ highlightSchemaErdTable(table.getAttribute('data-table')); return; }
+  clearSchemaErdHighlight();
+}
+
+/* =========================================================
    SAVED QUERY LIBRARY
    Shared, project-scoped entity (local-only: project.savedQueries in localStorage; server-
    authoritative: SavedQueries table, one shared list every project member sees) — same

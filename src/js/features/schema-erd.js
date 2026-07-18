@@ -15,6 +15,12 @@ import { escapeHTML } from '../utils.js';
    truth the query engine itself reads from — so this diagram can never drift out of sync with what's
    actually queryable; there is no separate "diagram data" to maintain. Generated fresh every time the
    panel opens (buildSchemaErdSvg() has no cached state), not a static asset.
+
+   Every table box is a `<g class="kf-erd-table" data-table="name">` and every relationship is a
+   `<g class="kf-erd-edge" data-rel-index data-from data-to">` (paired invisible-fat-hitbox +
+   visible-thin-line paths, since the real stroke is only 1.2px) so modals/project-search.js's click
+   handler (handleSchemaErdClick) can dim/un-dim by selector alone — no separate id-lookup table to
+   keep in sync with the layout.
    ========================================================= */
 
 var BOX_WIDTH = 210;
@@ -118,7 +124,42 @@ function fieldRowY(box, fieldName){
   return box.y + HEADER_HEIGHT + BOX_PADDING_TOP + idx * ROW_HEIGHT + ROW_HEIGHT * 0.72;
 }
 
-/* Orthogonal (right-angle elbow) connector, built as a plain polyline — no curves.
+// Fillet radius applied to every elbow's angled corners (all 90°, since every segment this diagram
+// draws is purely horizontal or vertical) — purely cosmetic, softens the classic hard-cornered ERD
+// look without touching any of the lane/corridor math above it.
+var CORNER_RADIUS = 4;
+
+/* Turns a plain polyline (an array of [x, y] points) into an SVG path string whose interior corners
+   are rounded to CORNER_RADIUS — a quadratic Bezier (`Q`) at each interior point, using the corner
+   itself as the control point (so the curve stays tangent to both adjacent segments, the standard
+   "fillet" construction for an axis-aligned polyline). `r` is clamped to half of whichever adjacent
+   segment is shorter so a fillet can never eat past a neighboring corner on a short elbow leg (e.g.
+   the tight self-loop brackets), degrading gracefully to a sharp corner (r=0) rather than
+   overshooting into a visible kink. */
+function roundedPolylinePath(points){
+  var d = 'M ' + points[0][0] + ' ' + points[0][1];
+  for(var i = 1; i < points.length - 1; i++){
+    var prev = points[i - 1], curr = points[i], next = points[i + 1];
+    var inLen = Math.hypot(curr[0] - prev[0], curr[1] - prev[1]);
+    var outLen = Math.hypot(next[0] - curr[0], next[1] - curr[1]);
+    var r = Math.min(CORNER_RADIUS, inLen / 2, outLen / 2);
+    if(r <= 0){
+      d += ' L ' + curr[0] + ' ' + curr[1];
+      continue;
+    }
+    var p1x = curr[0] - (curr[0] - prev[0]) / inLen * r;
+    var p1y = curr[1] - (curr[1] - prev[1]) / inLen * r;
+    var p2x = curr[0] + (next[0] - curr[0]) / outLen * r;
+    var p2y = curr[1] + (next[1] - curr[1]) / outLen * r;
+    d += ' L ' + p1x + ' ' + p1y + ' Q ' + curr[0] + ' ' + curr[1] + ' ' + p2x + ' ' + p2y;
+  }
+  var last = points[points.length - 1];
+  d += ' L ' + last[0] + ' ' + last[1];
+  return d;
+}
+
+/* Orthogonal (right-angle elbow) connector, rounded at each bend via roundedPolylinePath() above —
+   still no curves in the routing itself, purely a cosmetic fillet on top of the same polyline.
    - `offset` is this edge's lane position within its CORRIDOR group (see corridorKey() and the
      grouping pass in buildSchemaErdSvg()) — a multiple of LANE_GAP — so every edge sharing a
      physical corridor gets its own parallel track through it.
@@ -138,7 +179,7 @@ function buildElbowPath(fromBox, fromField, toBox, toField, offset, entryOffset)
     // the box's own right edge, from the FK field's row back up to the id row.
     var y2self = fieldRowY(toBox, toField);
     var loopX = fromRight + 16 + offset;
-    return 'M ' + fromRight + ' ' + y1 + ' L ' + loopX + ' ' + y1 + ' L ' + loopX + ' ' + y2self + ' L ' + fromRight + ' ' + y2self;
+    return roundedPolylinePath([[fromRight, y1], [loopX, y1], [loopX, y2self], [fromRight, y2self]]);
   }
 
   var y2 = toBox.y + HEADER_HEIGHT / 2 + entryOffset;
@@ -147,17 +188,17 @@ function buildElbowPath(fromBox, fromField, toBox, toField, offset, entryOffset)
     // Target sits to the right — horizontal out, one vertical bend at the corridor midpoint, then
     // horizontal into the target's left edge.
     var midX = (fromRight + toLeft) / 2 + offset;
-    return 'M ' + fromRight + ' ' + y1 + ' L ' + midX + ' ' + y1 + ' L ' + midX + ' ' + y2 + ' L ' + toLeft + ' ' + y2;
+    return roundedPolylinePath([[fromRight, y1], [midX, y1], [midX, y2], [toLeft, y2]]);
   }
   if(toRight <= fromBox.x){
     // Target sits to the left — mirror image of the above.
     var midXLeft = (fromBox.x + toRight) / 2 + offset;
-    return 'M ' + fromBox.x + ' ' + y1 + ' L ' + midXLeft + ' ' + y1 + ' L ' + midXLeft + ' ' + y2 + ' L ' + toRight + ' ' + y2;
+    return roundedPolylinePath([[fromBox.x, y1], [midXLeft, y1], [midXLeft, y2], [toRight, y2]]);
   }
   // Same column (stacked vertically) — route out to the right of whichever box, down/up past it,
   // then back in, rather than a straight line that would cut through anything stacked in between.
   var detourX = Math.max(fromRight, toRight) + 16 + offset;
-  return 'M ' + fromRight + ' ' + y1 + ' L ' + detourX + ' ' + y1 + ' L ' + detourX + ' ' + y2 + ' L ' + toRight + ' ' + y2;
+  return roundedPolylinePath([[fromRight, y1], [detourX, y1], [detourX, y2], [toRight, y2]]);
 }
 
 /* Field names ending in Id/Ids (plus the literal "id") are highlighted as key-ish — a simple, always-
@@ -219,8 +260,15 @@ export function buildSchemaErdSvg(){
 
     var path = buildElbowPath(fromBox, rel.fromField, toBox, rel.toField, offset, entryOffset);
     var title = rel.from + '.' + rel.fromField + ' → ' + rel.to + '.' + rel.toField;
-    return '<path d="' + path + '" fill="none" stroke="var(--kf-text-faint)" stroke-width="1.2" opacity="0.6" marker-end="url(#kf-erd-arrow)"><title>' +
-      escapeHTML(title) + '</title></path>';
+    // Two coincident paths per relationship: a fat, invisible one purely to widen the clickable hit
+    // area (the visible stroke is only 1.2px, far too thin to reliably click), and the real visible
+    // one on top. Both share data-from/data-to so a click handler's `closest('.kf-erd-edge')` finds
+    // the group regardless of which of the two paths the pointer actually lands on.
+    return '<g class="kf-erd-edge" data-rel-index="' + i + '" data-from="' + escapeHTML(rel.from) + '" data-to="' + escapeHTML(rel.to) + '">' +
+      '<path d="' + path + '" fill="none" stroke="transparent" stroke-width="10"></path>' +
+      '<path d="' + path + '" fill="none" stroke="var(--kf-text-faint)" stroke-width="1.2" opacity="0.6" marker-end="url(#kf-erd-arrow)"><title>' +
+      escapeHTML(title) + '</title></path>' +
+    '</g>';
   }).join('');
 
   var boxesHTML = Object.keys(pos).sort().map(function(name){
@@ -231,7 +279,7 @@ export function buildSchemaErdSvg(){
       return '<text x="' + (box.x + 8) + '" y="' + y + '" font-size="9.5" font-weight="' + (keyish ? '700' : '400') + '" fill="' + (keyish ? 'var(--kf-blue)' : 'var(--kf-text-secondary)') + '">' + escapeHTML(f) + '</text>';
     }).join('');
     return (
-      '<g>' +
+      '<g class="kf-erd-table" data-table="' + escapeHTML(name) + '">' +
         '<rect x="' + box.x + '" y="' + box.y + '" width="' + box.w + '" height="' + box.h + '" rx="5" fill="var(--kf-surface)" stroke="var(--kf-border-strong)" stroke-width="1.2"></rect>' +
         '<path d="M ' + box.x + ' ' + (box.y + 5) + ' a 5 5 0 0 1 5 -5 h ' + (box.w - 10) + ' a 5 5 0 0 1 5 5 v ' + (HEADER_HEIGHT - 5) + ' h -' + box.w + ' Z" fill="var(--kf-blue)"></path>' +
         '<text x="' + (box.x + 8) + '" y="' + (box.y + 15) + '" font-size="11" font-weight="700" fill="#ffffff">' + escapeHTML(name) + '</text>' +
