@@ -1216,6 +1216,68 @@
     right: 724px;
   }
 
+  /* Desktop full-screen chat (views/chat.js's isChatFullscreenOpen/toggleChatFullscreen) — a pure
+     CSS state toggle on the existing panel, same convention as the Tables & Columns ERD panel's own
+     #projectQuerySchemaPanel.kf-erd-fullscreen: no separate overlay/modal element, no second copy of
+     the thread/picker markup. z-index matches the mobile full-screen tier below. */
+  .kf-chat-panel.kf-chat-fullscreen {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    border: none;
+    z-index: 1200;
+  }
+
+  /* "Open in New Tab" (#chatOpenNewTabBtn) only makes sense from the small windowed panel — once
+     already full screen there's nothing left to open a second copy of. */
+  .kf-chat-panel.kf-chat-fullscreen #chatOpenNewTabBtn {
+    display: none;
+  }
+
+  /* Full screen covers the whole viewport regardless of the docked task panel — it's no longer a
+     small floating panel that needs to dodge it, so this must out-specificity the rule above. */
+  body.kf-task-panel-docked .kf-chat-panel.kf-chat-fullscreen {
+    right: 0;
+  }
+
+  .kf-chat-fullscreen-body {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .kf-chat-fullscreen-rail {
+    width: 280px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--kf-border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .kf-chat-fullscreen-rail .kf-chat-channel-row.kf-chat-channel-row-active {
+    background: var(--kf-hover-tint);
+  }
+
+  .kf-chat-fullscreen-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .kf-chat-fullscreen-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--kf-text-faint);
+  }
+
   .kf-chat-panel-header {
     display: flex;
     align-items: center;
@@ -1636,6 +1698,20 @@
     .kf-chat-bubble {
       bottom: 16px;
       right: 16px;
+    }
+
+    /* Two-pane full screen doesn't fit a narrow viewport, and mobile already gets its own
+       full-screen single-pane takeover above regardless of this flag — hide the toggle so it can't
+       be entered here, and collapse the rail defensively in the rare case a user resizes down into
+       mobile width while already in full screen without closing chat first. "Open in New Tab"
+       promises the same two-pane full-screen experience, so it's hidden alongside it. */
+    #chatFullscreenBtn,
+    #chatOpenNewTabBtn {
+      display: none;
+    }
+
+    .kf-chat-fullscreen-rail {
+      display: none;
     }
   }
 

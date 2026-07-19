@@ -26,8 +26,8 @@ import { parseTaskKeyFromHash, findTaskByKey, clearTaskHash } from './features/h
 import { exportProjectJSON, setExportToast } from './features/export.js';
 import { migrateProjectToServer, loginToServer, completeSsoLogin, changePasswordOnServer, isServerLoggedIn, isServerAuthoritative, pullServerProjectsIntoLocal, deleteProjectOnServer, setMigrationToast } from './features/migration.js';
 import { connectEventStream, disconnectEventStream } from './features/live-updates.js';
-import { initChat, resetChatState, closeChatPanel, isChatPanelOpen } from './features/chat.js';
-import { initChatView, toggleChatPanel, chatBackClicked, updateChatBubbleVisibility } from './views/chat.js';
+import { initChat, resetChatState, openChatPanel, closeChatPanel, isChatPanelOpen } from './features/chat.js';
+import { initChatView, toggleChatPanel, chatBackClicked, updateChatBubbleVisibility, isChatFullscreenOpen, openChatFullscreen, toggleChatFullscreen, closeChatFullscreen } from './views/chat.js';
 import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck, setImportToast, setImportRenderAll, setImportResetFilters } from './features/import.js';
 import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder } from './features/session-alerts.js';
 import { setBulkEditDeps, openBulkEditOverlay, closeBulkEditOverlay, isBulkEditOverlayOpen, saveBulkEditChanges } from './features/bulk-edit.js';
@@ -1231,6 +1231,7 @@ function wireEvents(){
       connectEventStream();
       initChat();
       updateChatBubbleVisibility();
+      openChatFullscreenFromQueryParamIfPresent();
       pullServerProjectsIntoLocal().then(function(count){
         renderAll();
         if(count > 0) toast('Loaded ' + count + ' project(s) from the server.');
@@ -1703,12 +1704,35 @@ function wireEvents(){
     else if(isMobileDrawerOpen()) closeMobileDrawer();
     else if(isUfoModalOpen()) closeUfoModal();
     else if(isOpeningExperienceModalOpen()) closeOpeningExperienceModal();
+    else if(isChatFullscreenOpen()) closeChatFullscreen();
     else if(isChatPanelOpen()) closeChatPanel();
   });
 
   document.getElementById('chatBubbleBtn').addEventListener('click', toggleChatPanel);
   document.getElementById('chatCloseBtn').addEventListener('click', closeChatPanel);
   document.getElementById('chatBackBtn').addEventListener('click', chatBackClicked);
+  document.getElementById('chatFullscreenBtn').addEventListener('click', toggleChatFullscreen);
+  document.getElementById('chatOpenNewTabBtn').addEventListener('click', function(){
+    window.open(window.location.pathname + '?chat=fullscreen', '_blank');
+  });
+}
+
+/* Chat's "Open in New Tab" button (#chatOpenNewTabBtn, views/chat.js) opens a second tab at this
+   same URL + "?chat=fullscreen" — checked here on every startup path that can result in a
+   logged-in session (an already-logged-in reload, an interactive login, and an SSO callback, i.e.
+   every initChat() call site) so the new tab lands straight in full-screen chat regardless of which
+   path it took. The marker is stripped from the address bar immediately, same "don't leave a
+   one-shot deep link sitting around" rule as clearTaskHash, so a later manual reload of this same
+   tab doesn't reopen chat every time. */
+function openChatFullscreenFromQueryParamIfPresent(){
+  if(!isServerLoggedIn()) return;
+  var params = new URLSearchParams(window.location.search);
+  if(params.get('chat') !== 'fullscreen') return;
+  params.delete('chat');
+  var newSearch = params.toString();
+  history.replaceState(null, '', window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash);
+  openChatPanel();
+  openChatFullscreen();
 }
 
 /* =========================================================
@@ -1757,6 +1781,7 @@ function handleSsoCallbackIfPresent(){
     connectEventStream();
     initChat();
     updateChatBubbleVisibility();
+    openChatFullscreenFromQueryParamIfPresent();
     pullServerProjectsIntoLocal().then(function(count){
       renderAll();
       if(count > 0) toast('Loaded ' + count + ' project(s) from the server.');
@@ -1800,6 +1825,7 @@ function init(){
   if(isServerLoggedIn()){
     connectEventStream();
     initChat();
+    openChatFullscreenFromQueryParamIfPresent();
     pullServerProjectsIntoLocal().then(function(count){
       if(count > 0) renderAll();
     });

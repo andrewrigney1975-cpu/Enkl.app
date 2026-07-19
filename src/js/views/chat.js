@@ -168,55 +168,135 @@ function updateChatBubbleBadge(){
   badge.classList.toggle('kf-vis-hidden', count === 0);
 }
 
+/* Full-screen chat: a pure CSS state toggle (see #chatPanel.kf-chat-fullscreen in styles.css),
+   same convention as the Tables & Columns ERD panel's own full-screen mode
+   (modals/project-search.js's erdFullscreenActive/isProjectQueryErdFullscreenOpen) — no separate
+   overlay/modal element, no second copy of the thread/picker markup to keep in sync. The flag lives
+   here (not in features/chat.js's chatState) since it's a pure view/display concern, matching where
+   this file's other view-only state (_pendingEditMessageId, _newChatPicker) already lives. Never
+   persists across a close/reopen — renderChatPanel() resets it the moment the panel is hidden, same
+   as the ERD toggle never remembering fullscreen across a fresh open. */
+var _chatFullscreen = false;
+
+export function isChatFullscreenOpen(){
+  return _chatFullscreen;
+}
+
+function updateFullscreenButtonState(){
+  var btn = document.getElementById('chatFullscreenBtn');
+  if(!btn) return;
+  var icon = btn.querySelector('.kf-icon');
+  if(icon){
+    icon.setAttribute('data-icon', _chatFullscreen ? 'collapse' : 'expand');
+    hydrateIcons(btn);
+  }
+  btn.title = _chatFullscreen ? 'Exit Full Screen' : 'Full Screen';
+}
+
+export function openChatFullscreen(){
+  if(_chatFullscreen) return;
+  _chatFullscreen = true;
+  updateFullscreenButtonState();
+  renderChatPanel();
+}
+
+export function closeChatFullscreen(){
+  if(!_chatFullscreen) return;
+  _chatFullscreen = false;
+  updateFullscreenButtonState();
+  renderChatPanel();
+}
+
+export function toggleChatFullscreen(){
+  if(_chatFullscreen) closeChatFullscreen(); else openChatFullscreen();
+}
+
 export function renderChatPanel(){
   updateChatBubbleBadge();
   var panel = document.getElementById('chatPanel');
   if(!panel) return;
   panel.classList.toggle('hidden', !isChatPanelOpen());
   closeReactionPopover();
-  if(!isChatPanelOpen()) return;
+  if(!isChatPanelOpen()){
+    _chatFullscreen = false;
+    return;
+  }
+  panel.classList.toggle('kf-chat-fullscreen', _chatFullscreen);
+  updateFullscreenButtonState();
 
   var body = document.getElementById('chatPanelBody');
   var title = document.getElementById('chatPanelTitle');
   var backBtn = document.getElementById('chatBackBtn');
 
+  // Same three-way branch as before full screen existed — it still decides the contextual title
+  // and whether "back" would apply, just no longer writes straight into `body`/`backBtn` itself
+  // (that happens once, below, so both the docked and full-screen layouts share this logic).
+  var titleText, showBack, mainHtml, wireMain;
   if(chatState.newChatPickerOpen){
-    backBtn.classList.remove('kf-vis-hidden');
-    title.textContent = _newChatPicker.isDirectMessage ? 'New direct message' : 'New channel';
-    body.innerHTML = newChatPickerHtml();
-    wireNewChatPicker(body);
+    titleText = _newChatPicker.isDirectMessage ? 'New direct message' : 'New channel';
+    showBack = true;
+    mainHtml = newChatPickerHtml();
+    wireMain = wireNewChatPicker;
   } else if(chatState.activeChannelId){
-    // A re-render can be triggered by an incoming SSE message while the user is mid-sentence in the
-    // compose box (this whole panel re-renders wholesale, no partial DOM diffing anywhere in this
-    // app — see CLAUDE.md's "no client-side framework" convention) — preserve whatever's already
-    // typed (and the caret position, and any in-progress edit) across that rebuild rather than
-    // silently discarding it.
-    var oldInput = document.getElementById('chatComposeInput');
-    var preserved = oldInput ? {value: oldInput.value, selStart: oldInput.selectionStart, selEnd: oldInput.selectionEnd} : null;
-    closeIntellisenseDropdown();
-
-    backBtn.classList.remove('kf-vis-hidden');
-    title.textContent = channelDisplayName(findChannel(chatState.activeChannelId));
-    body.innerHTML = threadHtml(chatState.activeChannelId);
-    wireThread(body, chatState.activeChannelId);
-    if(preserved && preserved.value){
-      var newInput = document.getElementById('chatComposeInput');
-      if(newInput){
-        newInput.value = preserved.value;
-        newInput.setSelectionRange(preserved.selStart, preserved.selEnd);
-      }
-      if(_pendingEditMessageId){
-        document.getElementById('chatCancelEditBtn').classList.remove('kf-vis-hidden');
-        document.getElementById('chatSendBtn').textContent = 'Save';
-      }
-    }
-    scrollMessagesToBottomIfNeeded(body);
+    titleText = channelDisplayName(findChannel(chatState.activeChannelId));
+    showBack = true;
+    mainHtml = threadHtml(chatState.activeChannelId);
+    wireMain = function(root){ wireThread(root, chatState.activeChannelId); };
   } else {
-    backBtn.classList.add('kf-vis-hidden');
-    title.textContent = 'Chat';
-    body.innerHTML = channelListHtml();
-    wireChannelList(body);
+    titleText = 'Chat';
+    showBack = false;
+    // In full screen the rail already shows the channel list permanently, so the main pane gets a
+    // simple empty state instead of a second copy of it.
+    mainHtml = _chatFullscreen ? '<div class="kf-chat-fullscreen-empty">Select a chat to get started.</div>' : channelListHtml();
+    wireMain = _chatFullscreen ? null : wireChannelList;
   }
+
+  title.textContent = titleText;
+  // The rail replaces "back" entirely in full screen — you click a different row instead.
+  backBtn.classList.toggle('kf-vis-hidden', !showBack || _chatFullscreen);
+
+  // A re-render can be triggered by an incoming SSE message while the user is mid-sentence in the
+  // compose box (this whole panel re-renders wholesale, no partial DOM diffing anywhere in this
+  // app — see CLAUDE.md's "no client-side framework" convention) — preserve whatever's already
+  // typed (and the caret position, and any in-progress edit) across that rebuild rather than
+  // silently discarding it. ID-based lookup, so it works unchanged regardless of how deeply
+  // #chatComposeInput ends up nested (plain body vs. the full-screen main pane below).
+  var oldInput = document.getElementById('chatComposeInput');
+  var preserved = oldInput ? {value: oldInput.value, selStart: oldInput.selectionStart, selEnd: oldInput.selectionEnd} : null;
+  closeIntellisenseDropdown();
+
+  if(_chatFullscreen){
+    body.innerHTML =
+      '<div class="kf-chat-fullscreen-body">' +
+        '<div class="kf-chat-fullscreen-rail">' + channelListHtml() + '</div>' +
+        '<div class="kf-chat-fullscreen-main">' + mainHtml + '</div>' +
+      '</div>';
+    var rail = body.querySelector('.kf-chat-fullscreen-rail');
+    var main = body.querySelector('.kf-chat-fullscreen-main');
+    wireChannelList(rail);
+    if(wireMain) wireMain(main);
+    if(chatState.activeChannelId){
+      var activeRow = rail.querySelector('.kf-chat-channel-row[data-channel-id="' + chatState.activeChannelId + '"]');
+      if(activeRow) activeRow.classList.add('kf-chat-channel-row-active');
+    }
+  } else {
+    body.innerHTML = mainHtml;
+    if(wireMain) wireMain(body);
+  }
+
+  if(chatState.activeChannelId && preserved && preserved.value){
+    var newInput = document.getElementById('chatComposeInput');
+    if(newInput){
+      newInput.value = preserved.value;
+      newInput.setSelectionRange(preserved.selStart, preserved.selEnd);
+    }
+    if(_pendingEditMessageId){
+      document.getElementById('chatCancelEditBtn').classList.remove('kf-vis-hidden');
+      document.getElementById('chatSendBtn').textContent = 'Save';
+    }
+  }
+  if(chatState.activeChannelId) scrollMessagesToBottomIfNeeded(body);
+
   hydrateIcons(body);
 }
 
