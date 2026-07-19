@@ -20,6 +20,21 @@ use Psr\Http\Message\ServerRequestInterface as Request;
  * POLL_SECONDS — see Realtime/Broadcaster.php for the publish side. A dedicated PDO connection
  * (Database::newConnection(), never the shared per-request singleton) is still used, same as the
  * Postgres tiers, since this stream lives far longer than an ordinary request.
+ *
+ * **Bounded duration (MAX_STREAM_SECONDS), specifically for commercial shared-hosting
+ * compatibility**: a genuinely unbounded "hours-long" stream (what the Postgres tiers' own
+ * LISTEN/NOTIFY-based version does, and what an earlier version of this file also did) relies on
+ * `set_time_limit(0)` actually working — shared-hosting PHP-FPM/CGI pools almost universally
+ * enforce their own hard per-request execution-time ceiling that a script cannot override (this is
+ * deliberate on the host's part, protecting shared resources), and will simply kill the process
+ * once that ceiling is hit regardless of what the script requested. Rather than fight that (or
+ * silently break on hosts where it isn't overridable), this stream deliberately ends itself cleanly
+ * well before any plausible host ceiling and returns a normal response. **This needed zero frontend
+ * changes**: `features/live-updates.js`'s `connectLoop()` already treats a cleanly-closed stream
+ * (`chunk.done`) as "reconnect" (`scheduleReconnect()`), and resets its backoff to
+ * `RECONNECT_MIN_DELAY_MS` (2s) on every successful connection — so a bounded-duration stream here
+ * just means the client silently reconnects every `MAX_STREAM_SECONDS` + ~2s, indistinguishable to
+ * the user from a single long-lived connection. No polling contract change, no new endpoint.
  */
 final class EventsController extends BaseController
 {
@@ -36,6 +51,11 @@ final class EventsController extends BaseController
     // design decision to accept a small steady per-connection query instead of MariaDB's total lack
     // of a LISTEN/NOTIFY-equivalent push primitive.
     private const POLL_SECONDS = 2;
+
+    // Comfortably under even a conservative shared-hosting execution-time ceiling (commonly
+    // 30-300s) — see this class's own doc comment for why the stream ends itself here rather than
+    // relying on set_time_limit(0) to actually take effect.
+    private const MAX_STREAM_SECONDS = 20;
 
     public function stream(Request $request, Response $response, array $args): Response
     {
@@ -55,7 +75,10 @@ final class EventsController extends BaseController
         header('X-Accel-Buffering: no');
         flush();
 
-        set_time_limit(0);
+        // No set_time_limit(0) here — deliberately unnecessary now that the loop below always exits
+        // well under any plausible host ceiling on its own, and some shared hosts disable
+        // set_time_limit() entirely (via disable_functions) as a hardening measure, which would
+        // otherwise raise a warning/notice for no benefit.
         ignore_user_abort(false);
 
         $db = Database::newConnection();
@@ -64,10 +87,11 @@ final class EventsController extends BaseController
         // the Postgres tiers for free.
         $lastSeenId = (int) ($db->query('SELECT COALESCE(MAX("Id"), 0) FROM "Events"')->fetchColumn() ?: 0);
         $lastHeartbeat = time();
+        $streamStartedAt = time();
         $this->markPresent($userId);
 
         try {
-            while (!connection_aborted()) {
+            while (!connection_aborted() && (time() - $streamStartedAt) < self::MAX_STREAM_SECONDS) {
                 $stmt = $db->prepare('SELECT "Id", "Channel", "Payload" FROM "Events" WHERE "Id" > :lastSeenId ORDER BY "Id" LIMIT 100');
                 $stmt->execute(['lastSeenId' => $lastSeenId]);
                 $found = false;

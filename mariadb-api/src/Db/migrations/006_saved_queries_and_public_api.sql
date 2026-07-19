@@ -77,14 +77,26 @@ CREATE TABLE "QueryContext" (
     "ProjectId" CHAR(36) NOT NULL
 ) ENGINE=InnoDB;
 
--- PublicQueryExecutionService (all three tiers) executes a saved query's SQL text as this dedicated,
+-- PublicQueryExecutionService (all three tiers) executes a saved query's SQL text as a dedicated,
 -- SELECT-only user — never the app's own high-privilege DB user — so it can see nothing except the
--- views below. Unlike Postgres's CREATE ROLE (needing a pg_roles-checked DO-block to be idempotent),
--- MariaDB's CREATE USER IF NOT EXISTS is natively idempotent, no workaround needed. The dev password
--- here MUST match the literal in Db/Database.php's publicQueryConnection() default and this tier's
--- own .env.example — same "duplicated-by-necessity constant" situation as the other two tiers' own
--- copies of this password; a real deployment overrides it via env, same as the main DB password.
-CREATE USER IF NOT EXISTS 'enkl_public_query'@'%' IDENTIFIED BY 'enkl_public_query_dev_password';
+-- views below.
+--
+-- **This migration deliberately does NOT create that user or GRANT it anything** (unlike this
+-- migration's own earlier revision, and unlike php-api's Postgres equivalent, which uses a
+-- pg_roles-checked DO-block to idempotently CREATE ROLE). Reason: on ordinary VPS/dedicated hosting
+-- the app's own DB user has CREATE USER/GRANT privileges and this could run automatically — but on
+-- commercial shared hosting (the environment this split was made for), the app's DB user is
+-- deliberately scoped to ONE database with no server-level privileges at all, so a `CREATE USER`
+-- statement here would just fail the whole migration outright. Creating the second, low-privilege
+-- account is therefore a **manual, one-time, operator-performed step** — see
+-- DEPLOYMENT-MARIADB.md's "Shared hosting" appendix for the exact steps (create the user via the
+-- host's control panel, grant it SELECT — typically only available at whole-database granularity
+-- on a shared-hosting panel, a real reduction from the previous per-view GRANT design, called out
+-- there explicitly — then set DB_PUBLIC_QUERY_USER/DB_PUBLIC_QUERY_PASSWORD in .env to match).
+-- On a VPS/dedicated host where the app's DB user DOES have CREATE USER/GRANT privileges, the
+-- operator can still just run the two statements by hand once, e.g.:
+--   CREATE USER IF NOT EXISTS 'enkl_public_query'@'%' IDENTIFIED BY '<a-real-password>';
+--   GRANT SELECT ON `enkl`.`tasks` TO 'enkl_public_query'@'%';   -- ...and so on, one per view below.
 
 CREATE VIEW tasks AS
     SELECT
@@ -184,21 +196,10 @@ CREATE VIEW teamscommittees AS
     FROM "TeamsCommittees" tc
     WHERE tc."ProjectId" = (SELECT "ProjectId" FROM "QueryContext" WHERE "ConnectionId" = CONNECTION_ID());
 
--- One db-qualified GRANT per view is required here (unlike Postgres, where GRANT is schema-relative
--- to whatever database the migration ran against) — hardcoded to the documented default database
--- name `enkl` (same convention as the dev password above). An operator using a different DB_NAME
--- must adjust the schema-qualifier below by hand, same as they'd already need to for DB_NAME itself.
--- No grant needed on "QueryContext" itself — the views' correlated subqueries run with the view
--- DEFINER's privileges (the migration-running high-privilege user), not the invoking
--- enkl_public_query user's, same as their access to the base tables above.
-GRANT SELECT ON `enkl`.`tasks` TO 'enkl_public_query'@'%';
-GRANT SELECT ON `enkl`.`columns` TO 'enkl_public_query'@'%';
-GRANT SELECT ON `enkl`.`members` TO 'enkl_public_query'@'%';
-GRANT SELECT ON `enkl`.`risks` TO 'enkl_public_query'@'%';
-GRANT SELECT ON `enkl`.`decisions` TO 'enkl_public_query'@'%';
-GRANT SELECT ON `enkl`.`principles` TO 'enkl_public_query'@'%';
-GRANT SELECT ON `enkl`.`objectives` TO 'enkl_public_query'@'%';
-GRANT SELECT ON `enkl`.`documents` TO 'enkl_public_query'@'%';
-GRANT SELECT ON `enkl`.`releases` TO 'enkl_public_query'@'%';
-GRANT SELECT ON `enkl`.`tasktypes` TO 'enkl_public_query'@'%';
-GRANT SELECT ON `enkl`.`teamscommittees` TO 'enkl_public_query'@'%';
+-- The GRANTs that used to live here (one per view, db-qualified) are no longer part of this
+-- migration — see this file's header comment. No grant is needed on "QueryContext" itself either
+-- way: the views' correlated subqueries run with the view DEFINER's privileges (the
+-- migration-running user), not the invoking enkl_public_query user's, same as their access to the
+-- base tables above. See DEPLOYMENT-MARIADB.md's "Shared hosting" appendix for the manual
+-- equivalent of the 11 `GRANT SELECT ON <db>.<view> TO 'enkl_public_query'@'%';` statements this
+-- migration used to run automatically.

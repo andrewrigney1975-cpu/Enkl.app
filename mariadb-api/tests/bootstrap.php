@@ -59,6 +59,24 @@ if ($lastError !== null) {
 // calls that also touch the schema.
 (new Migrator(Database::connection(), __DIR__ . '/../src/Db/migrations'))->run();
 
+// Migration 006 deliberately does NOT create the enkl_public_query account (see that migration's own
+// header comment) — on real shared hosting, the app's own DB user has no CREATE USER/GRANT privilege
+// to do this automatically, so it's a manual, operator-performed step there. This test runner's own
+// DB_USER, however, is a fully-privileged throwaway container root user (see mariadb-api/CLAUDE.md's
+// test recipe) — the closest equivalent to a VPS/dedicated host where an operator COULD still run
+// this by hand once. Doing it here, in test setup rather than in the migration itself, is what keeps
+// PublicQueryTest exercising the real account/GRANT-scoped connection (Database::publicQueryConnection())
+// without reintroducing a privileged statement into the portable migration.
+$grantDb = Database::connection();
+$publicQueryUser = getenv('DB_PUBLIC_QUERY_USER') ?: 'enkl_public_query';
+$publicQueryPassword = getenv('DB_PUBLIC_QUERY_PASSWORD') ?: 'enkl_public_query_dev_password';
+$grantDb->exec("CREATE USER IF NOT EXISTS '{$publicQueryUser}'@'%' IDENTIFIED BY '{$publicQueryPassword}'");
+$grantDbName = $grantDb->query('SELECT DATABASE()')->fetchColumn();
+foreach (['tasks', 'columns', 'members', 'risks', 'decisions', 'principles', 'objectives', 'documents', 'releases', 'tasktypes', 'teamscommittees'] as $view) {
+    $grantDb->exec("GRANT SELECT ON `{$grantDbName}`.`{$view}` TO '{$publicQueryUser}'@'%'");
+}
+$grantDb->exec('FLUSH PRIVILEGES');
+
 // A real php -S process, not an in-process Slim request — see this file's own doc comment for why.
 $env = array_merge($_ENV, [
     'APP_ENV' => 'development',

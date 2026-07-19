@@ -52,23 +52,36 @@ are not byte-compatible).
   GRANT ALL PRIVILEGES ON enkl.* TO 'enkl_app'@'%';
   ```
 
-  The application itself creates every table via its own migrations (see §2.4) — you only need to
-  create the empty database and a user with rights inside it. It does **not** need
-  database-creation or account-management privileges, and does not need `SUPER`.
+  The application itself creates every table/view via its own migrations (see §2.4) — you only need
+  to create the empty database and a user with rights inside it. It does **not** need
+  database-creation, account-management, or `SUPER` privileges — an ordinary user scoped to `enkl.*`
+  is enough for every migration to run cleanly, including the Public Query API's tables/views
+  (migration `006`).
 
-  **One MariaDB-specific exception**: `src/Db/migrations/006_saved_queries_and_public_api.sql`
-  itself issues `CREATE USER IF NOT EXISTS 'enkl_public_query'@'%'` and `GRANT SELECT` statements
-  for the Public Query API feature (a second, deliberately low-privilege account the app creates
-  for itself — see `mariadb-api/CLAUDE.md` §4.2) — so `enkl_app` **does** need `CREATE USER` and
-  `GRANT OPTION` privileges scoped to what it needs to create that one low-privilege account, e.g.:
+  **One extra, manual step if you use the Public Query API/Saved Queries feature**:
+  `PublicQueryExecutionService` (see `mariadb-api/CLAUDE.md` §4.2) executes saved-query SQL as a
+  second, dedicated, SELECT-only MariaDB account — but migration `006` deliberately does **not**
+  create that account or grant it anything (an earlier revision did; it was removed specifically so
+  this tier's migrations never require `CREATE USER`/`GRANT`, which a shared-hosting DB user
+  typically cannot do — see §7 below). Create it yourself, once, after running migrations for the
+  first time:
   ```sql
-  GRANT CREATE USER ON *.* TO 'enkl_app'@'%';
-  GRANT SELECT ON enkl.* TO 'enkl_app'@'%' WITH GRANT OPTION;
+  CREATE USER 'enkl_public_query'@'%' IDENTIFIED BY '<a long, randomly generated password>';
+  GRANT SELECT ON enkl.tasks TO 'enkl_public_query'@'%';
+  GRANT SELECT ON enkl.columns TO 'enkl_public_query'@'%';
+  GRANT SELECT ON enkl.members TO 'enkl_public_query'@'%';
+  GRANT SELECT ON enkl.risks TO 'enkl_public_query'@'%';
+  GRANT SELECT ON enkl.decisions TO 'enkl_public_query'@'%';
+  GRANT SELECT ON enkl.principles TO 'enkl_public_query'@'%';
+  GRANT SELECT ON enkl.objectives TO 'enkl_public_query'@'%';
+  GRANT SELECT ON enkl.documents TO 'enkl_public_query'@'%';
+  GRANT SELECT ON enkl.releases TO 'enkl_public_query'@'%';
+  GRANT SELECT ON enkl.tasktypes TO 'enkl_public_query'@'%';
+  GRANT SELECT ON enkl.teamscommittees TO 'enkl_public_query'@'%';
   ```
-  If your database name is anything other than the default `enkl`, that migration's `GRANT SELECT
-  ON \`enkl\`.\`viewname\`` statements need the schema-qualifier changed to match **before** you run
-  migrations for the first time (MariaDB's `GRANT` syntax is schema-qualified, unlike Postgres's own
-  schema-relative `GRANT`) — see the migration file's own header comment.
+  Then set `DB_PUBLIC_QUERY_USER`/`DB_PUBLIC_QUERY_PASSWORD` in `.env` (§2.3) to match. If you never
+  use Saved Queries' "Expose via API" toggle, you can skip this step entirely — nothing else depends
+  on this account existing.
 - **Session settings the app configures itself, not you**: `Db/Database.php` sets `sql_mode`
   (appending `ANSI_QUOTES`) and `time_zone = '+00:00'` on every connection it opens. You don't need
   to (and shouldn't) set either of these at the server/`my.cnf` level — they're connection-scoped by
@@ -156,6 +169,14 @@ an internal `Events` table every ~2 seconds rather than using Postgres's `LISTEN
 MariaDB has no equivalent for at all) — see `mariadb-api/CLAUDE.md` §4.4. This means, unlike the
 Postgres/PHP tier, you do **not** need any extra PHP extension analogous to `ext-pgsql` for this
 feature; ordinary `pdo_mysql` is all it uses.
+
+**The stream self-terminates every ~20 seconds and reconnects** (`EventsController::MAX_STREAM_SECONDS`)
+rather than staying open for hours — deliberately, so it works unmodified even on hosts that enforce
+a hard per-request execution-time ceiling the app itself cannot override (see §7). The frontend
+(`features/live-updates.js`) already treats a cleanly-closed stream as "reconnect immediately" and
+needs no configuration for this; a reverse proxy/timeout only needs to comfortably exceed ~20s, not
+"hours," for this endpoint (see the nginx example in §4, which still uses a generous 1h timeout —
+harmless, just no longer load-bearing the way it was in an earlier revision of this tier).
 
 ### 2.5 Run under php-fpm
 
@@ -305,7 +326,9 @@ Confirm in the browser:
 - Live updates (the SSE stream) work across two open tabs — edit a task in one, watch it update in
   the other within a couple of seconds (not instant — this tier polls rather than pushes, see §2.4).
   This is the single best end-to-end proof the reverse proxy's buffering/timeout settings for
-  `/api/events/` are correct.
+  `/api/events/` are correct. Also leave a tab open and idle for a minute or two — you should see
+  (via browser devtools' Network tab) the stream cleanly reconnect roughly every 20 seconds; this is
+  expected behavior (§2.4), not a bug or a dropped connection.
 
 ---
 
@@ -385,3 +408,123 @@ responsibility to configure.
   sent explicitly by the frontend's own JS.
 - File upload virus scanning / storage — not applicable; the app stores no binary uploads, only
   URLs/text for documents and attachments.
+
+---
+
+## 7. Commercial / shared hosting (cPanel-style)
+
+Everything above assumes an operator-controlled server (root/sudo access, your own nginx/php-fpm
+vhost, a MariaDB account you can grant arbitrary privileges to). This section is for the common
+alternative: a commercial shared-hosting plan (cPanel or similar) where you have **SSH and cron, but
+no root**, the web server's own document-root/vhost routing is fixed by the host's panel, and your
+MySQL/MariaDB account is deliberately scoped to *its own* database with no server-level privileges.
+Three adaptations, all already built into this tier — nothing below requires patching the app:
+
+### 7.1 No `CREATE USER`/`GRANT` in the migration
+
+A typical shared-hosting DB user cannot run `CREATE USER` or `GRANT` at all — those are host-panel
+operations. Migration `006` was written for exactly this: it creates the Public Query API's
+tables/views (which an ordinary scoped user CAN create) but does **not** attempt to create the
+`enkl_public_query` account or grant it anything — see §1's note above for the manual, one-time
+replacement (create the second MySQL user via your host's panel UI — most panels let you attach more
+than one user to a database — grant it access, then set `DB_PUBLIC_QUERY_USER`/
+`DB_PUBLIC_QUERY_PASSWORD` in `.env` to match).
+
+**Real reduction from the operator-controlled setup, be aware of it**: §1's fully-scripted version
+grants `SELECT` on each of the 11 views individually. A typical shared-hosting panel's "add user to
+database" UI only offers whole-database privilege toggles, not per-table/per-view grants — so in
+practice the `enkl_public_query` account on shared hosting will likely end up with `SELECT` on the
+*entire* database rather than just the 11 public-query views. This is still safe from the
+application's own isolation logic (the account still can't write anything, and the Public Query API
+endpoint still only ever queries through those 11 views), but it's a wider blast radius than the
+per-view design intends if that account's credentials were ever to leak. If your host's panel
+exposes a raw phpMyAdmin/SQL console, prefer running the exact per-view `GRANT SELECT` statements
+from §1 by hand there instead of using the "add user" UI, to keep the narrower scope.
+
+### 7.2 SSE stream already self-bounded — no host configuration needed
+
+Shared-hosting PHP-FPM/CGI pools almost universally enforce their own hard per-request
+execution-time ceiling (commonly 30–300 seconds) that a script cannot override — `set_time_limit(0)`
+is routinely ignored or outright blocked via `disable_functions`. `Controllers/EventsController.php`
+already accounts for this: the stream ends itself cleanly after `MAX_STREAM_SECONDS` (20s, comfortably
+under even a conservative ceiling) rather than trying to stay open for hours. **This required zero
+frontend changes** — `src/js/features/live-updates.js`'s existing reconnect logic already treats a
+cleanly-closed stream as "reconnect now," and resets its backoff to 2 seconds on every successful
+connection, so the user experiences one continuous live-update feed even though the underlying
+HTTP connection actually cycles every ~20 seconds. Nothing to configure here; just don't be alarmed
+seeing the connection cycle in devtools' Network tab — that's expected (see §5's verify note).
+
+### 7.3 Front-controller-in-subfolder document root
+
+An operator-controlled deploy (§4) puts a reverse proxy in front that proxies `/api/*` to php-fpm
+while serving the static frontend from `/`. A shared-hosting plan usually gives you exactly one
+document root (e.g. `public_html/`) with no reverse-proxy config of your own — so the API instead
+needs to live in a **subfolder** of that same document root, reached at (for example)
+`https://your-domain.com/api/...`, with Apache's own `.htaccess` doing the front-controller
+rewriting that the reference nginx config (§4) does at the proxy layer instead.
+
+**This tier's routes already declare their own literal `/api/...`/`/health` prefixes** (see
+`src/routes.php`) rather than assuming Slim is mounted at the domain root with a stripped prefix —
+so as long as the rewrite below preserves the full request path (it does not strip `/api`), no
+`Slim\App::setBasePath()` call or other code change is needed.
+
+Recommended layout — keep `vendor/`, `src/`, and `.env` **outside** the web-facing document root
+entirely (most hosts give you a home directory one level above `public_html/`), and put only a thin
+front controller + `.htaccess` inside the public folder:
+
+```
+/home/youruser/
+├── mariadb-api/            ← composer install target: vendor/, src/, .env, migrate.php, etc.
+│                              (NOT web-accessible — outside public_html/)
+└── public_html/
+    ├── index.html          ← dist/index.html, built per §3
+    └── api/
+        ├── .htaccess       ← front-controller rewrite, see below
+        └── index.php       ← thin shim, see below
+```
+
+`public_html/api/.htaccess`:
+```apache
+RewriteEngine On
+# Anything under /api/ that isn't a real file/directory (i.e. everything — this folder contains
+# only index.php and .htaccess) gets routed through the front controller. RewriteBase left as the
+# default (no prefix stripping) so REQUEST_URI stays "/api/..." exactly as routes.php expects.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
+```
+
+`public_html/api/index.php` — identical in effect to `mariadb-api/public/index.php`, just with its
+three relative `require`/`createImmutable` paths adjusted to point up and over to where the real
+application actually lives instead of a sibling `public/`'s usual `..`:
+```php
+<?php
+
+declare(strict_types=1);
+
+$appRoot = '/home/youruser/mariadb-api';
+
+require $appRoot . '/vendor/autoload.php';
+(\Dotenv\Dotenv::createImmutable($appRoot))->safeLoad();
+require $appRoot . '/src/bootstrap.php';
+
+$app = buildApp();
+$app->run();
+```
+(Use an absolute path, not a relative `__DIR__ . '/../../mariadb-api'` — cPanel's PHP execution
+environment/`open_basedir` restrictions are more predictable against an absolute path, and it reads
+clearly for whoever maintains this later.)
+
+`/health` needs the same treatment — since it isn't under `/api/` in this tier's own routing (see
+§4's note on why), either place a second, identical front controller at `public_html/health/` with
+its own one-line `.htaccess`, or skip it: `/health` is only used by the frontend's own connectivity
+probe and by your own uptime monitoring, neither of which strictly requires it to be reachable at
+the bare domain root — the frontend still functions with it unreachable, just without the green
+connectivity-pulse indicator.
+
+**No SSH/cron requirement for any of this** — despite what you might expect from "the app needs a
+long-lived process," §7.2 means the whole app runs as ordinary short-lived PHP-FPM/CGI requests,
+exactly like every other page on a shared host. SSH is still useful for running `composer install`
+and `php migrate.php` directly on the server (§2.2/§2.4) instead of running Composer locally and
+uploading the resulting `vendor/` via SFTP, and cron is not required by anything in this tier today
+(there is no scheduled-job mechanism in either backend tier as of this writing).
