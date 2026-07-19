@@ -6,6 +6,7 @@ namespace Enkl\Api\Services;
 
 use Enkl\Api\Auth\PasswordHasher;
 use Enkl\Api\Auth\UsernameNormalizer;
+use Enkl\Api\Support\SqlDateTime;
 use Enkl\Api\Support\Uuid;
 use Enkl\Api\Validation\ApiValidationException;
 use Enkl\Api\Validation\CycleDetection;
@@ -171,9 +172,12 @@ final class MigrationService
 
         $findInOrgStmt = $this->db->prepare('SELECT "Id", "EmailAddress" FROM "Users" WHERE "NormalizedUsername" = :n AND "OrganisationId" = :org');
         $findAnywhereStmt = $this->db->prepare('SELECT 1 FROM "Users" WHERE "NormalizedUsername" = :n');
+        // MariaDB port: "SecurityStamp" has no DB-side default here (see
+        // src/Db/migrations/001_initial_schema.sql's own note) — unlike php-api's original, which
+        // relied on Postgres's `DEFAULT gen_random_uuid()`, this INSERT must supply one explicitly.
         $insertUserStmt = $this->db->prepare(<<<SQL
-            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt")
-            VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, :hash, :displayName, true, :isAdmin, now())
+            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt", "SecurityStamp")
+            VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, :hash, :displayName, true, :isAdmin, now(), :securityStamp)
         SQL);
         $insertMemberStmt = $this->db->prepare('INSERT INTO "ProjectMembers" ("Id", "ProjectId", "UserId", "Color", "Role", "AllocatedFraction", "IsProjectAdmin") VALUES (:id, :pid, :uid, :color, :role, :allocatedFraction, :isProjectAdmin)');
         $backfillEmailStmt = $this->db->prepare('UPDATE "Users" SET "EmailAddress" = :email, "NormalizedEmailAddress" = :normalizedEmail WHERE "Id" = :id');
@@ -231,6 +235,7 @@ final class MigrationService
                         'id' => $userId, 'orgId' => $organisationId, 'username' => $usernameToUse, 'normalized' => $usernameToUse,
                         'email' => $email, 'normalizedEmail' => $normalizedEmail,
                         'hash' => PasswordHasher::hash('enklUserPassword'), 'displayName' => $m['name'], 'isAdmin' => (int) $isFirstAdminOfNewOrg,
+                        'securityStamp' => Uuid::v4(),
                     ]);
                     $usersCreated++;
                     if ($isFirstAdminOfNewOrg) {
@@ -280,8 +285,8 @@ final class MigrationService
                 'status' => in_array($r['status'] ?? null, ['pending', 'in_progress', 'deployed'], true) ? $r['status'] : 'pending',
                 'ownerId' => $memberByOldId[$r['ownerId'] ?? ''] ?? null,
                 'start' => $this->parseDateOnly($r['startDate'] ?? null), 'end' => $this->parseDateOnly($r['endDate'] ?? null),
-                'created' => $this->parseDateTime($r['dateCreated'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
-                'modified' => $this->parseDateTime($r['dateLastModified'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                'created' => $this->parseDateTime($r['dateCreated'] ?? null) ?? SqlDateTime::now(),
+                'modified' => $this->parseDateTime($r['dateLastModified'] ?? null) ?? SqlDateTime::now(),
             ]);
             $byName[$r['name']] = $id;
         }
@@ -312,8 +317,8 @@ final class MigrationService
             $stmt->execute([
                 'id' => $id, 'pid' => $projectId, 'key' => $p['key'], 'title' => $p['title'],
                 'description' => $p['description'] ?? null, 'docUrl' => $p['documentUrl'] ?? null,
-                'created' => $this->parseDateTime($p['dateCreated'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
-                'modified' => $this->parseDateTime($p['dateLastModified'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                'created' => $this->parseDateTime($p['dateCreated'] ?? null) ?? SqlDateTime::now(),
+                'modified' => $this->parseDateTime($p['dateLastModified'] ?? null) ?? SqlDateTime::now(),
             ]);
             $byOldId[$p['id']] = $id;
         }
@@ -386,8 +391,8 @@ final class MigrationService
                 'releaseId' => $releasesByName[$t['release'] ?? ''] ?? null,
                 'typeId' => $taskTypesByName[$t['type'] ?? ''] ?? null,
                 'docUrl' => $t['documentationUrl'] ?? null,
-                'created' => $this->parseDateTime($t['dateCreated'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
-                'modified' => $this->parseDateTime($t['dateLastModified'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                'created' => $this->parseDateTime($t['dateCreated'] ?? null) ?? SqlDateTime::now(),
+                'modified' => $this->parseDateTime($t['dateLastModified'] ?? null) ?? SqlDateTime::now(),
                 'dateDone' => $this->parseDateTime($t['dateDone'] ?? null),
                 'start' => $this->parseDateOnly($t['startDate'] ?? null), 'end' => $this->parseDateOnly($t['endDate'] ?? null),
                 'businessValue' => $t['businessValue'] ?? null, 'taskCost' => $t['taskCost'] ?? null, 'progress' => (int) ($t['progress'] ?? 0),
@@ -440,7 +445,7 @@ final class MigrationService
             foreach ($t['auditLog'] ?? [] as $entry) {
                 $auditStmt->execute([
                     'id' => Uuid::v4(), 'taskId' => $taskId,
-                    'timestamp' => $this->parseDateTime($entry['timestamp'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                    'timestamp' => $this->parseDateTime($entry['timestamp'] ?? null) ?? SqlDateTime::now(),
                     'field' => $entry['field'], 'oldValue' => $entry['oldValue'] ?? null, 'newValue' => $entry['newValue'] ?? null,
                 ]);
             }
@@ -448,7 +453,7 @@ final class MigrationService
             foreach ($t['comments'] ?? [] as $c) {
                 $commentStmt->execute([
                     'id' => Uuid::v4(), 'taskId' => $taskId, 'text' => $c['text'],
-                    'dateCreated' => $this->parseDateTime($c['dateCreated'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                    'dateCreated' => $this->parseDateTime($c['dateCreated'] ?? null) ?? SqlDateTime::now(),
                     'authorId' => $memberByOldId[$c['authorId'] ?? ''] ?? null,
                     'authorName' => $c['authorName'] ?? '',
                 ]);
@@ -468,8 +473,8 @@ final class MigrationService
             $stmt->execute([
                 'id' => $id, 'pid' => $projectId, 'key' => $d['key'], 'title' => $d['title'], 'url' => $d['url'] ?? null, 'description' => $d['description'] ?? null,
                 'ownerId' => $memberByOldId[$d['ownerId'] ?? ''] ?? null, 'taskId' => $taskByOldId[$d['taskId'] ?? ''] ?? null,
-                'created' => $this->parseDateTime($d['dateCreated'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
-                'modified' => $this->parseDateTime($d['dateLastModified'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                'created' => $this->parseDateTime($d['dateCreated'] ?? null) ?? SqlDateTime::now(),
+                'modified' => $this->parseDateTime($d['dateLastModified'] ?? null) ?? SqlDateTime::now(),
             ]);
             $byOldId[$d['id']] = $id;
         }
@@ -509,8 +514,8 @@ final class MigrationService
                 'ownerId' => $memberByOldId[$r['ownerId'] ?? ''] ?? null, 'taskId' => $taskByOldId[$r['taskId'] ?? ''] ?? null,
                 'status' => in_array($r['status'] ?? null, ['new', 'in_review', 'closed'], true) ? $r['status'] : 'new',
                 'dateToClose' => $this->parseDateOnly($r['dateToClose'] ?? null), 'dateClosed' => $this->parseDateOnly($r['dateClosed'] ?? null),
-                'created' => $this->parseDateTime($r['dateCreated'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
-                'modified' => $this->parseDateTime($r['dateLastModified'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                'created' => $this->parseDateTime($r['dateCreated'] ?? null) ?? SqlDateTime::now(),
+                'modified' => $this->parseDateTime($r['dateLastModified'] ?? null) ?? SqlDateTime::now(),
             ]);
             $byOldId[$r['id']] = $id;
         }
@@ -556,8 +561,8 @@ final class MigrationService
             $id = Uuid::v4();
             $stmt->execute([
                 'id' => $id, 'pid' => $projectId, 'key' => $o['key'], 'title' => $o['title'], 'description' => $o['description'] ?? null,
-                'created' => $this->parseDateTime($o['dateCreated'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
-                'modified' => $this->parseDateTime($o['dateLastModified'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                'created' => $this->parseDateTime($o['dateCreated'] ?? null) ?? SqlDateTime::now(),
+                'modified' => $this->parseDateTime($o['dateLastModified'] ?? null) ?? SqlDateTime::now(),
             ]);
             $byOldId[$o['id']] = $id;
         }
@@ -591,8 +596,8 @@ final class MigrationService
             $stmt->execute([
                 'id' => $id, 'pid' => $projectId, 'key' => $tc['key'], 'name' => $tc['name'], 'description' => $tc['description'] ?? null,
                 'type' => in_array($tc['type'] ?? null, ['team', 'committee'], true) ? $tc['type'] : 'team',
-                'created' => $this->parseDateTime($tc['dateCreated'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
-                'modified' => $this->parseDateTime($tc['dateLastModified'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                'created' => $this->parseDateTime($tc['dateCreated'] ?? null) ?? SqlDateTime::now(),
+                'modified' => $this->parseDateTime($tc['dateLastModified'] ?? null) ?? SqlDateTime::now(),
             ]);
             $byOldId[$tc['id']] = $id;
         }
@@ -636,8 +641,8 @@ final class MigrationService
                 'status' => in_array($d['status'] ?? null, ['open', 'in_review', 'completed'], true) ? $d['status'] : 'open',
                 'outcome' => $d['outcome'] ?? null, 'ownerId' => $memberByOldId[$d['ownerId'] ?? ''] ?? null,
                 'approver' => $d['approver'] ?? null, 'taskId' => $taskByOldId[$d['taskId'] ?? ''] ?? null,
-                'created' => $this->parseDateTime($d['dateCreated'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
-                'modified' => $this->parseDateTime($d['dateLastModified'] ?? null) ?? gmdate('Y-m-d\TH:i:s\Z'),
+                'created' => $this->parseDateTime($d['dateCreated'] ?? null) ?? SqlDateTime::now(),
+                'modified' => $this->parseDateTime($d['dateLastModified'] ?? null) ?? SqlDateTime::now(),
             ]);
             $byOldId[$d['id']] = $id;
         }
@@ -755,7 +760,13 @@ final class MigrationService
         if ($value === null || trim($value) === '' || strtotime($value) === false) {
             return null;
         }
-        return $value;
+        // MariaDB port: the client-supplied export is untrusted input in whatever ISO-8601-ish shape
+        // JS produced (typically ending in "Z") — php-api's original just bound $value as-is, which
+        // works against Postgres's lenient timestamptz parser but not MariaDB's DATETIME (see
+        // SqlDateTime's own doc comment). Every caller of parseDateTime() here only ever uses the
+        // result as a bound SQL parameter (never returned in the migration response itself, which
+        // only reports counts/warnings), so reformatting unconditionally at the source is safe.
+        return SqlDateTime::reformat($value);
     }
 
     private function parseDateOnly(?string $value): ?string

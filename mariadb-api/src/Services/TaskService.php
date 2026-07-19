@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Enkl\Api\Services;
 
+use Enkl\Api\Support\SqlDateTime;
 use Enkl\Api\Support\Uuid;
 use Enkl\Api\Validation\ApiValidationException;
 use Enkl\Api\Validation\CycleDetection;
@@ -85,7 +86,7 @@ final class TaskService
             'priority' => $request['priority'] ?? 'medium', 'columnId' => $request['columnId'],
             'assigneeId' => $request['assigneeId'] ?? null, 'releaseId' => $request['releaseId'] ?? null,
             'typeId' => $request['typeId'] ?? null, 'parentTaskId' => $parentTaskId,
-            'dateDone' => $done ? gmdate('Y-m-d\TH:i:s\Z') : null,
+            'dateDone' => $done ? SqlDateTime::now() : null,
         ]);
 
         $this->db->prepare('UPDATE "Projects" SET "TaskCounter" = "TaskCounter" + 1 WHERE "Id" = :id')->execute(['id' => $projectId]);
@@ -152,7 +153,7 @@ final class TaskService
 
         $newDateDone = $task['DateDone'];
         if ((bool) $newColumn['Done'] && !$wasDone) {
-            $newDateDone = gmdate('Y-m-d\TH:i:s\Z');
+            $newDateDone = SqlDateTime::now();
         } elseif (!$newColumn['Done'] && $wasDone) {
             $newDateDone = null;
         }

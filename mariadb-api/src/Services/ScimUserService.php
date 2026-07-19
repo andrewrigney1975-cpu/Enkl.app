@@ -99,14 +99,17 @@ final class ScimUserService
 
         $userId = Uuid::v4();
         $active = array_key_exists('active', $request) && $request['active'] !== null ? (bool) $request['active'] : true;
+        // MariaDB port: "SecurityStamp" has no DB-side default here (see
+        // src/Db/migrations/001_initial_schema.sql's own note) — unlike php-api's original, which
+        // relied on Postgres's `DEFAULT gen_random_uuid()`, this INSERT must supply one explicitly.
         $stmt = $this->db->prepare(<<<SQL
-            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "IsActive", "CreatedAt")
-            VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, NULL, :displayName, false, false, :active, now())
+            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "IsActive", "CreatedAt", "SecurityStamp")
+            VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, NULL, :displayName, false, false, :active, now(), :securityStamp)
         SQL);
         $stmt->execute([
             'id' => $userId, 'orgId' => $orgId, 'username' => $usernameToUse, 'normalized' => $usernameToUse,
             'email' => $validEmail, 'normalizedEmail' => $normalizedEmail, 'displayName' => $displayName,
-            'active' => (int) $active,
+            'active' => (int) $active, 'securityStamp' => Uuid::v4(),
         ]);
 
         $stmt = $this->db->prepare('SELECT * FROM "Users" WHERE "Id" = :id');
@@ -139,14 +142,21 @@ final class ScimUserService
 
         // Security review finding H2: an already-issued token is otherwise still fully valid for up
         // to 8 hours after this exact deprovisioning event — only rotate when the value actually
-        // changes, not on every no-op PUT that just re-sends the same active:true/false.
-        $securityStampSql = $active !== $wasActive ? ', "SecurityStamp" = gen_random_uuid()' : '';
-        $this->db->prepare(
-            'UPDATE "Users" SET "EmailAddress" = :email, "NormalizedEmailAddress" = :normalizedEmail, "DisplayName" = :displayName, "IsActive" = :active' . $securityStampSql . ' WHERE "Id" = :id'
-        )->execute([
+        // changes, not on every no-op PUT that just re-sends the same active:true/false. MariaDB
+        // port: no gen_random_uuid() function exists here — generate the replacement value in PHP
+        // and bind it, rather than inlining a Postgres-only function call into the SQL fragment.
+        $params = [
             'email' => $emailToSave, 'normalizedEmail' => $normalizedEmail, 'displayName' => $displayName,
             'active' => (int) $active, 'id' => $userId,
-        ]);
+        ];
+        $securityStampSql = '';
+        if ($active !== $wasActive) {
+            $securityStampSql = ', "SecurityStamp" = :stamp';
+            $params['stamp'] = Uuid::v4();
+        }
+        $this->db->prepare(
+            'UPDATE "Users" SET "EmailAddress" = :email, "NormalizedEmailAddress" = :normalizedEmail, "DisplayName" = :displayName, "IsActive" = :active' . $securityStampSql . ' WHERE "Id" = :id'
+        )->execute($params);
 
         $stmt = $this->db->prepare('SELECT * FROM "Users" WHERE "Id" = :id');
         $stmt->execute(['id' => $userId]);
@@ -198,15 +208,22 @@ final class ScimUserService
         // Security review finding H2: an already-issued token is otherwise still fully valid for up
         // to 8 hours after this exact deprovisioning event (PATCH active:false is the real-world
         // IdP deprovisioning path — see delete()'s own note) — only rotate when the value actually
-        // changed, not on every no-op PATCH that just re-sends the same active:true/false.
+        // changed, not on every no-op PATCH that just re-sends the same active:true/false. MariaDB
+        // port: no gen_random_uuid() function exists here — generate the replacement value in PHP
+        // and bind it, rather than inlining a Postgres-only function call into the SQL fragment.
         $isActiveNow = (bool) $user['IsActive'];
-        $securityStampSql = $isActiveNow !== $wasActive ? ', "SecurityStamp" = gen_random_uuid()' : '';
-        $this->db->prepare(
-            'UPDATE "Users" SET "EmailAddress" = :email, "NormalizedEmailAddress" = :normalizedEmail, "DisplayName" = :displayName, "IsActive" = :active' . $securityStampSql . ' WHERE "Id" = :id'
-        )->execute([
+        $params = [
             'email' => $user['EmailAddress'], 'normalizedEmail' => $user['NormalizedEmailAddress'],
             'displayName' => $user['DisplayName'], 'active' => (int) $isActiveNow, 'id' => $userId,
-        ]);
+        ];
+        $securityStampSql = '';
+        if ($isActiveNow !== $wasActive) {
+            $securityStampSql = ', "SecurityStamp" = :stamp';
+            $params['stamp'] = Uuid::v4();
+        }
+        $this->db->prepare(
+            'UPDATE "Users" SET "EmailAddress" = :email, "NormalizedEmailAddress" = :normalizedEmail, "DisplayName" = :displayName, "IsActive" = :active' . $securityStampSql . ' WHERE "Id" = :id'
+        )->execute($params);
 
         return $this->toResponse($user);
     }

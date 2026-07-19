@@ -148,7 +148,10 @@ final class SamlService
                 'id' => $user['Id'],
                 'username' => $user['Username'],
                 'displayName' => $user['DisplayName'],
-                'mustChangePassword' => $user['MustChangePassword'],
+                // MariaDB port: PDO_MYSQL returns a BOOLEAN/TINYINT(1) column as a plain PHP int
+                // (0/1), never a native bool the way PDO_PGSQL always does — explicit cast keeps
+                // this real JSON true/false, matching the other two tiers' response shape.
+                'mustChangePassword' => (bool) $user['MustChangePassword'],
             ],
         ]);
 
@@ -170,13 +173,17 @@ final class SamlService
         $usernameToUse = $this->resolveUniqueUsername($baseUsername);
 
         $userId = Uuid::v4();
+        // MariaDB port: "SecurityStamp" has no DB-side default here (see
+        // src/Db/migrations/001_initial_schema.sql's own note) — unlike php-api's original, which
+        // relied on Postgres's `DEFAULT gen_random_uuid()`, this INSERT must supply one explicitly.
         $stmt = $this->db->prepare(<<<SQL
-            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "IsActive", "CreatedAt")
-            VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, NULL, :displayName, false, false, true, now())
+            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "IsActive", "CreatedAt", "SecurityStamp")
+            VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, NULL, :displayName, false, false, true, now(), :securityStamp)
         SQL);
         $stmt->execute([
             'id' => $userId, 'orgId' => $orgId, 'username' => $usernameToUse, 'normalized' => $usernameToUse,
             'email' => $email, 'normalizedEmail' => $normalizedEmail, 'displayName' => $displayName,
+            'securityStamp' => Uuid::v4(),
         ]);
 
         $stmt = $this->db->prepare(<<<SQL

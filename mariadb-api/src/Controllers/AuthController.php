@@ -10,6 +10,7 @@ use Enkl\Api\Auth\PasswordHasher;
 use Enkl\Api\Auth\UsernameNormalizer;
 use Enkl\Api\Db\Database;
 use Enkl\Api\Services\SsoExchangeCodeService;
+use Enkl\Api\Support\Uuid;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -78,7 +79,11 @@ final class AuthController extends BaseController
                 'id' => $user['Id'],
                 'username' => $user['Username'],
                 'displayName' => $user['DisplayName'],
-                'mustChangePassword' => $user['MustChangePassword'],
+                // MariaDB port: PDO_MYSQL returns a BOOLEAN/TINYINT(1) column as a plain PHP int
+                // (0/1), never a native bool the way PDO_PGSQL always does — explicit cast needed
+                // here so this stays real JSON true/false, not 1/0, matching the other two tiers'
+                // response shape exactly (and passing this tier's own AuthTest's strict assertTrue()).
+                'mustChangePassword' => (bool) $user['MustChangePassword'],
             ],
         ]);
     }
@@ -161,8 +166,11 @@ final class AuthController extends BaseController
         // the instant the real user changes it) — but that also invalidates THIS caller's own
         // current token, since it carries the now-stale stamp, so a fresh one is minted and returned
         // below (same shape as login) rather than noContent(), mirroring AuthController.cs exactly.
-        $db->prepare('UPDATE "Users" SET "PasswordHash" = :hash, "MustChangePassword" = false, "SecurityStamp" = gen_random_uuid() WHERE "Id" = :id')
-            ->execute(['hash' => PasswordHasher::hash($newPassword), 'id' => $userId]);
+        // MariaDB port: no gen_random_uuid() function exists here (that was only ever a Postgres/
+        // pgcrypto convenience) — generate the replacement value in PHP instead, same as every real
+        // "Users" INSERT on this tier already does.
+        $db->prepare('UPDATE "Users" SET "PasswordHash" = :hash, "MustChangePassword" = false, "SecurityStamp" = :stamp WHERE "Id" = :id')
+            ->execute(['hash' => PasswordHasher::hash($newPassword), 'stamp' => Uuid::v4(), 'id' => $userId]);
 
         $stmt = $db->prepare('SELECT u.*, o."Name" AS "OrganisationName" FROM "Users" u JOIN "Organisations" o ON o."Id" = u."OrganisationId" WHERE u."Id" = :id');
         $stmt->execute(['id' => $userId]);
@@ -181,7 +189,11 @@ final class AuthController extends BaseController
                 'id' => $user['Id'],
                 'username' => $user['Username'],
                 'displayName' => $user['DisplayName'],
-                'mustChangePassword' => $user['MustChangePassword'],
+                // MariaDB port: PDO_MYSQL returns a BOOLEAN/TINYINT(1) column as a plain PHP int
+                // (0/1), never a native bool the way PDO_PGSQL always does — explicit cast needed
+                // here so this stays real JSON true/false, not 1/0, matching the other two tiers'
+                // response shape exactly (and passing this tier's own AuthTest's strict assertTrue()).
+                'mustChangePassword' => (bool) $user['MustChangePassword'],
             ],
         ]);
     }

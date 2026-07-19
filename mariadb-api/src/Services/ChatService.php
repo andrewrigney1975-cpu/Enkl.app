@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Enkl\Api\Services;
 
+use Enkl\Api\Support\SqlDateTime;
 use Enkl\Api\Support\Uuid;
 use Enkl\Api\Validation\ApiValidationException;
 use PDO;
@@ -111,14 +112,23 @@ final class ChatService
         $this->db->beginTransaction();
         try {
             $channelId = Uuid::v4();
+            // $dateCreated stays ISO-8601 (returned via toChannelDto below, matching the other two
+            // tiers' response shape) — SQL binds use SqlDateTime::reformat() separately (see that
+            // class's own doc comment for why the two representations must differ on this tier).
             $dateCreated = gmdate('Y-m-d\TH:i:s\Z');
+            $sqlDateCreated = SqlDateTime::reformat($dateCreated);
+            // MariaDB port: bind (int), not php-api's original 't'/'f' Postgres boolean-literal text
+            // ("Incorrect integer value: 'f'" on this tier) — matches this codebase's OWN established
+            // "(int), not the raw PHP bool" convention elsewhere (see e.g. MigrationService's Columns
+            // insert), since PDOStatement::execute(array)'s implicit string-casting turns a raw
+            // `false` into an empty string, not "0".
             $this->db->prepare(
                 'INSERT INTO "ChatChannels" ("Id", "OrganisationId", "Name", "IsDirectMessage", "CreatedByUserId", "DateCreated") VALUES (:id, :orgId, :name, :dm, :cb, :dc)'
-            )->execute(['id' => $channelId, 'orgId' => $organisationId, 'name' => $name, 'dm' => $isDirectMessage ? 't' : 'f', 'cb' => $callerUserId, 'dc' => $dateCreated]);
+            )->execute(['id' => $channelId, 'orgId' => $organisationId, 'name' => $name, 'dm' => (int) $isDirectMessage, 'cb' => $callerUserId, 'dc' => $sqlDateCreated]);
 
             $memberStmt = $this->db->prepare('INSERT INTO "ChatChannelMembers" ("Id", "ChannelId", "UserId", "DateJoined") VALUES (:id, :cid, :uid, :dj)');
             foreach ($validMemberIds as $userId) {
-                $memberStmt->execute(['id' => Uuid::v4(), 'cid' => $channelId, 'uid' => $userId, 'dj' => $dateCreated]);
+                $memberStmt->execute(['id' => Uuid::v4(), 'cid' => $channelId, 'uid' => $userId, 'dj' => $sqlDateCreated]);
             }
             $this->db->commit();
         } catch (\Throwable $e) {
@@ -171,7 +181,7 @@ final class ChatService
         }
 
         $this->db->prepare('INSERT INTO "ChatChannelMembers" ("Id", "ChannelId", "UserId", "DateJoined") VALUES (:id, :cid, :uid, :dj)')
-            ->execute(['id' => Uuid::v4(), 'cid' => $channelId, 'uid' => $targetUserId, 'dj' => gmdate('Y-m-d\TH:i:s\Z')]);
+            ->execute(['id' => Uuid::v4(), 'cid' => $channelId, 'uid' => $targetUserId, 'dj' => SqlDateTime::now()]);
         return true;
     }
 
@@ -240,10 +250,12 @@ final class ChatService
         }
 
         $messageId = Uuid::v4();
+        // $dateCreated stays ISO-8601 (returned via toMessageDto below) — see SqlDateTime's own doc
+        // comment for why the bound SQL copy needs a separately-reformatted value on this tier.
         $dateCreated = gmdate('Y-m-d\TH:i:s\Z');
         $this->db->prepare(
             'INSERT INTO "ChatMessages" ("Id", "ChannelId", "AuthorUserId", "AuthorName", "Text", "DateCreated", "IsDeleted") VALUES (:id, :cid, :aid, :aname, :text, :dc, false)'
-        )->execute(['id' => $messageId, 'cid' => $channelId, 'aid' => $callerUserId, 'aname' => $callerDisplayName, 'text' => $text, 'dc' => $dateCreated]);
+        )->execute(['id' => $messageId, 'cid' => $channelId, 'aid' => $callerUserId, 'aname' => $callerDisplayName, 'text' => $text, 'dc' => SqlDateTime::reformat($dateCreated)]);
 
         $memberNames = $this->channelMemberDisplayNames($channelId);
         $message = ['Id' => $messageId, 'ChannelId' => $channelId, 'AuthorUserId' => $callerUserId, 'AuthorName' => $callerDisplayName, 'Text' => $text, 'DateCreated' => $dateCreated, 'IsDeleted' => false, 'DateDeleted' => null];
@@ -293,9 +305,10 @@ final class ChatService
             return null;
         }
 
+        // $dateDeleted stays ISO-8601 (returned below) — see SqlDateTime's own doc comment.
         $dateDeleted = gmdate('Y-m-d\TH:i:s\Z');
         $this->db->prepare('UPDATE "ChatMessages" SET "IsDeleted" = true, "DateDeleted" = :dd WHERE "Id" = :id')
-            ->execute(['dd' => $dateDeleted, 'id' => $messageId]);
+            ->execute(['dd' => SqlDateTime::reformat($dateDeleted), 'id' => $messageId]);
         $message['IsDeleted'] = true;
         $message['DateDeleted'] = $dateDeleted;
 
@@ -335,7 +348,7 @@ final class ChatService
             $this->db->prepare('DELETE FROM "ChatMessageReactions" WHERE "Id" = :id')->execute(['id' => $row['Id']]);
         } else {
             $this->db->prepare('INSERT INTO "ChatMessageReactions" ("Id", "MessageId", "UserId", "Emoji", "DateCreated") VALUES (:id, :mid, :uid, :emoji, :dc)')
-                ->execute(['id' => Uuid::v4(), 'mid' => $messageId, 'uid' => $callerUserId, 'emoji' => $emoji, 'dc' => gmdate('Y-m-d\TH:i:s\Z')]);
+                ->execute(['id' => Uuid::v4(), 'mid' => $messageId, 'uid' => $callerUserId, 'emoji' => $emoji, 'dc' => SqlDateTime::now()]);
         }
 
         $memberUserIds = $this->getChannelMemberUserIds($channelId);
@@ -348,7 +361,7 @@ final class ChatService
 
     public function truncateOldMessages(string $organisationId): array
     {
-        $cutoff = gmdate('Y-m-d\TH:i:s\Z', strtotime('-180 days'));
+        $cutoff = SqlDateTime::fromTimestamp(strtotime('-180 days'));
         $stmt = $this->db->prepare(
             'DELETE FROM "ChatMessages" WHERE "DateCreated" < :cutoff AND "ChannelId" IN (SELECT "Id" FROM "ChatChannels" WHERE "OrganisationId" = :orgId)'
         );

@@ -67,11 +67,13 @@ final class OrganisationService
 
         // Security review finding H2: rotating SecurityStamp here invalidates the target's
         // already-issued token(s), whose orgAdmin claim would otherwise stay stale (still
-        // false/true from before this change) for up to the token's full 8-hour lifetime.
-        $stmt = $this->db->prepare('UPDATE "Users" SET "IsOrgAdmin" = :admin, "SecurityStamp" = gen_random_uuid() WHERE "Id" = :id');
+        // false/true from before this change) for up to the token's full 8-hour lifetime. MariaDB
+        // port: no gen_random_uuid() function exists here — generate the replacement value in PHP
+        // and bind it instead.
+        $stmt = $this->db->prepare('UPDATE "Users" SET "IsOrgAdmin" = :admin, "SecurityStamp" = :stamp WHERE "Id" = :id');
         // (int), not the raw PHP bool — PDO's array-form execute() would bind false as '' otherwise,
-        // which Postgres's boolean parser rejects.
-        $stmt->execute(['admin' => (int) $isOrgAdmin, 'id' => $targetUserId]);
+        // which neither Postgres's nor MariaDB's boolean parser accepts.
+        $stmt->execute(['admin' => (int) $isOrgAdmin, 'stamp' => Uuid::v4(), 'id' => $targetUserId]);
         return true;
     }
 
@@ -113,9 +115,12 @@ final class OrganisationService
         [$email, $normalizedEmail] = EmailValidation::validateAndNormalize($this->db, $request['emailAddress'] ?? null, true, null);
 
         $id = Uuid::v4();
+        // MariaDB port: "SecurityStamp" has no DB-side default here (see
+        // src/Db/migrations/001_initial_schema.sql's own note) — unlike php-api's original, which
+        // relied on Postgres's `DEFAULT gen_random_uuid()`, this INSERT must supply one explicitly.
         $stmt = $this->db->prepare(<<<SQL
-            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt")
-            VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, :hash, :displayName, true, false, now())
+            INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt", "SecurityStamp")
+            VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, :hash, :displayName, true, false, now(), :securityStamp)
         SQL);
         $stmt->execute([
             'id' => $id,
@@ -126,6 +131,7 @@ final class OrganisationService
             'normalizedEmail' => $normalizedEmail,
             'hash' => PasswordHasher::hash($password),
             'displayName' => $displayName,
+            'securityStamp' => Uuid::v4(),
         ]);
 
         return [

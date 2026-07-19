@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Enkl\Api\Services;
 
+use Enkl\Api\Support\SqlDateTime;
 use Enkl\Api\Support\Uuid;
 use Enkl\Api\Validation\ApiValidationException;
 use PDO;
@@ -51,12 +52,15 @@ final class TaskCommentService
         }
 
         $commentId = Uuid::v4();
+        // $dateCreated stays ISO-8601 (returned to the caller below, matching the other two tiers'
+        // response shape exactly) — only the bound SQL parameter needs MariaDB's own DATETIME literal
+        // form (see SqlDateTime's own doc comment for why the two representations must differ).
         $dateCreated = gmdate('Y-m-d\TH:i:s\Z');
         $stmt = $this->db->prepare(
             'INSERT INTO "TaskComments" ("Id", "TaskId", "Text", "DateCreated", "AuthorId", "AuthorName") VALUES (:id, :tid, :text, :dc, :aid, :aname)'
         );
         $stmt->execute([
-            'id' => $commentId, 'tid' => $taskId, 'text' => $text, 'dc' => $dateCreated,
+            'id' => $commentId, 'tid' => $taskId, 'text' => $text, 'dc' => SqlDateTime::reformat($dateCreated),
             'aid' => $member['MemberId'], 'aname' => $member['DisplayName'],
         ]);
 

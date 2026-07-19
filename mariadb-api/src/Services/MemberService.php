@@ -105,14 +105,18 @@ final class MemberService
             [$email, $normalizedEmail] = EmailValidation::validateAndNormalize($this->db, $request['email'] ?? null, true, null);
 
             $userId = Uuid::v4();
+            // MariaDB port: "SecurityStamp" has no DB-side default here (see
+            // src/Db/migrations/001_initial_schema.sql's own note) — unlike php-api's original, which
+            // relied on Postgres's `DEFAULT gen_random_uuid()`, this INSERT must supply one explicitly.
             $stmt = $this->db->prepare(<<<SQL
-                INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt")
-                VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, :hash, :displayName, true, false, now())
+                INSERT INTO "Users" ("Id", "OrganisationId", "Username", "NormalizedUsername", "EmailAddress", "NormalizedEmailAddress", "PasswordHash", "DisplayName", "MustChangePassword", "IsOrgAdmin", "CreatedAt", "SecurityStamp")
+                VALUES (:id, :orgId, :username, :normalized, :email, :normalizedEmail, :hash, :displayName, true, false, now(), :securityStamp)
             SQL);
             $stmt->execute([
                 'id' => $userId, 'orgId' => $project['OrganisationId'], 'username' => $usernameToUse,
                 'normalized' => $usernameToUse, 'email' => $email, 'normalizedEmail' => $normalizedEmail,
                 'hash' => PasswordHasher::hash('enklUserPassword'), 'displayName' => $trimmedName,
+                'securityStamp' => Uuid::v4(),
             ]);
             $user = ['Id' => $userId, 'DisplayName' => $trimmedName, 'EmailAddress' => $email];
         } else {
