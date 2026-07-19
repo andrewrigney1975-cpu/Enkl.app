@@ -13,11 +13,13 @@ public class OrganisationService
 {
     private readonly AppDbContext _db;
     private readonly IValidator<CreateUserRequest> _createUserValidator;
+    private readonly SseBroadcaster _broadcaster;
 
-    public OrganisationService(AppDbContext db, IValidator<CreateUserRequest> createUserValidator)
+    public OrganisationService(AppDbContext db, IValidator<CreateUserRequest> createUserValidator, SseBroadcaster broadcaster)
     {
         _db = db;
         _createUserValidator = createUserValidator;
+        _broadcaster = broadcaster;
     }
 
     public async Task<OrganisationDetailDto?> GetOrganisationAsync(Guid organisationId)
@@ -28,9 +30,10 @@ public class OrganisationService
             .FirstOrDefaultAsync(o => o.Id == organisationId);
         if (org is null) return null;
 
+        var online = _broadcaster.GetOnlineUserIds();
         return new OrganisationDetailDto(
             org.Id, org.Name,
-            org.Users.Select(u => new OrgUserDto(u.Id, u.Username, u.EmailAddress, u.DisplayName, u.IsOrgAdmin, u.IsActive, u.CreatedAt)).ToList());
+            org.Users.Select(u => new OrgUserDto(u.Id, u.Username, u.EmailAddress, u.DisplayName, u.IsOrgAdmin, u.IsActive, u.CreatedAt, online.Contains(u.Id))).ToList());
     }
 
     /// <summary>Returns false if the target user doesn't exist or belongs to a different Organisation
@@ -92,7 +95,7 @@ public class OrganisationService
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        return new OrgUserDto(user.Id, user.Username, user.EmailAddress, user.DisplayName, user.IsOrgAdmin, user.IsActive, user.CreatedAt);
+        return new OrgUserDto(user.Id, user.Username, user.EmailAddress, user.DisplayName, user.IsOrgAdmin, user.IsActive, user.CreatedAt, false);
     }
 
     /// <summary>

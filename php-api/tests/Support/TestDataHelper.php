@@ -60,6 +60,32 @@ final class TestDataHelper
         return ['orgId' => $orgId, 'userId' => $userId];
     }
 
+    /** Adds a second (third, ...) user to an ALREADY-seeded Organisation — seedOrgAndUser always
+     * creates a brand-new org, so this is the one to reach for when a test needs two colleagues in
+     * the SAME org (e.g. chat channel members). Mirrors TestDataHelper.cs's SeedUserInOrgAsync. */
+    public static function seedUserInOrg(PDO $db, string $organisationId, string $username, bool $isOrgAdmin = false): string
+    {
+        $userId = Uuid::v4();
+        $db->prepare(<<<SQL
+            INSERT INTO "Users" (
+                "Id", "OrganisationId", "Username", "NormalizedUsername", "PasswordHash", "DisplayName",
+                "MustChangePassword", "IsOrgAdmin", "IsActive", "CreatedAt"
+            ) VALUES (
+                :id, :orgId, :username, :normalizedUsername, :passwordHash, :displayName,
+                false, :isOrgAdmin, true, now()
+            )
+        SQL)->execute([
+            'id' => $userId,
+            'orgId' => $organisationId,
+            'username' => $username,
+            'normalizedUsername' => UsernameNormalizer::normalize($username),
+            'passwordHash' => PasswordHasher::hash(self::DEFAULT_PASSWORD),
+            'displayName' => $username,
+            'isOrgAdmin' => $isOrgAdmin ? 1 : 0,
+        ]);
+        return $userId;
+    }
+
     public static function seedProject(PDO $db, string $organisationId, string $key, ?string $memberUserId = null, bool $memberIsProjectAdmin = false): string
     {
         $projectId = Uuid::v4();

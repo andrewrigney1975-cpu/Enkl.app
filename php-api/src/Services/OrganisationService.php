@@ -30,6 +30,7 @@ final class OrganisationService
             'SELECT "Id", "Username", "EmailAddress", "DisplayName", "IsOrgAdmin", "IsActive", "CreatedAt" FROM "Users" WHERE "OrganisationId" = :id'
         );
         $stmt->execute(['id' => $organisationId]);
+        $online = $this->onlineUserIds();
         $users = array_map(static fn(array $u): array => [
             'id' => $u['Id'],
             'username' => $u['Username'],
@@ -38,9 +39,18 @@ final class OrganisationService
             'isOrgAdmin' => (bool) $u['IsOrgAdmin'],
             'isActive' => (bool) $u['IsActive'],
             'createdAt' => $u['CreatedAt'],
+            'isOnline' => in_array($u['Id'], $online, true),
         ], $stmt->fetchAll());
 
         return ['id' => $org['Id'], 'name' => $org['Name'], 'users' => $users];
+    }
+
+    /** @return string[] Same query/grace-window as ChatService::onlineUserIds — duplicated rather
+     * than shared, matching this tier's existing per-class-duplication convention (see php-api/CLAUDE.md). */
+    private function onlineUserIds(): array
+    {
+        $stmt = $this->db->query('SELECT "UserId" FROM "SsePresence" WHERE "LastSeenAt" > now() - interval \'25 seconds\'');
+        return array_column($stmt->fetchAll(), 'UserId');
     }
 
     /** Returns false if the target user doesn't exist or belongs to a different Organisation than the caller. */

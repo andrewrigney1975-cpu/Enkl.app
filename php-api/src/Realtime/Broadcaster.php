@@ -51,4 +51,35 @@ final class Broadcaster
         $stmt = $this->db->prepare('SELECT pg_notify(:channel, :payload)');
         $stmt->execute(['channel' => 'task_changed', 'payload' => $payload]);
     }
+
+    /**
+     * @param string[] $channelMemberUserIds
+     * @param string[] $mentionedUserIds
+     */
+    public function broadcastChatMessage(
+        array $channelMemberUserIds,
+        string $channelId,
+        string $messageId,
+        string $text,
+        string $changeType,
+        ?string $authorUserId,
+        string $authorName,
+        string $dateCreated,
+        bool $isDeleted,
+        array $mentionedUserIds,
+        ?string $excludeClientSessionId
+    ): void {
+        $payload = json_encode([
+            'memberUserIds' => $channelMemberUserIds,
+            'excludeClientSessionId' => $excludeClientSessionId,
+            'event' => [
+                'channelId' => $channelId, 'messageId' => $messageId, 'text' => $text,
+                'changeType' => $changeType, 'authorUserId' => $authorUserId, 'authorName' => $authorName,
+                'dateCreated' => $dateCreated, 'isDeleted' => $isDeleted, 'mentionedUserIds' => $mentionedUserIds,
+            ],
+        ]);
+
+        $stmt = $this->db->prepare('SELECT pg_notify(:channel, :payload)');
+        $stmt->execute(['channel' => 'chat_message', 'payload' => $payload]);
+    }
 }

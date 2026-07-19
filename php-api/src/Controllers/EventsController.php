@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Enkl\Api\Controllers;
 
 use Enkl\Api\Config\Config;
+use Enkl\Api\Db\Database;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -60,8 +61,10 @@ final class EventsController extends BaseController
         }
 
         pg_query($conn, 'LISTEN task_changed');
+        pg_query($conn, 'LISTEN chat_message');
         $socket = pg_socket($conn);
         $lastHeartbeat = time();
+        $this->markPresent($userId);
 
         try {
             while (!connection_aborted()) {
@@ -82,10 +85,15 @@ final class EventsController extends BaseController
                         break;
                     }
                     $lastHeartbeat = time();
+                    // Refreshed every heartbeat, not just on connect — a long-lived stream must keep
+                    // proving it's still alive so PresenceRepository's "online" window (grace period
+                    // just past one missed beat) doesn't go stale while the connection is actually fine.
+                    $this->markPresent($userId);
                 }
             }
         } finally {
             pg_close($conn);
+            $this->markAbsent($userId);
         }
 
         return $response;
@@ -106,8 +114,34 @@ final class EventsController extends BaseController
             return;
         }
 
-        echo "event: task-changed\n";
+        // The channel name IS the SSE event name for every channel this stream listens to — kept a
+        // 1:1 mapping deliberately so adding a future channel never needs a branch here, just another
+        // `pg_query($conn, 'LISTEN ...')` call above.
+        echo 'event: ' . str_replace('_', '-', $notify['message']) . "\n";
         echo 'data: ' . json_encode($payload['event']) . "\n\n";
         @flush();
+    }
+
+    // Best-effort — a presence hiccup must never break the SSE stream itself. See migration
+    // 027_add_chat.sql's own comment on SsePresence for why this table exists at all (the PHP-FPM
+    // equivalent of the .NET tier's in-memory connection registry).
+    private function markPresent(string $userId): void
+    {
+        try {
+            $stmt = Database::connection()->prepare(
+                'INSERT INTO "SsePresence" ("UserId", "LastSeenAt") VALUES (:uid, now())
+                 ON CONFLICT ("UserId") DO UPDATE SET "LastSeenAt" = now()'
+            );
+            $stmt->execute(['uid' => $userId]);
+        } catch (\Throwable) {
+        }
+    }
+
+    private function markAbsent(string $userId): void
+    {
+        try {
+            Database::connection()->prepare('DELETE FROM "SsePresence" WHERE "UserId" = :uid')->execute(['uid' => $userId]);
+        } catch (\Throwable) {
+        }
     }
 }

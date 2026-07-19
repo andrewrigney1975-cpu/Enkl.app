@@ -46,6 +46,28 @@ public static class TestDataHelper
         return (org, user);
     }
 
+    /// <summary>Adds a second (third, ...) user to an ALREADY-seeded Organisation — SeedOrgAndUserAsync
+    /// always creates a brand-new org, so this is the one to reach for when a test needs two colleagues
+    /// in the SAME org (e.g. chat channel members).</summary>
+    public static async Task<User> SeedUserInOrgAsync(AppDbContext db, Guid organisationId, string username, bool isOrgAdmin = false)
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            OrganisationId = organisationId,
+            Username = username,
+            NormalizedUsername = UsernameNormalizer.Normalize(username),
+            PasswordHash = PasswordHasher.Hash(DefaultPassword),
+            DisplayName = username,
+            IsOrgAdmin = isOrgAdmin,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        return user;
+    }
+
     public static async Task<Project> SeedProjectAsync(AppDbContext db, Guid organisationId, string key, User? member = null, bool memberIsProjectAdmin = false)
     {
         var project = new Project

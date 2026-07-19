@@ -1124,6 +1124,451 @@
     min-height: 200px;
   }
 
+  /* Chat bubble + panel — position:fixed (viewport-anchored), not a layout participant of
+     .kf-board-wrap, so it never drifts as the board scrolls horizontally underneath it (an
+     absolutely-positioned child of a scrolling container moves WITH that content, which is wrong
+     here — the bubble needs to stay pinned to the same visible corner regardless of scroll
+     position). Sits in the same z-index band as .kf-toast-wrap (1100) — below every real modal's
+     backdrop (1000... but modals are also >=1000, so this needs to be BELOW a blocking modal while
+     still above ordinary board content) — see the two rules' actual values below for the reasoning
+     spelled out per-element. No .kf-overlay backdrop anywhere here — the whole point (per the
+     original ask) is that the app stays usable while the panel is open, same "floats above the app,
+     nothing dims/blocks behind it" shape as the widescreen docked task panel's own
+     pointer-events:none overlay trick. */
+  .kf-chat-bubble {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 900;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--kf-navy);
+    color: #fff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--kf-modal-shadow);
+    cursor: pointer;
+    transition: right .2s ease, transform .1s ease;
+  }
+
+  .kf-chat-bubble:hover {
+    transform: scale(1.05);
+  }
+
+  .kf-chat-bubble-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 10px;
+    background: #de350b;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border: 2px solid var(--kf-bg);
+  }
+
+  .kf-chat-panel {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 900;
+    width: 360px;
+    height: 520px;
+    max-height: calc(100vh - 48px);
+    background: var(--kf-surface);
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    box-shadow: var(--kf-modal-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: right .2s ease;
+  }
+
+  /* No generic ".hidden { display:none }" utility class exists anywhere in this app's CSS (see
+     CLAUDE.md's own note on this) — every "hidden" toggle needs its own compound selector, and this
+     one was missing entirely, which is exactly why the panel was visible (empty, since
+     chatState.isOpen was still false) from page load and "closing" it appeared to do nothing. */
+  .kf-chat-panel.hidden {
+    display: none;
+  }
+
+  /* Moves both left of the widescreen (2560px+) docked task panel (700px wide) — see
+     board-layout.js's fitBoardForTaskModal, the only place this class is ever toggled. */
+  body.kf-task-panel-docked .kf-chat-bubble,
+  body.kf-task-panel-docked .kf-chat-panel {
+    right: 724px;
+  }
+
+  .kf-chat-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--kf-border);
+    flex-shrink: 0;
+  }
+
+  .kf-chat-panel-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .kf-chat-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* ---- Channel list view ---- */
+
+  .kf-chat-channel-list {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+  }
+
+  .kf-chat-new-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .kf-chat-new-btn {
+    flex: 1;
+    font-size: 12px;
+    padding: 6px 8px;
+    justify-content: center;
+  }
+
+  .kf-chat-channel-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 8px;
+    border-radius: var(--kf-radius);
+    cursor: pointer;
+  }
+
+  .kf-chat-channel-row:hover {
+    background: var(--kf-hover-tint);
+  }
+
+  .kf-chat-channel-row-admin {
+    opacity: .85;
+  }
+
+  .kf-chat-presence-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--kf-text-faint);
+    flex-shrink: 0;
+  }
+
+  .kf-chat-presence-dot.online {
+    background: #36b37e;
+  }
+
+  .kf-chat-channel-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .kf-chat-unread-badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #de350b;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .kf-chat-channel-group-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--kf-text-secondary);
+    padding: 10px 8px 4px;
+  }
+
+  .kf-chat-truncate-btn {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--kf-overdue-fg);
+    justify-content: center;
+  }
+
+  .kf-chat-empty {
+    padding: 20px 8px;
+    text-align: center;
+    color: var(--kf-text-faint);
+    font-size: 13px;
+  }
+
+  /* ---- New channel / DM picker ---- */
+
+  .kf-chat-new-picker {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .kf-chat-user-picker-list {
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 4px;
+  }
+
+  .kf-chat-user-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .kf-chat-user-picker-row:hover {
+    background: var(--kf-hover-tint);
+    border-radius: var(--kf-radius);
+  }
+
+  /* ---- Thread view ---- */
+
+  .kf-chat-thread {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .kf-chat-thread-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--kf-border);
+    flex-shrink: 0;
+  }
+
+  .kf-chat-thread-toolbar #chatExportBtn {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  .kf-chat-reveal-deleted-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--kf-text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .kf-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+  }
+
+  .kf-chat-load-older-btn {
+    align-self: center;
+    font-size: 12px;
+  }
+
+  .kf-chat-message-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .kf-chat-message-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--kf-navy);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .kf-chat-message-content {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+  }
+
+  .kf-chat-message-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+
+  .kf-chat-message-author {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .kf-chat-message-time {
+    font-size: 11px;
+    color: var(--kf-text-faint);
+  }
+
+  .kf-chat-deleted-icon {
+    color: var(--kf-text-faint);
+    display: inline-flex;
+  }
+
+  .kf-chat-message-text {
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .kf-chat-message-deleted .kf-chat-message-text {
+    color: var(--kf-text-faint);
+    font-style: italic;
+  }
+
+  /* The current user's own messages — avatar flipped to the right, meta row and message text
+     right-aligned, same "your messages on the right" convention every mainstream chat app uses. */
+  .kf-chat-message-own {
+    flex-direction: row-reverse;
+  }
+
+  .kf-chat-message-own .kf-chat-message-meta {
+    justify-content: flex-end;
+  }
+
+  .kf-chat-message-own .kf-chat-message-text {
+    text-align: right;
+  }
+
+  .kf-chat-mention {
+    background: var(--kf-chip-active-bg, rgba(79, 70, 229, .15));
+    color: #fff;
+    border-radius: 3px;
+    padding: 0 2px;
+    font-weight: 600;
+  }
+
+  .kf-chat-message-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: none;
+    gap: 2px;
+  }
+
+  .kf-chat-message-row:hover .kf-chat-message-actions {
+    display: flex;
+  }
+
+  .kf-chat-message-actions button {
+    background: var(--kf-surface);
+    border: 1px solid var(--kf-border);
+    border-radius: 3px;
+    color: var(--kf-text-secondary);
+    padding: 3px;
+    cursor: pointer;
+    display: flex;
+  }
+
+  .kf-chat-message-actions button:hover {
+    background: var(--kf-hover-tint);
+  }
+
+  .kf-chat-compose {
+    flex-shrink: 0;
+    border-top: 1px solid var(--kf-border);
+    padding: 8px 10px;
+    position: relative;
+  }
+
+  .kf-chat-compose textarea {
+    width: 100%;
+    resize: none;
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--kf-text);
+    background: var(--kf-input-bg);
+    box-sizing: border-box;
+  }
+
+  .kf-chat-compose-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  @media (max-width: 1024px) {
+    .kf-chat-panel {
+      position: fixed;
+      inset: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      border-radius: 0;
+      border: none;
+      z-index: 1200;
+    }
+
+    .kf-chat-bubble {
+      bottom: 16px;
+      right: 16px;
+    }
+  }
+
   .kf-column {
     background: var(--kf-column-tint, var(--kf-column-bg));
     border-radius: 6px;

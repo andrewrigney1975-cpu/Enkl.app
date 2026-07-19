@@ -41,6 +41,12 @@ export function fitBoardForTaskModal(){
   mainContent.style.flexGrow = '0';
   mainContent.style.flexShrink = '0';
   mainContent.style.flexBasis = mainContentWidth + 'px';
+
+  // The chat bubble/panel are position:fixed (viewport-anchored, so they never drift when the board
+  // itself scrolls horizontally — see styles.css's .kf-chat-bubble/.kf-chat-panel) rather than layout
+  // participants of .kf-main-content, so they don't narrow "for free" the way the header/board do
+  // above — this class is what actually moves them left, clear of the docked panel's own 700px width.
+  document.body.classList.add('kf-task-panel-docked');
 }
 
 function clearBoardInlineSizing(){
@@ -52,6 +58,7 @@ function clearBoardInlineSizing(){
     mainContent.style.flexShrink = '';
     mainContent.style.flexBasis = '';
   }
+  document.body.classList.remove('kf-task-panel-docked');
 }
 
 /* Undoes fitBoardForTaskModal's inline sizing once the Task modal closes, handing the board back to

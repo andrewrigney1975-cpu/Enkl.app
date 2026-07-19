@@ -26,6 +26,8 @@ import { parseTaskKeyFromHash, findTaskByKey, clearTaskHash } from './features/h
 import { exportProjectJSON, setExportToast } from './features/export.js';
 import { migrateProjectToServer, loginToServer, completeSsoLogin, changePasswordOnServer, isServerLoggedIn, isServerAuthoritative, pullServerProjectsIntoLocal, deleteProjectOnServer, setMigrationToast } from './features/migration.js';
 import { connectEventStream, disconnectEventStream } from './features/live-updates.js';
+import { initChat, resetChatState, closeChatPanel, isChatPanelOpen } from './features/chat.js';
+import { initChatView, toggleChatPanel, chatBackClicked, updateChatBubbleVisibility } from './views/chat.js';
 import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck, setImportToast, setImportRenderAll, setImportResetFilters } from './features/import.js';
 import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder } from './features/session-alerts.js';
 import { setBulkEditDeps, openBulkEditOverlay, closeBulkEditOverlay, isBulkEditOverlayOpen, saveBulkEditChanges } from './features/bulk-edit.js';
@@ -82,6 +84,7 @@ setBulkEditDeps({ confirmDialog, exportProjectJSON });
 // priority filter chips, the task modal's priority icon) keeps showing colors computed for the OLD
 // theme until something else happens to trigger its own re-render (e.g. a hard refresh).
 setThemeDeps({ renderBoard, renderDependencyMap, isDepMapOpen, updatePriorityIcon, renderPriorityFilterChips });
+initChatView();
 setMutationsToast(toast);
 setMigrationToast(toast);
 setExportToast(toast);
@@ -1228,6 +1231,8 @@ function wireEvents(){
       document.getElementById('serverLoginPasswordInput').value = '';
       closeServerLoginModal();
       connectEventStream();
+      initChat();
+      updateChatBubbleVisibility();
       pullServerProjectsIntoLocal().then(function(count){
         renderAll();
         if(count > 0) toast('Loaded ' + count + ' project(s) from the server.');
@@ -1239,6 +1244,9 @@ function wireEvents(){
   document.getElementById('serverLogoutBtn').addEventListener('click', function(){
     clearToken();
     disconnectEventStream();
+    closeChatPanel();
+    resetChatState();
+    updateChatBubbleVisibility();
     // Server-authoritative projects stay exactly as they are — still flagged server-authoritative,
     // still showing their last-synced data — they just can't push/pull further changes until logged
     // back in (any attempt will 401 and re-open the login modal via setOnAuthExpired above).
@@ -1697,7 +1705,12 @@ function wireEvents(){
     else if(isMobileDrawerOpen()) closeMobileDrawer();
     else if(isUfoModalOpen()) closeUfoModal();
     else if(isOpeningExperienceModalOpen()) closeOpeningExperienceModal();
+    else if(isChatPanelOpen()) closeChatPanel();
   });
+
+  document.getElementById('chatBubbleBtn').addEventListener('click', toggleChatPanel);
+  document.getElementById('chatCloseBtn').addEventListener('click', closeChatPanel);
+  document.getElementById('chatBackBtn').addEventListener('click', chatBackClicked);
 }
 
 /* =========================================================
@@ -1744,6 +1757,8 @@ function handleSsoCallbackIfPresent(){
 
   completeSsoLogin(code).then(function(){
     connectEventStream();
+    initChat();
+    updateChatBubbleVisibility();
     pullServerProjectsIntoLocal().then(function(count){
       renderAll();
       if(count > 0) toast('Loaded ' + count + ' project(s) from the server.');
@@ -1786,10 +1801,12 @@ function init(){
   // that dead-end copy forever. See pullServerProjectsIntoLocal's comment in features/migration.js.
   if(isServerLoggedIn()){
     connectEventStream();
+    initChat();
     pullServerProjectsIntoLocal().then(function(count){
       if(count > 0) renderAll();
     });
   }
+  updateChatBubbleVisibility();
 }
 
 if(document.readyState === 'loading'){

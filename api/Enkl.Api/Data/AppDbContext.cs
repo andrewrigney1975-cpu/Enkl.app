@@ -38,6 +38,9 @@ public class AppDbContext : DbContext
     public DbSet<ProjectResourcePlaceholder> ProjectResourcePlaceholders => Set<ProjectResourcePlaceholder>();
     public DbSet<SavedQuery> SavedQueries => Set<SavedQuery>();
     public DbSet<OrganisationApiKey> OrganisationApiKeys => Set<OrganisationApiKey>();
+    public DbSet<ChatChannel> ChatChannels => Set<ChatChannel>();
+    public DbSet<ChatChannelMember> ChatChannelMembers => Set<ChatChannelMember>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

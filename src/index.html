@@ -243,6 +243,18 @@
   <!-- Board -->
   <div class="kf-board-wrap">
     <div class="kf-board" id="board"></div>
+    <button class="kf-chat-bubble kf-vis-hidden" id="chatBubbleBtn" title="Chat" aria-label="Open chat">
+      <span class="kf-icon" data-icon="chat" data-size="24"></span>
+      <span class="kf-chat-bubble-badge kf-vis-hidden" id="chatBubbleBadge">0</span>
+    </button>
+    <div class="kf-chat-panel hidden" id="chatPanel">
+      <div class="kf-chat-panel-header">
+        <button class="kf-btn kf-btn-ghost kf-chat-back-btn kf-vis-hidden" id="chatBackBtn" aria-label="Back to channels"><span class="kf-icon" data-icon="chevronLeft" data-size="16"></span></button>
+        <div class="kf-chat-panel-title" id="chatPanelTitle">Chat</div>
+        <button class="kf-btn kf-btn-ghost" id="chatCloseBtn" aria-label="Close chat"><span class="kf-icon" data-icon="close" data-size="16"></span></button>
+      </div>
+      <div class="kf-chat-panel-body" id="chatPanelBody"></div>
+    </div>
   </div>
     </div>
   </div>

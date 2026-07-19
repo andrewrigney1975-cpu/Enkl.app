@@ -12,6 +12,7 @@ use Enkl\Api\Auth\RequireAuthMiddleware;
 use Enkl\Api\Auth\ScimAuthMiddleware;
 use Enkl\Api\Auth\SessionValidationMiddleware;
 use Enkl\Api\Controllers\AuthController;
+use Enkl\Api\Controllers\ChatController;
 use Enkl\Api\Controllers\ColumnsController;
 use Enkl\Api\Controllers\DecisionsController;
 use Enkl\Api\Controllers\DocumentsController;
@@ -137,6 +138,26 @@ function registerRoutes(App $app): void
         $group->post('/api-key', [OrganisationApiKeyController::class, 'generate']);
         $group->delete('/api-key', [OrganisationApiKeyController::class, 'revoke']);
     })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
+
+    // ---- Chat (org-wide, any authenticated org user — deliberately NO ProjectMemberMiddleware, since
+    // colleagues chat across the whole org, not within one project's membership) ----
+    $app->group('/api/chat', function ($group) {
+        $group->get('/org-users', [ChatController::class, 'getOrgRoster']);
+        $group->get('/channels', [ChatController::class, 'listChannels']);
+        $group->post('/channels', [ChatController::class, 'createChannel']);
+        $group->post('/channels/{channelId}/members', [ChatController::class, 'addMember']);
+        $group->delete('/channels/{channelId}/members/{userId}', [ChatController::class, 'removeMember']);
+        $group->get('/channels/{channelId}/messages', [ChatController::class, 'getMessages']);
+        $group->post('/channels/{channelId}/messages', [ChatController::class, 'postMessage']);
+        $group->put('/channels/{channelId}/messages/{messageId}', [ChatController::class, 'updateMessage']);
+        $group->delete('/channels/{channelId}/messages/{messageId}', [ChatController::class, 'deleteMessage']);
+        // Manual replacement for a scheduled 180-day purge — see ChatService::truncateOldMessages's own
+        // doc comment — nested in its own sub-group (same "extra check on just these routes" shape as
+        // teams-committees above) so only this one route requires OrgAdmin, not the whole /api/chat group.
+        $group->group('', function ($adminGroup) {
+            $adminGroup->post('/truncate', [ChatController::class, 'truncate']);
+        })->add(OrgAdminMiddleware::class);
+    })->add(RequireAuthMiddleware::class);
 
     // ---- Public Query API (the app's first public/3rd-party-facing surface — deliberately
     // namespaced/versioned apart from the internal "api/..." routes, see PublicQueryController.php's

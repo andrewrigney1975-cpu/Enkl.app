@@ -394,6 +394,43 @@ export var taskCommentApi = {
   }
 };
 
+/* Org-wide chat — see api/Enkl.Api/Controllers/ChatController.cs for the definitive route list.
+   Not project-scoped (no projectId anywhere here) — channels/messages belong to the caller's own
+   organisation, derived server-side from the JWT, same as getMyOrganisationApi below. */
+export var chatApi = {
+  orgUsers: function(){
+    return apiFetch('/chat/org-users', {method: 'GET'});
+  },
+  listChannels: function(){
+    return apiFetch('/chat/channels', {method: 'GET'});
+  },
+  createChannel: function(name, isDirectMessage, memberUserIds){
+    return apiFetch('/chat/channels', {method: 'POST', body: JSON.stringify({name: name, isDirectMessage: isDirectMessage, memberUserIds: memberUserIds})});
+  },
+  addMember: function(channelId, userId){
+    return apiFetch('/chat/channels/' + channelId + '/members', {method: 'POST', body: JSON.stringify({userId: userId})});
+  },
+  removeMember: function(channelId, userId){
+    return apiFetch('/chat/channels/' + channelId + '/members/' + userId, {method: 'DELETE'});
+  },
+  getMessages: function(channelId, before, limit){
+    var qs = '?limit=' + (limit || 50) + (before ? '&before=' + encodeURIComponent(before) : '');
+    return apiFetch('/chat/channels/' + channelId + '/messages' + qs, {method: 'GET'});
+  },
+  postMessage: function(channelId, text){
+    return apiFetch('/chat/channels/' + channelId + '/messages', {method: 'POST', body: JSON.stringify({text: text})});
+  },
+  updateMessage: function(channelId, messageId, text){
+    return apiFetch('/chat/channels/' + channelId + '/messages/' + messageId, {method: 'PUT', body: JSON.stringify({text: text})});
+  },
+  deleteMessage: function(channelId, messageId){
+    return apiFetch('/chat/channels/' + channelId + '/messages/' + messageId, {method: 'DELETE'});
+  },
+  truncate: function(){
+    return apiFetch('/chat/truncate', {method: 'POST'});
+  }
+};
+
 export var releaseApi = makeEntityApi('releases');
 export var taskTypeApi = makeEntityApi('task-types');
 export var principleApi = makeEntityApi('principles');

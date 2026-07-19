@@ -52,7 +52,22 @@ public class SseBroadcaster
     /// </summary>
     public void BroadcastTaskChanged(IEnumerable<Guid> memberUserIds, TaskChangedEventDto payload, string? excludeClientSessionId)
     {
-        var frame = "event: task-changed\ndata: " + JsonSerializer.Serialize(payload, JsonOptions) + "\n\n";
+        Broadcast("task-changed", memberUserIds, payload, excludeClientSessionId);
+    }
+
+    /// <summary>Notifies every channel member's open connections of a new/edited/deleted chat message
+    /// — same per-explicit-member-list scoping and self-tab exclusion as BroadcastTaskChanged. The
+    /// payload's MentionedUserIds carries which of those members (if any) were @-tagged; the frontend
+    /// decides whether to surface an extra highlighted alert for itself rather than this needing a
+    /// second broadcast/event type.</summary>
+    public void BroadcastChatMessage(IEnumerable<Guid> channelMemberUserIds, ChatMessageEventDto payload, string? excludeClientSessionId)
+    {
+        Broadcast("chat-message", channelMemberUserIds, payload, excludeClientSessionId);
+    }
+
+    private void Broadcast<T>(string eventName, IEnumerable<Guid> memberUserIds, T payload, string? excludeClientSessionId)
+    {
+        var frame = "event: " + eventName + "\ndata: " + JsonSerializer.Serialize(payload, JsonOptions) + "\n\n";
         foreach (var userId in memberUserIds)
         {
             if (!_connectionsByUser.TryGetValue(userId, out var set)) continue;
@@ -63,6 +78,14 @@ public class SseBroadcaster
             }
         }
     }
+
+    /// <summary>Snapshot of every userId with at least one open SSE connection right now — the basis
+    /// for the "green dot" presence indicator (GET /api/organisations/me/roster). Deliberately a
+    /// point-in-time poll target, not a push-on-connect/disconnect event: fanning a presence-changed
+    /// notification out to an entire org on every connect/disconnect is a materially different
+    /// (broadcast-to-everyone) shape than every other broadcast here, which targets an explicit,
+    /// already-known member list.</summary>
+    public IReadOnlyCollection<Guid> GetOnlineUserIds() => _connectionsByUser.Keys.ToArray();
 }
 
 /// <summary>
