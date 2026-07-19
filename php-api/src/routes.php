@@ -250,6 +250,7 @@ function registerRoutes(App $app): void
         // every action in both requires the Project Administrator role, not just plain membership.
         $group->group('', function ($adminGroup) {
             registerEntityRoutes($adminGroup, '/columns', ColumnsController::class, 'columnId');
+            $adminGroup->get('/members/org-candidates', [MembersController::class, 'orgCandidates']);
             registerEntityRoutes($adminGroup, '/members', MembersController::class, 'memberId');
             $adminGroup->put('/members/{memberId}/admin', [MembersController::class, 'setProjectAdmin']);
         })->add(ProjectAdminMiddleware::class);

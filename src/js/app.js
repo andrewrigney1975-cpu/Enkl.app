@@ -41,7 +41,7 @@ import { closeSetPrivateKeyModal, confirmSetPrivateKeyFromModal } from './modals
 import { closeUnlockPrivateTaskModal, confirmUnlockFromModal, continueWithoutKeyFromModal } from './modals/private-key-unlock.js';
 import { openColumnModal, closeColumnModal, saveColumnFromModal, deleteColumnFromModal } from './modals/column.js';
 import { openProjectModal, closeProjectModal, saveProjectFromModal } from './modals/project.js';
-import { openTeamModal, closeTeamModal, addMemberFromModal } from './modals/team.js';
+import { openTeamModal, closeTeamModal, addMemberFromModal, wireAddMemberCombobox } from './modals/team.js';
 import { openOrgUsersModal, closeOrgUsersModal, createOrgUserFromModal } from './modals/organisation.js';
 import { openSsoConfigModal, closeSsoConfigModal, saveSsoConfigFromModal, generateScimTokenFromModal, generateApiKeyFromModal, revokeApiKeyFromModal } from './modals/sso.js';
 import { openSaveAsTemplateModal, closeSaveAsTemplateModal, saveAsTemplateFromModal, openTemplatesModal, closeTemplatesModal } from './modals/templates.js';
@@ -171,9 +171,7 @@ function wireEvents(){
   document.getElementById('teamModalClose').addEventListener('click', closeTeamModal);
   document.getElementById('teamDoneBtn').addEventListener('click', closeTeamModal);
   document.getElementById('addMemberBtn').addEventListener('click', addMemberFromModal);
-  document.getElementById('newMemberNameInput').addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){ e.preventDefault(); addMemberFromModal(); }
-  });
+  wireAddMemberCombobox();
   document.getElementById('teamOverlay').addEventListener('mousedown', function(e){
     if(e.target.id === 'teamOverlay') closeTeamModal();
   });

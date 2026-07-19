@@ -20,6 +20,13 @@ public record CreateMemberRequest(string Name, string? Email);
 public record UpdateMemberRequest(string Name, string? Role, int? AllocatedFraction, Guid? ReportsToId);
 public record SetProjectAdminRequest(bool IsProjectAdmin);
 
+/// <summary>The "Add a team member" combobox's candidate list — every active User in the project's
+/// own Organisation (not just ones already a ProjectMember here), so a person who's a member of a
+/// different project in the same org still shows up and can be added to this one too. Frontend
+/// excludes ids already in this project's own member list client-side (it already has that data from
+/// the project-detail fetch) rather than this endpoint doing it server-side.</summary>
+public record OrgUserCandidateDto(Guid Id, string DisplayName, string? Email);
+
 public record ColumnDto(Guid Id, string Name, bool Done, string? Color, int Order, int Cap);
 
 public record TaskAuditLogEntryDto(Guid Id, DateTime Timestamp, string Field, string? OldValue, string? NewValue, string? ChangedBy);

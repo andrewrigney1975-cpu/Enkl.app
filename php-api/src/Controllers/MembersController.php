@@ -17,6 +17,14 @@ final class MembersController extends BaseController
         return new MemberService(Database::connection());
     }
 
+    // "Add a team member" combobox's candidate list — see MemberService::getOrgCandidates's own doc
+    // comment for why this is the whole org roster, not just this project's existing members.
+    public function orgCandidates(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->service()->getOrgCandidates($args['projectId']);
+        return $result === null ? $this->notFound($response) : $this->json($response, $result);
+    }
+
     public function create(Request $request, Response $response, array $args): Response
     {
         $result = $this->service()->create($args['projectId'], $this->body($request));

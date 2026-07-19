@@ -23,6 +23,31 @@ final class MemberService
     {
     }
 
+    /**
+     * Backs the "Add a team member" combobox — the project's whole Organisation roster (active
+     * Users), not just its current ProjectMembers, so someone who's only a member of a sibling
+     * project in the same org still shows up as a pickable candidate here. Ported from
+     * Services/MemberService.cs's GetOrgCandidatesAsync.
+     */
+    public function getOrgCandidates(string $projectId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT "OrganisationId" FROM "Projects" WHERE "Id" = :id');
+        $stmt->execute(['id' => $projectId]);
+        $project = $stmt->fetch();
+        if ($project === false) {
+            return null;
+        }
+
+        $stmt = $this->db->prepare(
+            'SELECT "Id", "DisplayName", "EmailAddress" FROM "Users" WHERE "OrganisationId" = :org AND "IsActive" = true ORDER BY "DisplayName"'
+        );
+        $stmt->execute(['org' => $project['OrganisationId']]);
+        return array_map(
+            fn(array $u) => ['id' => $u['Id'], 'displayName' => $u['DisplayName'], 'email' => $u['EmailAddress']],
+            $stmt->fetchAll()
+        );
+    }
+
     // ARCHITECTURE-REVIEW.md finding 3.1: the User insert (new-user branch) and the ProjectMember
     // insert used to be two separately auto-committed statements — a failure on the second left a
     // real User account behind with no ProjectMember row at all, invisible on the project but still

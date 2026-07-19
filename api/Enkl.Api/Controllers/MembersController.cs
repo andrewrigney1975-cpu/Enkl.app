@@ -20,6 +20,15 @@ public class MembersController : ControllerBase
         _members = members;
     }
 
+    // "Add a team member" combobox's candidate list — see MemberService.GetOrgCandidatesAsync's doc
+    // comment for why this is the whole org roster, not just this project's existing members.
+    [HttpGet("org-candidates")]
+    public async Task<IActionResult> GetOrgCandidates(Guid projectId)
+    {
+        var result = await _members.GetOrgCandidatesAsync(projectId);
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(Guid projectId, CreateMemberRequest request)
     {

@@ -19,11 +19,135 @@ function buildServerMemberBody(m, overrides){
   return Object.assign({name: m.name, role: m.role || null, reportsToId: m.reportsToId || null, allocatedFraction: m.allocatedFraction != null ? m.allocatedFraction : null}, overrides || {});
 }
 
+/* ---- "Add a team member" combobox — filters the org's whole user roster (fetched once per modal
+   open) as you type, tagging any candidate already on this project. Built on the exact same standard
+   dropdown/combobox control as the board toolbar's "Search tasks..." box (board-filters.js's
+   #searchHashtagPanel): a `.kf-search`-wrapped input with a `.kf-dropdown-filter-panel` sitting below
+   it (pure CSS absolute positioning off the wrap's own `position:relative` — no JS-computed
+   coordinates needed, unlike the chat mention dropdown's caret-tracking, since this is a single-line
+   input with nothing to track), `.kf-dropdown-filter-row`/`.kf-dropdown-filter-name` per candidate,
+   and the same "Matching tags" title-row convention (here: "Existing Team Members"). Only meaningful
+   for a server-authoritative project — a local-only project has no User/org concept at all (see
+   isServerAuthoritative gate below), so the combobox never activates there and the name input stays a
+   plain free-text box exactly as before. */
+var _orgCandidates = [];
+var _addCombobox = null; // {options: [{userId, displayName, email, alreadyMember}], activeIndex} or null when closed
+
+function loadOrgCandidatesForCombobox(project){
+  if(!isServerAuthoritative(project)){ _orgCandidates = []; return; }
+  memberApi.orgCandidates(project.serverProjectId).then(function(list){
+    _orgCandidates = list || [];
+  }).catch(function(){ _orgCandidates = []; });
+}
+
+function filterOrgCandidates(query){
+  var q = query.trim().toLowerCase();
+  if(!q) return [];
+  var project = getCurrentProject();
+  var existingUserIds = (project && project.members || []).map(function(m){ return m.userId; });
+  return _orgCandidates
+    .filter(function(u){ return u.displayName.toLowerCase().indexOf(q) !== -1; })
+    .map(function(u){ return {userId: u.id, displayName: u.displayName, email: u.email, alreadyMember: existingUserIds.indexOf(u.id) !== -1}; })
+    .slice(0, 8);
+}
+
+function renderAddMemberDropdown(){
+  var dropdown = document.getElementById('newMemberNameDropdown');
+  var input = document.getElementById('newMemberNameInput');
+  if(!dropdown || !input) return;
+  if(!_addCombobox || _addCombobox.options.length === 0){
+    dropdown.classList.add('hidden');
+    dropdown.innerHTML = '';
+    input.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  // Same title styling as the search box's "Matching tags"/"Matching Archived Tasks" panels
+  // (kf-search-archived-matches-title) for visual consistency across every dropdown built on this
+  // standard control.
+  dropdown.innerHTML = '<div class="kf-search-archived-matches-title">Existing Team Members</div>' +
+    _addCombobox.options.map(function(opt, i){
+      return '<div class="kf-dropdown-filter-row' + (i === _addCombobox.activeIndex ? ' active' : '') + '" role="option" data-index="' + i + '">' +
+        '<span class="kf-dropdown-filter-name">' + escapeHTML(opt.displayName) + '</span>' +
+        (opt.alreadyMember ? '<span class="kf-search-archived-badge">On team</span>' : '') +
+        '</div>';
+    }).join('');
+  dropdown.classList.remove('hidden');
+  input.setAttribute('aria-expanded', 'true');
+}
+
+function closeAddMemberDropdown(){
+  _addCombobox = null;
+  renderAddMemberDropdown();
+}
+
+function selectAddMemberCandidate(index){
+  if(!_addCombobox || !_addCombobox.options[index]) return;
+  var opt = _addCombobox.options[index];
+  document.getElementById('newMemberNameInput').value = opt.displayName;
+  var emailInput = document.getElementById('newMemberEmailInput');
+  if(emailInput) emailInput.value = opt.email || '';
+  closeAddMemberDropdown();
+}
+
+export function wireAddMemberCombobox(){
+  var input = document.getElementById('newMemberNameInput');
+  var dropdown = document.getElementById('newMemberNameDropdown');
+  input.addEventListener('input', function(){
+    var options = filterOrgCandidates(input.value);
+    _addCombobox = options.length > 0 ? {options: options, activeIndex: 0} : null;
+    renderAddMemberDropdown();
+  });
+  input.addEventListener('keydown', function(e){
+    if(_addCombobox){
+      if(e.key === 'ArrowDown'){
+        e.preventDefault();
+        _addCombobox.activeIndex = (_addCombobox.activeIndex + 1) % _addCombobox.options.length;
+        renderAddMemberDropdown();
+        return;
+      }
+      if(e.key === 'ArrowUp'){
+        e.preventDefault();
+        _addCombobox.activeIndex = (_addCombobox.activeIndex - 1 + _addCombobox.options.length) % _addCombobox.options.length;
+        renderAddMemberDropdown();
+        return;
+      }
+      if(e.key === 'Tab'){
+        selectAddMemberCandidate(_addCombobox.activeIndex);
+        return;
+      }
+      if(e.key === 'Escape'){
+        e.preventDefault();
+        e.stopPropagation();
+        closeAddMemberDropdown();
+        return;
+      }
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        selectAddMemberCandidate(_addCombobox.activeIndex);
+        return;
+      }
+    }
+    if(e.key === 'Enter'){ e.preventDefault(); addMemberFromModal(); }
+  });
+  // A short delay so a mousedown on a dropdown option below still registers before blur closes it —
+  // same convention the chat mention dropdown uses.
+  input.addEventListener('blur', function(){ setTimeout(closeAddMemberDropdown, 150); });
+  dropdown.addEventListener('mousedown', function(e){
+    var option = e.target.closest('[data-index]');
+    if(!option) return;
+    e.preventDefault();
+    selectAddMemberCandidate(parseInt(option.getAttribute('data-index'), 10));
+    input.focus();
+  });
+}
+
 export function openTeamModal(){
   var project = getCurrentProject();
   if(!project){ toast('No project selected.'); return; }
   renderMemberList();
   document.getElementById('newMemberNameInput').value = '';
+  closeAddMemberDropdown();
+  loadOrgCandidatesForCombobox(project);
   var emailInput = document.getElementById('newMemberEmailInput');
   emailInput.value = '';
   // Only a server-authoritative project's "add" silently creates a real User account behind the
@@ -38,6 +162,7 @@ export function openTeamModal(){
   document.getElementById('newMemberNameInput').focus();
 }
 export function closeTeamModal(){
+  closeAddMemberDropdown();
   document.getElementById('teamOverlay').classList.add('hidden');
 }
 
@@ -243,6 +368,8 @@ export async function addMemberFromModal(){
       await refreshProjectFromServer(project.id);
       input.value = '';
       emailInput.value = '';
+      closeAddMemberDropdown();
+      loadOrgCandidatesForCombobox(project);
       renderMemberList();
       renderAssigneeFilterChips();
       input.focus();
@@ -254,6 +381,7 @@ export async function addMemberFromModal(){
 
   addMember(project, name);
   input.value = '';
+  closeAddMemberDropdown();
   renderMemberList();
   renderAssigneeFilterChips();
   input.focus();

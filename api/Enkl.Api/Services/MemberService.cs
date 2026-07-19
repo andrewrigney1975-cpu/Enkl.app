@@ -35,6 +35,21 @@ public class MemberService
         _createValidator = createValidator;
     }
 
+    /// <summary>Backs the "Add a team member" combobox — the project's whole Organisation roster
+    /// (active Users), not just its current ProjectMembers, so someone who's only a member of a
+    /// sibling project in the same org still shows up as a pickable candidate here.</summary>
+    public async Task<List<OrgUserCandidateDto>?> GetOrgCandidatesAsync(Guid projectId)
+    {
+        var project = await _db.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.Id == projectId);
+        if (project is null) return null;
+
+        return await _db.Users.AsNoTracking()
+            .Where(u => u.OrganisationId == project.OrganisationId && u.IsActive)
+            .OrderBy(u => u.DisplayName)
+            .Select(u => new OrgUserCandidateDto(u.Id, u.DisplayName, u.EmailAddress))
+            .ToListAsync();
+    }
+
     public async Task<MemberDto?> CreateAsync(Guid projectId, CreateMemberRequest request)
     {
         await _createValidator.ValidateAndThrowApiExceptionAsync(request);

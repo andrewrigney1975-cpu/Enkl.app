@@ -2097,6 +2097,20 @@
     margin-bottom: 14px;
   }
 
+  /* "Add a team member" combobox (modals/team.js) — built on the exact same standard dropdown/
+     combobox control as the board toolbar's "Search tasks..." box (board-filters.js): the
+     `.kf-search` wrap (already `position:relative`, so the panel below needs no JS-computed
+     positioning at all — pure CSS `.kf-dropdown-filter-panel` absolute-below-the-wrap, same as every
+     other `.kf-dropdown-filter`/`.kf-search` panel in the app) and `.kf-dropdown-filter-row`/
+     `.kf-dropdown-filter-name` for each candidate row, exactly like the search box's own "Matching
+     tags" hashtag panel. `.kf-member-combobox` only overrides `.kf-search`'s fixed `min-width:180px`
+     with `flex:1` so it shares space properly with the email input/Add button alongside it in
+     `.kf-member-add-row`. */
+  .kf-member-combobox {
+    flex: 1;
+    min-width: 0;
+  }
+
   .kf-orguser-new-row {
     display: flex;
     flex-direction: column;

@@ -1191,7 +1191,11 @@
       <div class="kf-field" id="addMemberField">
         <label for="newMemberNameInput">Add a team member</label>
         <div class="kf-member-add-row">
-          <input type="text" id="newMemberNameInput" maxlength="60" placeholder="e.g. Priya Shah">
+          <div class="kf-search kf-member-combobox" id="newMemberNameWrap">
+            <span class="kf-icon" data-icon="search" data-size="14"></span>
+            <input type="text" id="newMemberNameInput" maxlength="60" placeholder="e.g. Priya Shah" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="newMemberNameDropdown">
+            <div class="kf-dropdown-filter-panel hidden" id="newMemberNameDropdown" role="listbox"></div>
+          </div>
           <input type="email" id="newMemberEmailInput" maxlength="320" placeholder="Email address" class="hidden">
           <button class="kf-btn kf-btn-primary" id="addMemberBtn"><span class="kf-icon" data-icon="plus" data-size="14"></span>Add</button>
         </div>

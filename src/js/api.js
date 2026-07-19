@@ -459,6 +459,13 @@ memberApi.setProjectAdmin = function(projectId, memberId, isProjectAdmin){
   return apiFetch('/projects/' + projectId + '/members/' + memberId + '/admin', {method: 'PUT', body: JSON.stringify({isProjectAdmin: isProjectAdmin})});
 };
 
+/* GET /api/projects/{projectId}/members/org-candidates — the "Add a team member" combobox's
+   candidate list (modals/team.js), see MembersController.GetOrgCandidates's doc comment for why it's
+   the whole org roster rather than just this project's existing members. */
+memberApi.orgCandidates = function(projectId){
+  return apiFetch('/projects/' + projectId + '/members/org-candidates', {method: 'GET'});
+};
+
 /* Project-scoped (not organisation-scoped, despite living next to the "Organisation Library" feature)
    — PUT /api/projects/{projectId}/principles/{id}/share, see PrinciplesController.Share. Bolted onto
    principleApi (rather than organisationPrincipleApi below) since every other method here already
