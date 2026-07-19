@@ -2,6 +2,7 @@
 import { chatApi, getCurrentUserId, isOrgAdmin } from '../api.js';
 import { isServerLoggedIn } from './migration.js';
 import { toast, toastWithAction } from '../ui.js';
+import { playSendSound, playReceiveSound } from './chat-sounds.js';
 
 /* Org-wide chat — state + API orchestration only, no DOM here (views/chat.js owns rendering,
    importing everything it needs from this module) — same one-directional-import shape as every
@@ -160,6 +161,7 @@ export function sendMessage(channelId, text){
   if(!text || !text.trim()) return Promise.resolve();
   return chatApi.postMessage(channelId, text.trim()).then(function(message){
     appendOrReplaceMessage(channelId, message);
+    playSendSound();
     notify();
     return message;
   }, function(e){
@@ -210,6 +212,8 @@ export function handleChatMessageEvent(payload){
     isDeleted: payload.isDeleted, mentionedUserIds: payload.mentionedUserIds || []
   };
   appendOrReplaceMessage(payload.channelId, message);
+
+  if(payload.changeType === 'created') playReceiveSound();
 
   var isActiveAndOpen = chatState.isOpen && chatState.activeChannelId === payload.channelId;
   if(!isActiveAndOpen && payload.changeType === 'created'){

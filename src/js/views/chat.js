@@ -13,6 +13,7 @@ import { toast } from '../ui.js';
 import { confirmDialog } from '../modals/confirm.js';
 import { downloadBlob } from '../features/svg-export.js';
 import { getCaretPixelPosition } from '../features/sql-intellisense.js';
+import { unlockAudio } from '../features/chat-sounds.js';
 
 /* Non-blocking chat panel — single-pane, navigable (channel list <-> thread <-> new-chat picker),
    mirroring a mobile chat app's own navigation shape per the original ask, rather than a Slack-style
@@ -106,6 +107,7 @@ export function initChatView(){
 }
 
 export function toggleChatPanel(){
+  unlockAudio();
   if(isChatPanelOpen()) closeChatPanel();
   else openChatPanel();
 }
@@ -464,6 +466,7 @@ function wireThread(root, channelId){
   var sendBtn = root.querySelector('#chatSendBtn');
   var input = root.querySelector('#chatComposeInput');
   function submit(){
+    unlockAudio();
     var text = input.value;
     if(!text.trim()) return;
     var promise = _pendingEditMessageId
