@@ -186,6 +186,44 @@ export function darkenHexColor(hex){
   return '#' + hex2(towardBlack(r)) + hex2(towardBlack(g)) + hex2(towardBlack(b));
 }
 
+/* Blends a "#rrggbb" color toward white (positive amount) or black (negative amount) by the given
+   fraction (0-1) — a subtler, parameterized sibling of lightenHexColor/darkenHexColor above (whose
+   fixed 14/15 and 12/15 ratios are tuned for pale background TINTS, not for a "slightly offset
+   shade of the same color" panel like #projectSelect sitting on a custom-colored header — that
+   relationship is closer to --kf-navy-light's small step off --kf-navy than either of those). */
+export function shadeHexColor(hex, amount){
+  var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if(!m) return null;
+  var num = parseInt(m[1], 16);
+  var r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  var target = amount >= 0 ? 255 : 0;
+  var frac = Math.min(1, Math.abs(amount));
+  function blend(c){ return Math.round(c + (target - c) * frac); }
+  function hex2(c){ var s = c.toString(16); return s.length < 2 ? '0' + s : s; }
+  return '#' + hex2(blend(r)) + hex2(blend(g)) + hex2(blend(b));
+}
+
+/* WCAG relative-luminance formula (sRGB, no gamma-correction shortcuts) — feeds contrastTextColor
+   below. Originally local to portfolio-bars.js (for the Planner's on-bar project-key label);
+   promoted here once a second consumer (My Preferences' header colour picker) needed the exact
+   same black-vs-white contrast decision, rather than duplicating the formula a second time. */
+export function relativeLuminance(hex){
+  var rgb = [1, 3, 5].map(function(i){
+    var c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+}
+
+/* Picks whichever of pure black/white has the higher WCAG contrast ratio against bgHex — correct
+   for any background color without hand-tuning per case. */
+export function contrastTextColor(bgHex){
+  var l = relativeLuminance(bgHex);
+  var contrastWithWhite = 1.05 / (l + 0.05);
+  var contrastWithBlack = (l + 0.05) / 0.05;
+  return contrastWithWhite >= contrastWithBlack ? '#ffffff' : '#000000';
+}
+
 export function memberInitials(name){
   var parts = String(name||'').trim().split(/\s+/).filter(Boolean);
   if(parts.length === 0) return '?';

@@ -64,6 +64,7 @@ import { openProjectStorageModal, closeProjectStorageModal, isProjectStorageModa
 import { openApiEndpointsModal, closeApiEndpointsModal, handleApiEndpointsListClick } from './modals/api-endpoints.js';
 import { openUfoModal, closeUfoModal, isUfoModalOpen } from './modals/ufo.js';
 import { openOpeningExperienceModal, closeOpeningExperienceModal, isOpeningExperienceModalOpen, chooseOpeningExperience, recordDeviceTypeAndMaybeShowPicker } from './modals/opening-experience.js';
+import { openMyPreferencesModal, closeMyPreferencesModal, isMyPreferencesModalOpen, applyBoardBackground, applyHeaderColor, onHeaderColorChange, resetHeaderColor, onBoardBackgroundTypeChange, onBoardBackgroundColorChange, onBoardBackgroundGradientChange, onBoardBackgroundDisplayChange, onBoardBackgroundFadedChange, onBoardBackgroundFileChange, removeBoardBackgroundImage, changeDefaultViewFromPreferences } from './modals/my-preferences.js';
 import { randomise } from './features/randomise.js';
 
 /* ---- Dependency injection (break circular import chains) ---- */
@@ -1278,7 +1279,27 @@ function wireEvents(){
     }, function(){ /* toast already shown by changePasswordOnServer */ });
   });
 
-  document.getElementById('myPreferencesBtn').addEventListener('click', openOpeningExperienceModal);
+  document.getElementById('myPreferencesBtn').addEventListener('click', openMyPreferencesModal);
+  document.getElementById('myPreferencesModalClose').addEventListener('click', closeMyPreferencesModal);
+  document.getElementById('myPreferencesDoneBtn').addEventListener('click', closeMyPreferencesModal);
+  document.getElementById('myPreferencesOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'myPreferencesOverlay') closeMyPreferencesModal();
+  });
+  document.getElementById('headerColorInput').addEventListener('input', onHeaderColorChange);
+  document.getElementById('headerColorResetBtn').addEventListener('click', resetHeaderColor);
+  document.getElementById('boardBackgroundTypeSelect').addEventListener('change', onBoardBackgroundTypeChange);
+  document.getElementById('boardBackgroundColorInput').addEventListener('input', onBoardBackgroundColorChange);
+  document.getElementById('boardBackgroundGradientStartInput').addEventListener('input', onBoardBackgroundGradientChange);
+  document.getElementById('boardBackgroundGradientEndInput').addEventListener('input', onBoardBackgroundGradientChange);
+  document.getElementById('boardBackgroundGradientDirectionSelect').addEventListener('change', onBoardBackgroundGradientChange);
+  document.getElementById('boardBackgroundDisplaySelect').addEventListener('change', onBoardBackgroundDisplayChange);
+  document.getElementById('boardBackgroundFadedCheckbox').addEventListener('change', onBoardBackgroundFadedChange);
+  document.getElementById('boardBackgroundUploadBtn').addEventListener('click', function(){
+    document.getElementById('boardBackgroundFileInput').click();
+  });
+  document.getElementById('boardBackgroundFileInput').addEventListener('change', onBoardBackgroundFileChange);
+  document.getElementById('boardBackgroundRemoveImageBtn').addEventListener('click', removeBoardBackgroundImage);
+  document.getElementById('myPreferencesChangeDefaultViewBtn').addEventListener('click', changeDefaultViewFromPreferences);
 
   document.getElementById('manageUsersLink').addEventListener('click', function(e){
     e.preventDefault();
@@ -1642,6 +1663,7 @@ function wireEvents(){
     else if(isHealthOverlayOpen()){ cancelHealthGaugeAnimation(); closeHealthOverlay(); }
     else if(isAppSettingsOverlayOpen()) closeAppSettingsOverlay();
     else if(isAboutModalOpen()) closeAboutModal();
+    else if(isMyPreferencesModalOpen()) closeMyPreferencesModal();
     else if(isProjectStorageModalOpen()) closeProjectStorageModal();
     else if(!document.getElementById('apiEndpointsOverlay').classList.contains('hidden')) closeApiEndpointsModal();
     else if(!document.getElementById('confirmOverlay').classList.contains('hidden')) closeConfirmDialog();
@@ -1753,6 +1775,8 @@ function init(){
   openTaskFromHashIfPresent();
   handleSsoCallbackIfPresent();
   applyOpeningExperience();
+  applyBoardBackground();
+  applyHeaderColor();
   reportPageLoadTiming(); // last step of init() — see page-load-telemetry.js for why here specifically
 
   // Reconciles a still-logged-in returning browser the same way the interactive login flow does

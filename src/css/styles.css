@@ -274,9 +274,13 @@
   }
 
   /* Top navy header */
+  /* Every color below reads through a --kf-header-* custom property with the app's normal navy
+     theme as its fallback, so modals/my-preferences.js's header colour picker can re-theme the
+     whole header — including its buttons/logo/select — by setting a handful of properties on
+     .kf-header itself (custom properties inherit) rather than touching every descendant rule. */
   .kf-header {
-    background: var(--kf-navy);
-    color: #fff;
+    background: var(--kf-header-bg, var(--kf-navy));
+    color: var(--kf-header-fg, #fff);
     display: flex;
     align-items: center;
     gap: 16px;
@@ -296,13 +300,13 @@
   }
 
   .kf-logo .kf-icon {
-    color: #fff;
+    color: var(--kf-header-fg, #fff);
   }
 
   .kf-header-divider {
     width: 1px;
     height: 28px;
-    background: rgba(255, 255, 255, .25);
+    background: var(--kf-header-divider, rgba(255, 255, 255, .25));
   }
 
   .kf-project-picker {
@@ -311,10 +315,14 @@
     gap: 6px;
   }
 
+  /* #projectSelect is the header's one element that reads as its own slightly-offset panel (like
+     --kf-navy-light against --kf-navy today) rather than just "header text/border on transparent" —
+     so it gets its own --kf-header-select-* properties, computed from (not just copied from) the
+     custom header colour, instead of reusing --kf-header-fg/-divider. */
   .kf-select-dark {
-    background: var(--kf-navy-light);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, .18);
+    background: var(--kf-header-select-bg, var(--kf-navy-light));
+    color: var(--kf-header-select-fg, #fff);
+    border: 1px solid var(--kf-header-select-border, rgba(255, 255, 255, .18));
     border-radius: var(--kf-radius);
     padding: 7px 10px;
     font-weight: 500;
@@ -323,14 +331,14 @@
   }
 
   .kf-select-dark:focus {
-    outline: 2px solid #fff;
+    outline: 2px solid var(--kf-header-select-fg, #fff);
     outline-offset: 1px;
   }
 
   .kf-header-btn {
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, .35);
-    color: #fff;
+    border: 1px solid var(--kf-header-btn-border, rgba(255, 255, 255, .35));
+    color: var(--kf-header-fg, #fff);
     border-radius: var(--kf-radius);
     padding: 6px 10px;
     font-size: 13px;
@@ -342,7 +350,7 @@
   }
 
   .kf-header-btn:hover {
-    background: rgba(255, 255, 255, .12);
+    background: var(--kf-header-btn-hover, rgba(255, 255, 255, .12));
   }
 
   .kf-theme-toggle {
@@ -1080,6 +1088,29 @@
     overflow-x: auto;
     overflow-y: hidden;
     padding: 16px;
+    position: relative;
+  }
+
+  /* An uploaded background image is rendered on its own ::before layer (z-index -1, behind every
+     normal-flow child) rather than as .kf-board-wrap's own background-image, so the "faded" filter
+     below can be scoped to just the image — filter on .kf-board-wrap itself would also wash out
+     every column/card sitting on top of it, since filter renders an element and its descendants as
+     one group. Kept off .kf-board itself (untouched here) to stay clear of that element's
+     drag-and-drop-sensitive styling. */
+  .kf-board-wrap.kf-board-bg-image::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: var(--kf-board-bg-image-url);
+    background-size: var(--kf-board-bg-image-size, cover);
+    background-position: center;
+    background-repeat: var(--kf-board-bg-image-repeat, no-repeat);
+    pointer-events: none;
+  }
+
+  .kf-board-wrap.kf-board-bg-image.kf-board-bg-faded::before {
+    filter: saturate(50%) brightness(110%) contrast(85%);
   }
 
   .kf-board {
@@ -4731,6 +4762,21 @@
     border-radius: var(--kf-radius);
     background: var(--kf-input-bg);
     cursor: pointer;
+  }
+
+  .kf-preferences-bg-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .kf-preferences-bg-preview {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--kf-radius);
+    border: 1px solid var(--kf-border);
+    object-fit: cover;
+    flex-shrink: 0;
   }
 
   .kf-color-input:disabled {

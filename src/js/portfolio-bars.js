@@ -1,6 +1,7 @@
 "use strict";
 import { getPriority } from './ui.js';
 import { escapeHTML } from './views/board.js';
+import { contrastTextColor } from './date-utils.js';
 
 /* =========================================================
    Shared Gantt-bar rendering for the Portfolio Dashboard's Timeline chart and the Portfolio
@@ -34,27 +35,6 @@ export function priorityMarkerSVG(priority, cx, cy){
     '<title>' + escapeHTML(prio.label) + ' priority</title></circle>';
 }
 
-/* WCAG relative-luminance formula (sRGB, no gamma-correction shortcuts) — used only to pick
-   black-vs-white text for the Planner's on-bar project-key label below. Kept local to this file
-   (not date-utils.js's lightenHexColor/darkenHexColor, which blend toward white/black for subtle
-   background tints, not decide a readable foreground) since this is its only consumer. */
-function relativeLuminance(hex){
-  var rgb = [1, 3, 5].map(function(i){
-    var c = parseInt(hex.slice(i, i + 2), 16) / 255;
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
-}
-
-/* Picks whichever of pure black/white has the higher WCAG contrast ratio against bgHex — correct for
-   any accent color without hand-tuning per swatch, so this keeps working automatically if
-   PRIORITY_COLORS' accents ever change. */
-function contrastTextColor(bgHex){
-  var l = relativeLuminance(bgHex);
-  var contrastWithWhite = 1.05 / (l + 0.05);
-  var contrastWithBlack = (l + 0.05) / 0.05;
-  return contrastWithWhite >= contrastWithBlack ? '#ffffff' : '#000000';
-}
 
 /**
  * Renders one project's Gantt row content (bar + resize handles, or the click-only "no dates"

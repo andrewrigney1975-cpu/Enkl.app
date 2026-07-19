@@ -95,7 +95,7 @@
         <button class="kf-header-btn kf-header-nav-projectaction" id="serverLoginBtn" title="Log in to the server"><span class="kf-icon" data-icon="upload" data-size="14"></span>Login</button>
         <button class="kf-header-btn kf-header-nav-projectaction kf-vis-hidden" id="serverLogoutBtn" title="Log out of the server"><span class="kf-icon" data-icon="logout" data-size="14"></span>Logout</button>
         <button class="kf-header-btn kf-header-nav-projectaction" id="changePasswordBtn" title="Change your server password"><span class="kf-icon" data-icon="lock" data-size="14"></span>Change Password</button>
-        <button class="kf-header-btn kf-header-nav-projectaction kf-vis-hidden" id="myPreferencesBtn" title="Choose what Enkl opens to by default"><span class="kf-icon" data-icon="ty_configure" data-size="14"></span>My Preferences</button>
+        <button class="kf-header-btn kf-header-nav-projectaction kf-vis-hidden" id="myPreferencesBtn" title="Board background and other personal preferences"><span class="kf-icon" data-icon="ty_configure" data-size="14"></span>My Preferences</button>
         <button class="kf-header-btn kf-header-nav-projectaction" id="deleteProjectBtn" title="Delete project"><span class="kf-icon" data-icon="trash" data-size="14"></span>Delete Project</button>
         <div class="kf-export-as-wrap kf-desktop-menu-wrap" id="projectsMenuWrap">
           <button class="kf-header-btn" id="projectsMenuBtn" title="Projects"><span class="kf-icon" data-icon="chevronDown" data-size="14"></span>Projects...</button>
@@ -1917,6 +1917,80 @@
 </div>
 
 <!-- About Modal -->
+<!-- My Preferences Modal -->
+<div class="kf-overlay hidden" id="myPreferencesOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2>My Preferences</h2>
+      <button class="kf-btn kf-btn-ghost" id="myPreferencesModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div class="kf-field">
+        <label for="headerColorInput">App header colour</label>
+        <div class="kf-preferences-bg-row">
+          <input type="color" class="kf-color-input" id="headerColorInput" value="#0c2a52">
+          <button type="button" class="kf-btn kf-btn-ghost kf-vis-hidden" id="headerColorResetBtn">Reset to default</button>
+        </div>
+      </div>
+      <div class="kf-field">
+        <label for="boardBackgroundTypeSelect">Board background</label>
+        <select id="boardBackgroundTypeSelect">
+          <option value="none">None</option>
+          <option value="color">Solid colour</option>
+          <option value="gradient">Colour gradient</option>
+          <option value="image">Image</option>
+        </select>
+      </div>
+      <div class="kf-field kf-vis-hidden" id="boardBackgroundColorField">
+        <label for="boardBackgroundColorInput">Colour</label>
+        <input type="color" class="kf-color-input" id="boardBackgroundColorInput" value="#f4f5f7">
+      </div>
+      <div class="kf-field kf-vis-hidden" id="boardBackgroundGradientField">
+        <label>Gradient</label>
+        <div class="kf-field-row">
+          <div class="kf-field">
+            <label for="boardBackgroundGradientStartInput" style="font-weight:400;text-transform:none;">Start colour</label>
+            <input type="color" class="kf-color-input" id="boardBackgroundGradientStartInput" value="#4f46e5">
+          </div>
+          <div class="kf-field">
+            <label for="boardBackgroundGradientEndInput" style="font-weight:400;text-transform:none;">End colour</label>
+            <input type="color" class="kf-color-input" id="boardBackgroundGradientEndInput" value="#f4f5f7">
+          </div>
+        </div>
+        <select id="boardBackgroundGradientDirectionSelect">
+          <option value="vertical">Vertical</option>
+          <option value="horizontal">Horizontal</option>
+        </select>
+      </div>
+      <div class="kf-field kf-vis-hidden" id="boardBackgroundImageField">
+        <label>Image</label>
+        <div class="kf-preferences-bg-row">
+          <img id="boardBackgroundPreviewImg" alt="" class="kf-preferences-bg-preview kf-vis-hidden">
+          <button type="button" class="kf-btn kf-btn-secondary" id="boardBackgroundUploadBtn">Upload image...</button>
+          <button type="button" class="kf-btn kf-btn-ghost kf-vis-hidden" id="boardBackgroundRemoveImageBtn">Remove</button>
+        </div>
+        <input type="file" id="boardBackgroundFileInput" accept="image/*" style="display:none;">
+        <select id="boardBackgroundDisplaySelect" disabled>
+          <option value="fill">Fill (keep aspect ratio, may crop)</option>
+          <option value="stretch">Stretch (ignore aspect ratio)</option>
+          <option value="tile">Tile (repeat at original size)</option>
+        </select>
+        <div class="kf-checkbox-row">
+          <input type="checkbox" id="boardBackgroundFadedCheckbox" disabled>
+          <label for="boardBackgroundFadedCheckbox" style="text-transform:none;font-weight:500;">Use faded version</label>
+        </div>
+      </div>
+      <div class="kf-field kf-vis-hidden" id="myPreferencesOpeningExperienceSection">
+        <label>Default view</label>
+        <button type="button" class="kf-btn kf-btn-secondary" id="myPreferencesChangeDefaultViewBtn">Change default view...</button>
+      </div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-primary" id="myPreferencesDoneBtn">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="kf-overlay hidden" id="aboutOverlay">
   <div class="kf-modal kf-modal-md" role="dialog" aria-modal="true">
     <div class="kf-modal-header">

@@ -158,6 +158,109 @@ export function setOpeningExperience(value){
   }
 }
 
+/* Board background preference — per-browser only (My Preferences modal), same "never
+   authoritative, just a local nicety" tier as device type/opening experience above. Shape:
+   {type: 'color', color: '#rrggbb'}
+   {type: 'gradient', gradientStart: '#rrggbb', gradientEnd: '#rrggbb', gradientDirection: 'horizontal'|'vertical'}
+   {type: 'image', imageData: 'data:image/...;base64,...', faded: bool, display: 'fill'|'stretch'|'tile'}
+   `type` is the only field that's ever trusted on read — a corrupted/half-written value (e.g. an
+   'image' entry with no imageData, from a previous version or manual tampering) collapses to "no
+   background" rather than rendering a broken CSS url(). Unrecognized/missing sub-fields (a bad
+   `display` or `gradientDirection`) fall back to a sane default rather than propagating garbage
+   into a CSS value. */
+export var BOARD_BACKGROUND_STORAGE_KEY = 'kanbanflow_board_background';
+export var BOARD_BACKGROUND_IMAGE_DISPLAYS = ['fill', 'stretch', 'tile'];
+
+export function getBoardBackground(){
+  var raw;
+  try{
+    raw = localStorage.getItem(BOARD_BACKGROUND_STORAGE_KEY);
+  }catch(e){
+    return null;
+  }
+  if(!raw) return null;
+  var pref;
+  try{
+    pref = JSON.parse(raw);
+  }catch(e){
+    return null;
+  }
+  if(!pref || typeof pref !== 'object') return null;
+  if(pref.type === 'color' && typeof pref.color === 'string') return {type: 'color', color: pref.color};
+  if(pref.type === 'gradient' && typeof pref.gradientStart === 'string' && typeof pref.gradientEnd === 'string'){
+    return {
+      type: 'gradient',
+      gradientStart: pref.gradientStart,
+      gradientEnd: pref.gradientEnd,
+      gradientDirection: pref.gradientDirection === 'horizontal' ? 'horizontal' : 'vertical'
+    };
+  }
+  if(pref.type === 'image' && typeof pref.imageData === 'string' && pref.imageData) {
+    return {
+      type: 'image',
+      imageData: pref.imageData,
+      faded: !!pref.faded,
+      display: BOARD_BACKGROUND_IMAGE_DISPLAYS.indexOf(pref.display) !== -1 ? pref.display : 'fill'
+    };
+  }
+  return null;
+}
+
+export function setBoardBackground(pref){
+  try{
+    localStorage.setItem(BOARD_BACKGROUND_STORAGE_KEY, JSON.stringify(pref));
+  }catch(e){
+    console.error('Enkl: failed to save board background to localStorage', e);
+    return false;
+  }
+  return true;
+}
+
+/* Explicit removeItem (not setBoardBackground({type:'none'})) so the base64 image payload is
+   actually dropped from localStorage rather than just becoming unreachable — the whole point of
+   "clearing" an uploaded image is to recover that space. */
+export function clearBoardBackground(){
+  try{
+    localStorage.removeItem(BOARD_BACKGROUND_STORAGE_KEY);
+  }catch(e){
+    console.error('Enkl: failed to clear board background from localStorage', e);
+  }
+}
+
+/* App header colour preference — same per-browser-only tier as board background above. A single
+   "#rrggbb" string, not a JSON object, since there's only one field; stored/read raw rather than
+   JSON-wrapped for that reason. */
+export var HEADER_COLOR_STORAGE_KEY = 'kanbanflow_header_color';
+
+export function getHeaderColor(){
+  var raw;
+  try{
+    raw = localStorage.getItem(HEADER_COLOR_STORAGE_KEY);
+  }catch(e){
+    return null;
+  }
+  return (raw && /^#[0-9a-f]{6}$/i.test(raw)) ? raw : null;
+}
+
+export function setHeaderColor(hex){
+  if(!/^#[0-9a-f]{6}$/i.test(hex || '')) return false;
+  try{
+    localStorage.setItem(HEADER_COLOR_STORAGE_KEY, hex);
+  }catch(e){
+    console.error('Enkl: failed to save header colour to localStorage', e);
+    return false;
+  }
+  return true;
+}
+
+export function clearHeaderColor(){
+  try{
+    localStorage.removeItem(HEADER_COLOR_STORAGE_KEY);
+  }catch(e){
+    console.error('Enkl: failed to clear header colour from localStorage', e);
+  }
+}
+
 export function loadDB(){
   var raw;
   try{
