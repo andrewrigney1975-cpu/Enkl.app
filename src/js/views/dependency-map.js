@@ -52,6 +52,157 @@ export var DEPMAP_NODE_H = 104;
 export var DEPMAP_GAP_X = 100;
 export var DEPMAP_GAP_Y = 18;
 export var DEPMAP_MARGIN = 30;
+export var DEPMAP_CORNER_RADIUS = 8;
+var DEPMAP_EDGE_STUB = 24;
+var DEPMAP_ANCHOR_MARGIN = 20;
+
+/* Builds the straight-segment vertex list for an orthogonal (Manhattan)
+   connector between two node-edge anchor points, each with an "outward"
+   travel direction (+1 = rightward, -1 = leftward) matching which side of
+   the node it's attached to. When the two directions/positions line up
+   (the common left-to-right dependency case, or a clearly-separated
+   subtask pair), a simple 2-corner "Z" path is enough. Otherwise the
+   anchors are on sides that can't reach each other without doubling back,
+   so each leaves via a short stub in its own outward direction first, then
+   the two stubs are joined — this is what keeps a same-column subtask
+   connector from being drawn straight through the card(s) between it. */
+function orthogonalPointsAreSimple(x1, y1, dir1, x2, y2, dir2){
+  var midX = (x1 + x2) / 2;
+  return (dir1 > 0 ? midX >= x1 : midX <= x1) && (dir2 < 0 ? midX <= x2 : midX >= x2);
+}
+
+/* midXOverride lets multiple edges that share an identical (x1,x2) column
+   pair — and would otherwise all bend at the exact same computed midpoint,
+   drawing directly on top of each other along their shared y-range — take
+   distinct vertical lanes instead. See the fan-out pass in
+   renderDependencyMap for how it's chosen. */
+function buildOrthogonalPoints(x1, y1, dir1, x2, y2, dir2, midXOverride){
+  var simpleOk = orthogonalPointsAreSimple(x1, y1, dir1, x2, y2, dir2);
+  if(simpleOk){
+    if(y1 === y2) return [{x:x1,y:y1},{x:x2,y:y2}];
+    var midX = midXOverride != null ? midXOverride : (x1 + x2) / 2;
+    return [{x:x1,y:y1},{x:midX,y:y1},{x:midX,y:y2},{x:x2,y:y2}];
+  }
+  var outX1 = x1 + dir1 * DEPMAP_EDGE_STUB;
+  var outX2 = x2 + dir2 * DEPMAP_EDGE_STUB;
+  var ymid = y1 === y2 ? y1 - (DEPMAP_NODE_H / 2 + 20) : (y1 + y2) / 2;
+  return [{x:x1,y:y1},{x:outX1,y:y1},{x:outX1,y:ymid},{x:outX2,y:ymid},{x:outX2,y:y2},{x:x2,y:y2}];
+}
+
+/* Companion to distributeEdgeAnchors: two edges can still share the exact
+   same (x1,x2) column pair after anchor fan-out (e.g. two dependencies
+   into the same task, both starting in the same source column) — their
+   default midX bend would be identical, so their vertical segments draw
+   directly on top of each other wherever their y-ranges overlap. This
+   groups edges by that shared channel and spreads their bend x-position
+   across the gap instead of leaving them all on the shared midpoint.
+   `geomById` maps edge id -> {x1,y1,dir1,x2,y2,dir2}; mutates each entry
+   with a `laneMidX` when it's part of a group of 2+. */
+function assignVerticalLanes(geomById){
+  var groups = {};
+  Object.keys(geomById).forEach(function(id){
+    var g = geomById[id];
+    if(g.y1 === g.y2) return;
+    if(!orthogonalPointsAreSimple(g.x1, g.y1, g.dir1, g.x2, g.y2, g.dir2)) return;
+    var key = Math.round(g.x1) + '_' + Math.round(g.x2);
+    (groups[key] = groups[key] || []).push(id);
+  });
+  Object.keys(groups).forEach(function(key){
+    var ids = groups[key];
+    var n = ids.length;
+    if(n < 2) return;
+    ids.sort(function(a, b){ return (geomById[a].y1 + geomById[a].y2) - (geomById[b].y1 + geomById[b].y2); });
+    ids.forEach(function(id, i){
+      var g = geomById[id];
+      var frac = 0.3 + 0.4 * i / (n - 1);
+      g.laneMidX = g.x1 + (g.x2 - g.x1) * frac;
+    });
+  });
+}
+
+/* Renders a vertex list (from buildOrthogonalPoints) as an SVG path with
+   every 90-degree corner rounded to a small fillet — each straight segment
+   is shortened by the fillet radius on either side of a bend, joined by a
+   quadratic curve through the original corner point. */
+function roundedOrthogonalPathD(points, radius){
+  if(points.length < 2) return '';
+  var pts = points.filter(function(p, i){
+    return i === 0 || p.x !== points[i-1].x || p.y !== points[i-1].y;
+  });
+  if(pts.length < 2) return '';
+  var d = 'M ' + pts[0].x + ' ' + pts[0].y;
+  for(var i = 1; i < pts.length - 1; i++){
+    var prev = pts[i-1], cur = pts[i], next = pts[i+1];
+    var len1 = Math.hypot(cur.x - prev.x, cur.y - prev.y);
+    var len2 = Math.hypot(next.x - cur.x, next.y - cur.y);
+    var r = Math.min(radius, len1 / 2, len2 / 2);
+    var p1x = cur.x - (cur.x - prev.x) / len1 * r;
+    var p1y = cur.y - (cur.y - prev.y) / len1 * r;
+    var p2x = cur.x + (next.x - cur.x) / len2 * r;
+    var p2y = cur.y + (next.y - cur.y) / len2 * r;
+    d += ' L ' + p1x + ' ' + p1y + ' Q ' + cur.x + ' ' + cur.y + ' ' + p2x + ' ' + p2y;
+  }
+  var last = pts[pts.length - 1];
+  d += ' L ' + last.x + ' ' + last.y;
+  return d;
+}
+
+/* A dependency edge always flows from a shallower to a strictly deeper
+   layout column (see computeDepGraphLayout's depth math), so it always
+   attaches source-right -> target-left. A sub-task edge is NOT laid out
+   by depth at all (see the "Sub-task edges" comment below) — parent and
+   child can land in the same column, or with the child to the left of the
+   parent — so its anchor SIDES are picked per-pair here, preferring
+   whichever side keeps the connector from being drawn across either
+   card's face. The actual y position on that side is decided later, by
+   distributeEdgeAnchors, once every edge touching a node is known. */
+function subtaskEdgeSides(parentNode, childNode, layoutWidth){
+  var pLeft = parentNode.x, pRight = parentNode.x + parentNode.w;
+  var cLeft = childNode.x, cRight = childNode.x + childNode.w;
+  if(cLeft >= pRight) return {fromSide: 'right', toSide: 'left'};
+  if(cRight <= pLeft) return {fromSide: 'left', toSide: 'right'};
+  var pCenterX = (pLeft + pRight) / 2;
+  return pCenterX < layoutWidth / 2 ? {fromSide: 'right', toSide: 'right'} : {fromSide: 'left', toSide: 'left'};
+}
+
+/* Multiple connectors landing on the exact same node side (e.g. a task
+   with three dependencies, or a parent with several sub-tasks) would
+   otherwise all leave/arrive from that side's dead-center point and sit
+   exactly on top of each other for their first/last stretch. This spreads
+   every edge attached to a given (node, side) across that side's usable
+   height instead of a single shared point — ordered by where the OTHER
+   end of each edge sits, so the fan-out doesn't introduce needless
+   crossings. Takes/returns edge descriptors of the shape
+   {id, from, to, fromSide, toSide}; nodesById maps task id -> layout node
+   ({x,y,w,h}). Returns a map of "<edgeId>:from"/"<edgeId>:to" -> y. */
+function distributeEdgeAnchors(edgeDescs, nodesById){
+  var groups = {};
+  edgeDescs.forEach(function(ed){
+    var fromNode = nodesById[ed.from], toNode = nodesById[ed.to];
+    if(!fromNode || !toNode) return;
+    var fromKey = ed.from + '|' + ed.fromSide;
+    var toKey = ed.to + '|' + ed.toSide;
+    (groups[fromKey] = groups[fromKey] || []).push({anchorKey: ed.id + ':from', otherY: toNode.y + toNode.h / 2});
+    (groups[toKey] = groups[toKey] || []).push({anchorKey: ed.id + ':to', otherY: fromNode.y + fromNode.h / 2});
+  });
+  var anchorY = {};
+  Object.keys(groups).forEach(function(key){
+    var nodeId = key.slice(0, key.lastIndexOf('|'));
+    var node = nodesById[nodeId];
+    var group = groups[key];
+    var n = group.length;
+    if(n === 1){
+      anchorY[group[0].anchorKey] = node.y + node.h / 2;
+      return;
+    }
+    group.sort(function(a, b){ return a.otherY - b.otherY; });
+    var usable = node.h - DEPMAP_ANCHOR_MARGIN * 2;
+    group.forEach(function(p, i){
+      anchorY[p.anchorKey] = node.y + DEPMAP_ANCHOR_MARGIN + usable * i / (n - 1);
+    });
+  });
+  return anchorY;
+}
 
 function depMapTaskVisible(t){
   return (!t.archived || ui.depMapShowArchived) &&
@@ -166,12 +317,10 @@ export function renderDependencyMap(){
   legend.innerHTML =
     '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:#de350b;"></span>Blocking dependency</span>' +
     '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:#8993a4;"></span>Completed dependency</span>' +
-    '<span class="kf-legend-item"><span class="kf-legend-dot" style="background:' + getPriority('critical').accent + ';"></span>Left edge color = priority</span>' +
+    (project && isSubTasksEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:repeating-linear-gradient(to right,#6554c0 0 4px,transparent 4px 7px);"></span>Sub-task</span>' : '') +
     '<span class="kf-legend-item">' + iconSvg('warning',12) + ' Task is currently blocked</span>' +
-    '<span class="kf-legend-item" style="color:var(--kf-overdue-fg);">' + iconSvg('clock',12) + ' Task is overdue</span>' +
-    (ui.depMapShowArchived ? '<span class="kf-legend-item">' + iconSvg('archive',12) + ' Task is archived (greyed out)</span>' : '') +
-    (project && isTimeTrackingEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:var(--kf-blue);"></span>Progress</span>' : '') +
-    (project && isSubTasksEnabled(project) ? '<span class="kf-legend-item"><span class="kf-legend-swatch" style="background:repeating-linear-gradient(to right,#6554c0 0 4px,transparent 4px 7px);"></span>Dashed = sub-task</span>' : '');
+    '<span class="kf-legend-item">' + iconSvg('clock',12) + ' Task is overdue</span>' +
+    (ui.depMapShowArchived ? '<span class="kf-legend-item">' + iconSvg('archive',12) + ' Task is archived (greyed out)</span>' : '');
 
   var hasVisibleTasks = project && getTasksArray(project).some(depMapTaskVisible);
   if(!hasVisibleTasks){
@@ -190,30 +339,62 @@ export function renderDependencyMap(){
       '<marker id="kf-arrow-done" viewBox="0 0 10 10" refX="9.25" refY="5" markerWidth="8" markerHeight="8" orient="auto"><circle cx="5" cy="5" r="3" fill="#8993a4" stroke="#8993a4" stroke-width="1.6"/></marker>' +
       '<marker id="kf-dot-start-blocked" viewBox="0 0 10 10" refX="0.75" refY="5" markerWidth="8" markerHeight="8" orient="auto"><circle cx="5" cy="5" r="3" fill="var(--kf-surface)" stroke="#de350b" stroke-width="1.6"/></marker>' +
       '<marker id="kf-dot-start-done" viewBox="0 0 10 10" refX="0.75" refY="5" markerWidth="8" markerHeight="8" orient="auto"><circle cx="5" cy="5" r="3" fill="var(--kf-surface)" stroke="#8993a4" stroke-width="1.6"/></marker>' +
+      (project && isSubTasksEnabled(project) && layout.subtaskEdges.length > 0 ?
+        '<marker id="kf-arrow-subtask" viewBox="0 0 10 10" refX="9.25" refY="5" markerWidth="8" markerHeight="8" orient="auto"><circle cx="5" cy="5" r="3" fill="#6554c0" stroke="#6554c0" stroke-width="1.6"/></marker>' +
+        '<marker id="kf-dot-start-subtask" viewBox="0 0 10 10" refX="0.75" refY="5" markerWidth="8" markerHeight="8" orient="auto"><circle cx="5" cy="5" r="3" fill="var(--kf-surface)" stroke="#6554c0" stroke-width="1.6"/></marker>'
+      : '') +
     '</defs>';
 
-  var edgesHTML = layout.edges.map(function(e){
-    var fromPos = layout.positions[e.from], toPos = layout.positions[e.to];
-    if(!fromPos || !toPos) return '';
-    var x1 = fromPos.x + DEPMAP_NODE_W, y1 = fromPos.y + DEPMAP_NODE_H / 2;
-    var x2 = toPos.x, y2 = toPos.y + DEPMAP_NODE_H / 2;
-    var bend = Math.max(40, (x2 - x1) * 0.5);
-    var path = 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + bend) + ' ' + y1 + ', ' + (x2 - bend) + ' ' + y2 + ', ' + x2 + ' ' + y2;
-    var color = e.blocked ? '#de350b' : '#8993a4';
-    var marker = e.blocked ? 'url(#kf-arrow-blocked)' : 'url(#kf-arrow-done)';
-    var startMarker = e.blocked ? 'url(#kf-dot-start-blocked)' : 'url(#kf-dot-start-done)';
+  var nodesById = {};
+  layout.nodes.forEach(function(n){ nodesById[n.task.id] = n; });
+  var subtasksOn = project && isSubTasksEnabled(project);
+
+  /* Every edge's anchor SIDE is decided first (dependency edges always
+     right->left; sub-task edges via subtaskEdgeSides), then every edge
+     touching a given node+side is fanned out together in one pass
+     (distributeEdgeAnchors) so edges sharing a node never leave/arrive at
+     the exact same point — see that function's comment for why. */
+  var edgeDescs = layout.edges.map(function(e, i){
+    return {id: 'dep' + i, from: e.from, to: e.to, fromSide: 'right', toSide: 'left', blocked: e.blocked};
+  });
+  var subtaskDescs = subtasksOn ? layout.subtaskEdges.map(function(e, i){
+    var sides = subtaskEdgeSides(nodesById[e.from], nodesById[e.to], layout.width);
+    return {id: 'sub' + i, from: e.from, to: e.to, fromSide: sides.fromSide, toSide: sides.toSide};
+  }) : [];
+  var anchorY = distributeEdgeAnchors(edgeDescs.concat(subtaskDescs), nodesById);
+
+  function sideDir(side){ return side === 'right' ? 1 : -1; }
+  function sideX(node, side){ return side === 'right' ? node.x + node.w : node.x; }
+
+  var geomById = {};
+  edgeDescs.concat(subtaskDescs).forEach(function(ed){
+    var fromNode = nodesById[ed.from], toNode = nodesById[ed.to];
+    if(!fromNode || !toNode) return;
+    geomById[ed.id] = {
+      x1: sideX(fromNode, ed.fromSide), y1: anchorY[ed.id + ':from'], dir1: sideDir(ed.fromSide),
+      x2: sideX(toNode, ed.toSide), y2: anchorY[ed.id + ':to'], dir2: sideDir(ed.toSide)
+    };
+  });
+  assignVerticalLanes(geomById);
+
+  var edgesHTML = edgeDescs.map(function(ed){
+    var g = geomById[ed.id];
+    if(!g) return '';
+    var points = buildOrthogonalPoints(g.x1, g.y1, g.dir1, g.x2, g.y2, g.dir2, g.laneMidX);
+    var path = roundedOrthogonalPathD(points, DEPMAP_CORNER_RADIUS);
+    var color = ed.blocked ? '#de350b' : '#8993a4';
+    var marker = ed.blocked ? 'url(#kf-arrow-blocked)' : 'url(#kf-arrow-done)';
+    var startMarker = ed.blocked ? 'url(#kf-dot-start-blocked)' : 'url(#kf-dot-start-done)';
     return '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2" opacity="0.85" marker-start="' + startMarker + '" marker-end="' + marker + '"></path>';
   }).join('');
 
-  var subtaskEdgesHTML = (project && isSubTasksEnabled(project)) ? layout.subtaskEdges.map(function(e){
-    var fromPos = layout.positions[e.from], toPos = layout.positions[e.to];
-    if(!fromPos || !toPos) return '';
-    var x1 = fromPos.x + DEPMAP_NODE_W, y1 = fromPos.y + DEPMAP_NODE_H / 2;
-    var x2 = toPos.x, y2 = toPos.y + DEPMAP_NODE_H / 2;
-    var bend = Math.max(40, (x2 - x1) * 0.5);
-    var path = 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + bend) + ' ' + y1 + ', ' + (x2 - bend) + ' ' + y2 + ', ' + x2 + ' ' + y2;
-    return '<path d="' + path + '" fill="none" stroke="#6554c0" stroke-width="2" stroke-dasharray="5 4" opacity="0.75"></path>';
-  }).join('') : '';
+  var subtaskEdgesHTML = subtaskDescs.map(function(ed){
+    var g = geomById[ed.id];
+    if(!g) return '';
+    var points = buildOrthogonalPoints(g.x1, g.y1, g.dir1, g.x2, g.y2, g.dir2, g.laneMidX);
+    var path = roundedOrthogonalPathD(points, DEPMAP_CORNER_RADIUS);
+    return '<path d="' + path + '" fill="none" stroke="#6554c0" stroke-width="2" stroke-dasharray="5 4" opacity="0.75" marker-start="url(#kf-dot-start-subtask)" marker-end="url(#kf-arrow-subtask)"></path>';
+  }).join('');
 
   /* Node content is grouped into the same row order as the board card (Board§renderCard):
      key+type-icon+avatar row, up-to-2-line title, priority+related+blocked+overdue row,
@@ -256,7 +437,7 @@ export function renderDependencyMap(){
         '<text x="16" y="10" font-size="9" font-weight="600" fill="var(--kf-blocked-fg)">Blocked</text></g>'
       : '';
     var overdueBadge = overdue
-      ? '<g transform="translate(140,70)" style="color:var(--kf-overdue-fg);"><title>Overdue — end date was ' + escapeHTML(utcISOToLocalDisplayDate(t.endDate)) + '</title>' + iconSvg('clock',12) +
+      ? '<g transform="translate(150,70)" style="color:var(--kf-overdue-fg);"><title>Overdue — end date was ' + escapeHTML(utcISOToLocalDisplayDate(t.endDate)) + '</title>' + iconSvg('clock',12) +
         '<text x="16" y="10" font-size="9" font-weight="600" fill="var(--kf-overdue-fg)">Overdue</text></g>'
       : '';
 

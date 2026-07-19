@@ -5616,6 +5616,7 @@
   .kf-depmap-scroll {
     flex: 1;
     overflow: auto;
+    scrollbar-gutter: stable;
     padding: 28px;
     background-color: var(--kf-canvas-bg);
     background-image: radial-gradient(circle, var(--kf-canvas-dot) 1px, transparent 1px);
