@@ -7,6 +7,7 @@ import { addTemplate, renameTemplate, deleteTemplate } from '../mutations.js';
 import { isServerLoggedIn, createTemplateOnServer, fetchTemplatesFromServer } from '../features/migration.js';
 import { isOrgAdmin, renameTemplateApi, deleteTemplateApi } from '../api.js';
 import { confirmDialog } from './confirm.js';
+import { hydrateIcons } from '../icons.js';
 
 /* ---- Save as Template (Projects menu) ---- */
 export function openSaveAsTemplateModal(){
@@ -125,4 +126,6 @@ function renderTemplateRows(templates, isServer){
 
     listEl.appendChild(row);
   });
+
+  hydrateIcons(listEl);
 }

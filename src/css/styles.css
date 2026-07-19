@@ -160,6 +160,7 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     transition: width .18s ease;
   }
 
@@ -479,6 +480,7 @@
       gap: 0;
       padding: 14px 16px;
       overflow-y: auto;
+      scrollbar-gutter: stable;
       transform: translateX(-100%);
       transition: transform .25s ease;
       z-index: 1100;
@@ -872,6 +874,7 @@
     min-width: 220px;
     max-height: 280px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     z-index: 50;
     padding: 6px;
   }
@@ -1260,6 +1263,7 @@
   .kf-archived-list {
     max-height: 320px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     border: 1px solid var(--kf-border);
     border-radius: var(--kf-radius);
   }
@@ -1302,6 +1306,7 @@
     position: relative;
     flex: 1;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     padding: 2px 8px 4px 8px;
     min-height: 40px;
   }
@@ -1731,6 +1736,7 @@
     gap: 6px;
     max-height: 280px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 
   .kf-member-row {
@@ -2087,6 +2093,7 @@
     gap: 8px;
     max-height: 360px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 
   .kf-release-row {
@@ -2283,6 +2290,7 @@
     gap: 4px;
     max-height: 160px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     border: 1px solid var(--kf-border);
     border-radius: var(--kf-radius);
     padding: 6px;
@@ -3171,6 +3179,7 @@
     min-width: 160px;
     max-height: 220px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     background: var(--kf-surface);
     border: 1px solid var(--kf-border);
     border-radius: var(--kf-radius);
@@ -3368,6 +3377,7 @@
     padding: 10px;
     max-height: 130px;
     overflow: auto;
+    scrollbar-gutter: stable;
     font-family: monospace;
     font-size: 12px;
     white-space: pre;
@@ -3458,6 +3468,7 @@
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: 12px;
     overflow: auto;
+    scrollbar-gutter: stable;
     max-height: 400px;
     white-space: pre-wrap;
     word-break: break-word;
@@ -3558,6 +3569,7 @@
   .kf-query-saved-panel {
     max-height: 360px;
     overflow: auto;
+    scrollbar-gutter: stable;
     background: var(--kf-bg);
     border-radius: var(--kf-radius);
     padding: 10px;
@@ -3740,6 +3752,7 @@
   .kf-overdue-alert-list {
     max-height: 200px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     border: 1px solid var(--kf-border);
     border-radius: var(--kf-radius);
   }
@@ -3786,6 +3799,7 @@
   .kf-overrun-alert-list {
     max-height: 200px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     border: 1px solid var(--kf-border);
     border-radius: var(--kf-radius);
   }
@@ -3837,6 +3851,7 @@
   .kf-defaultscore-alert-list {
     max-height: 200px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     border: 1px solid var(--kf-border);
     border-radius: var(--kf-radius);
   }
@@ -4114,6 +4129,12 @@
     cursor: pointer;
   }
 
+  .kf-header-more-divider {
+    height: 1px;
+    background: var(--kf-border);
+    margin: 4px 6px;
+  }
+
   .kf-header-more-link:hover {
     background: var(--kf-hover-tint);
     text-decoration: underline;
@@ -4241,6 +4262,7 @@
     min-height: 140px;
     max-height: 300px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 
   .kf-richtext-editor:focus {
@@ -4770,6 +4792,14 @@
     gap: 10px;
   }
 
+  /* .kf-color-input's shared margin-left:auto (see above) is meant for the checkbox-row layout,
+     where it pushes the swatch to the far right of its row — wrong here, where the header colour
+     swatch is the row's own first/only meaningful control and should sit flush left like every
+     other field in this modal, not float to the right edge. */
+  #headerColorInput {
+    margin-left: 0;
+  }
+
   .kf-preferences-bg-preview {
     width: 44px;
     height: 44px;
@@ -4851,6 +4881,7 @@
     margin-top: 8px;
     max-height: 260px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -4929,6 +4960,7 @@
     border-radius: var(--kf-radius);
     max-height: 160px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 
   .kf-dep-row {
@@ -5009,6 +5041,7 @@
   .kf-comments-list {
     max-height: 260px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -5166,6 +5199,7 @@
   .kf-tasklist-scroll {
     flex: 1;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 
   .kf-tasklist-row {
@@ -5419,6 +5453,7 @@
   .kf-bulkedit-scroll {
     flex: 1;
     overflow: auto;
+    scrollbar-gutter: stable;
   }
 
   .kf-bulkedit-row {
@@ -5503,6 +5538,7 @@
   .kf-todo-board {
     flex: 1;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     columns: 260px;
     column-gap: 16px;
     padding: 16px;
@@ -5755,6 +5791,7 @@
     max-width: 300px;
     max-height: 260px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     background: var(--kf-surface);
     border: 1px solid var(--kf-border);
     border-radius: var(--kf-radius);
@@ -5797,6 +5834,7 @@
   .kf-govmap-scroll {
     flex: 1;
     overflow: auto;
+    scrollbar-gutter: stable;
     padding: 28px;
     background-color: var(--kf-canvas-bg);
     background-image: radial-gradient(circle, var(--kf-canvas-dot) 1px, transparent 1px);
@@ -6006,6 +6044,7 @@
   .kf-costbenefit-scroll {
     flex: 1;
     overflow: auto;
+    scrollbar-gutter: stable;
     padding: 50px;
     background-color: var(--kf-canvas-bg);
     cursor: grab;
@@ -6081,6 +6120,7 @@
   .kf-timeline-scroll {
     flex: 1;
     overflow: auto;
+    scrollbar-gutter: stable;
     background: var(--kf-surface);
   }
 
@@ -6432,6 +6472,7 @@
     margin-bottom: 18px;
     max-height: 160px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 
   .kf-about-project-row {
@@ -6795,6 +6836,7 @@
     min-height: 20px;
     max-height: 260px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 
   .kf-retro-item-row {

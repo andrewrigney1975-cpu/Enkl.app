@@ -518,10 +518,14 @@ export function updateArchivedSearchMatchesPanel(){
 
 function renderSearchHashtagPanel(){
   var panel = document.getElementById('searchHashtagPanel');
-  panel.innerHTML = searchHashtagState.options.map(function(tag, i){
-    return '<div class="kf-dropdown-filter-row' + (i === searchHashtagState.activeIndex ? ' active' : '') + '" data-index="' + i + '">' +
-      '<span class="kf-dropdown-filter-name">#' + escapeHTML(tag) + '</span></div>';
-  }).join('');
+  // Same title styling as the "Matching Archived Tasks" panel just above this one
+  // (kf-search-archived-matches-title, see updateArchivedSearchMatchesPanel) for visual consistency
+  // between the two search-box dropdowns.
+  panel.innerHTML = '<div class="kf-search-archived-matches-title">Matching tags</div>' +
+    searchHashtagState.options.map(function(tag, i){
+      return '<div class="kf-dropdown-filter-row' + (i === searchHashtagState.activeIndex ? ' active' : '') + '" data-index="' + i + '">' +
+        '<span class="kf-dropdown-filter-name">#' + escapeHTML(tag) + '</span></div>';
+    }).join('');
 }
 
 /* Only ever triggers when the WHOLE search term starts with "#" (per the ask - "if a user starts a

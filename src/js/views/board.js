@@ -301,12 +301,15 @@ export function renderToolbar(){
   toggleHeaderActionButton('migrateToServerBtn', !isServerAuthoritative(p) && reachable);
 
   // Login/Logout are session-level, not tied to whichever project happens to be open — Login shows
-  // whenever there's no active session, Logout once there is one.
+  // whenever there's no active session, Logout once there is one. Each also requires `reachable`
+  // now (previously implicit — see accountMenuWrap below, which used to hide ALL of these at once
+  // by hiding the whole dropdown; now that the dropdown itself always stays visible for My
+  // Preferences' sake, each API-dependent item has to carry its own reachability check instead).
   var loggedIn = isServerLoggedIn();
-  toggleHeaderActionButton('serverLoginBtn', !loggedIn);
-  toggleHeaderActionButton('serverLogoutBtn', loggedIn);
+  toggleHeaderActionButton('serverLoginBtn', !loggedIn && reachable);
+  toggleHeaderActionButton('serverLogoutBtn', loggedIn && reachable);
   // There's no password to change until there's a server session to change it on.
-  toggleHeaderActionButton('changePasswordBtn', loggedIn);
+  toggleHeaderActionButton('changePasswordBtn', loggedIn && reachable);
 
   var logoTextEl = document.getElementById('kfLogoText');
   if(logoTextEl){
@@ -330,21 +333,34 @@ export function renderToolbar(){
   // just toggled directly here.
 
   var manageUsersLink = document.getElementById('manageUsersLink');
-  if(manageUsersLink) manageUsersLink.classList.toggle('kf-vis-hidden', !isOrgAdmin());
+  if(manageUsersLink) manageUsersLink.classList.toggle('kf-vis-hidden', !isOrgAdmin() || !reachable);
 
   var ssoConfigLink = document.getElementById('ssoConfigLink');
-  if(ssoConfigLink) ssoConfigLink.classList.toggle('kf-vis-hidden', !isOrgAdmin());
+  if(ssoConfigLink) ssoConfigLink.classList.toggle('kf-vis-hidden', !isOrgAdmin() || !reachable);
 
-  // Unlike Manage Users, Manage Templates has real value signed-out too (local-only templates, no
-  // Organisation concept to gate on) — only hidden in the one case where opening it would just show
-  // an error toast: signed in as a non-admin (its rename/delete actions are OrgAdmin-only server-side).
+  // Manage Templates lives in the Projects menu now (moved out of here — local-only templates have
+  // real value signed-out too, so it never needed the Account menu's API-dependent items around it).
+  // Same visibility rule as before the move: only hidden in the one case where opening it would
+  // just show an error toast (signed in as a non-admin — its rename/delete actions are OrgAdmin-
+  // only server-side).
   var manageTemplatesLink = document.getElementById('manageTemplatesLink');
   if(manageTemplatesLink) manageTemplatesLink.classList.toggle('kf-vis-hidden', isServerLoggedIn() && !isOrgAdmin());
 
-  // The whole Account menu (Login/Logout/Change Password/Manage Users) is meaningless with no API
-  // to talk to — hide the trigger itself rather than leaving an empty/broken-looking dropdown.
-  var accountMenuWrap = document.getElementById('accountMenuWrap');
-  if(accountMenuWrap) accountMenuWrap.classList.toggle('kf-vis-hidden', !isApiReachable());
+  // The Account menu itself no longer hides as a whole when the API is unreachable — it always has
+  // My Preferences (a local-only feature, see myPreferencesBtn above) to offer regardless. Each
+  // item that DOES need the API hides itself individually instead (see the `reachable` checks
+  // above), so an unreachable session just sees a shorter, still-useful menu rather than none at all.
+
+  // Both dividers exist only to separate the OTHER (API-dependent) items from each other and from
+  // My Preferences — with the API unreachable, none of those items show at all (Login/Logout are
+  // mutually exclusive on `loggedIn` but both still require `reachable`, so exactly one of them is
+  // always visible whenever `reachable` is true, and none are when it's false), leaving My
+  // Preferences alone in the menu. A pair of dividers bracketing nothing but empty space would look
+  // like a rendering bug, so both hide together with everything else in that case.
+  var accountDivider1 = document.getElementById('accountMenuDivider1');
+  if(accountDivider1) accountDivider1.classList.toggle('kf-vis-hidden', !reachable);
+  var accountDivider2 = document.getElementById('accountMenuDivider2');
+  if(accountDivider2) accountDivider2.classList.toggle('kf-vis-hidden', !reachable);
 }
 
 /* Hides/shows one of the header's project-action buttons together with its corresponding link in the
