@@ -302,8 +302,17 @@ only appears for an **Org Admin** — this is Elena's territory, not Marcus's.
 - **Portfolio Planner** — **What**: a Gantt-style view for planning multiple projects against each
   other before committing to timelines. **Who**: Elena, sanity-checking that two projects aren't
   quietly both claiming the same quarter's capacity.
-- **Manage Users** — **What**: create and manage the organisation's user accounts. **Who**: Elena,
-  onboarding Marcus's replacement without needing anyone to self-register.
+- **Manage Users** — **What**: create and manage the organisation's user accounts — including
+  deactivating one when someone leaves. **Who**: Elena, onboarding Marcus's replacement without
+  needing anyone to self-register, and, later, offboarding Marcus himself the day he moves on.
+  **How**: click **Deactivate** next to a user's name (a confirmation dialog asks first — this can't
+  be undone from this screen). They're signed out immediately and can't log back in. Elena can't
+  deactivate her own account this way, a deliberate guard against locking herself out by mistake.
+  Nothing about the user's past work disappears: anywhere their name would normally show up — a
+  task they're assigned to, a Risk or Decision or Document they own, a message in Chat — it now
+  reads their name followed by **"(Inactive)"**, so nobody mistakes old history for something still
+  actionable by them. Reassigning their tasks and governance items to someone else is then a manual
+  clean-up step Elena works through at her own pace, not something the deactivation does for her.
 - **SSO & Provisioning** — **What**: configure SAML single sign-on and SCIM-based automatic user
   provisioning. **Who**: larger organisations that already manage identity centrally and want Enklr
   Task to plug into that rather than keep a separate set of credentials.
@@ -400,6 +409,7 @@ to answer at all — it's just you.
 | Talk to a teammate in real time | [Section 8 — Chat](#8-collaboration--chat-and-comments) |
 | See how the whole organisation's projects are doing | [Section 9 — Portfolio Dashboard](#9-portfolio--organisation-management) |
 | Add a new person to the organisation | [Section 9 — Manage Users](#9-portfolio--organisation-management) |
+| Offboard someone who's leaving | [Section 9 — Manage Users](#9-portfolio--organisation-management) |
 | Stop rebuilding the same board layout every time | [Section 9 — Manage Templates](#9-portfolio--organisation-management) |
 | Change how the board looks for just me | [Section 10 — My Preferences](#10-making-it-yours--personalisation) |
 | Make sure I don't lose my local-only work | [Section 11 — Export Project](#11-data-backup-and-moving-between-tiers) |

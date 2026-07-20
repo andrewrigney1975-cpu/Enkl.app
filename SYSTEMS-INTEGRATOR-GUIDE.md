@@ -229,6 +229,17 @@ is required on the integrator's part beyond ensuring the application's API is re
 IdP's provisioning connector (typically a public HTTPS endpoint, since most cloud IdPs provision
 outbound-only from their own infrastructure).
 
+**Deprovisioning is not exclusively a SCIM concern.** An Org Admin can also deactivate a user
+directly from the application's own Manage Users screen — the identical `IsActive`-flip-plus-
+`SecurityStamp`-rotation path SCIM's deactivate operation triggers, just initiated in-app rather than
+pushed from the IdP. This matters for a deployment integration decision: a customer who has **not**
+configured SCIM is not left without any offboarding mechanism — manual deactivation is a first-class,
+always-available path, independent of whether identity federation is in scope for that customer at
+all. Deactivating a user (by either path) does not remove them from any project, task assignment, or
+governance-item ownership they already held — those references are left intact and rendered with an
+explicit inactive indicator in the UI, so historical accountability stays visible; reassigning that
+work to an active user is a separate, manual administrative action.
+
 ---
 
 ## 7. Authentication tokens and session security
@@ -240,7 +251,8 @@ outbound-only from their own infrastructure).
   validation.
 - **Revocation via `SecurityStamp`**: every JWT carries a `securityStamp` GUID that is re-validated
   against the live database value on **every** authenticated request. This value is rotated on
-  password change, on an account's Org Admin status changing, and on SCIM-driven deactivation — the
+  password change, on an account's Org Admin status changing, and on deactivation — whether that
+  deactivation was pushed by SCIM or triggered manually by an Org Admin from Manage Users (§6) — the
   practical effect is that a previously issued token becomes unusable **immediately** upon any of
   those events, not merely at its natural expiry. This is the primary mitigation against the standard
   "stolen long-lived bearer token stays valid until it expires" weakness of bearer-token
