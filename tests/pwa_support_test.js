@@ -16,7 +16,7 @@ function pngDimensions(buf){
     try { manifest = JSON.parse(manifestJson); } catch (e) {}
   }
   log('manifest decodes to valid JSON', !!manifest);
-  log('manifest has a name and short_name', manifest && manifest.name === 'Enkl' && manifest.short_name === 'Enkl', manifest && manifest.name);
+  log('manifest has a name and short_name', manifest && manifest.name === 'Enklr' && manifest.short_name === 'Enklr', manifest && manifest.name);
   log('manifest display mode is "standalone" (proper PWA install behavior)', manifest && manifest.display === 'standalone');
   log('manifest start_url is set', manifest && !!manifest.start_url);
 
