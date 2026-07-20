@@ -25,6 +25,29 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
+  // Seed data no longer includes fake members or assignments (see storage.js's createSeedDB()
+  // comment) — recreate the same "2 members, 'Configure project modules...' assigned to John Brown,
+  // 'Look at Project and App Settings' left unassigned" shape this test was originally written
+  // against, via the same UI actions team_test.js already exercises.
+  doc.getElementById('manageTeamBtn').click();
+  await wait(20);
+  doc.getElementById('newMemberNameInput').value = 'John Brown';
+  doc.getElementById('addMemberBtn').click();
+  await wait(20);
+  doc.getElementById('newMemberNameInput').value = 'Jan Smith';
+  doc.getElementById('addMemberBtn').click();
+  await wait(20);
+  doc.getElementById('teamDoneBtn').click();
+  await wait(20);
+  const setupCard = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf('Configure project modules, columns and details') !== -1);
+  setupCard.click();
+  await wait(20);
+  const setupSelect = doc.getElementById('taskAssigneeSelect');
+  const setupOpt = Array.from(setupSelect.options).find(o => o.textContent === 'John Brown');
+  setupSelect.value = setupOpt.value;
+  doc.getElementById('taskSaveBtn').click();
+  await wait(20);
+
   // --- 1. Export the seeded Sample Project and inspect the raw doc shape ---
   doc.getElementById('exportBtn').click();
   await wait(20);

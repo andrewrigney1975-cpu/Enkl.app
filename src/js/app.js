@@ -66,6 +66,7 @@ import { openProjectStorageModal, closeProjectStorageModal, isProjectStorageModa
 import { openApiEndpointsModal, closeApiEndpointsModal, handleApiEndpointsListClick } from './modals/api-endpoints.js';
 import { openUfoModal, closeUfoModal, isUfoModalOpen } from './modals/ufo.js';
 import { openOpeningExperienceModal, closeOpeningExperienceModal, isOpeningExperienceModalOpen, chooseOpeningExperience, recordDeviceTypeAndMaybeShowPicker } from './modals/opening-experience.js';
+import { openWelcomeNameModal, isWelcomeNameModalOpen, confirmWelcomeName, skipWelcomeName } from './modals/welcome-name.js';
 import { openMyPreferencesModal, closeMyPreferencesModal, isMyPreferencesModalOpen, applyBoardBackground, applyHeaderColor, onHeaderColorChange, resetHeaderColor, onBoardBackgroundTypeChange, onBoardBackgroundColorChange, onBoardBackgroundGradientChange, onBoardBackgroundDisplayChange, onBoardBackgroundFadedChange, onBoardBackgroundFileChange, removeBoardBackgroundImage, changeDefaultViewFromPreferences } from './modals/my-preferences.js';
 import { randomise } from './features/randomise.js';
 
@@ -1636,6 +1637,32 @@ function wireEvents(){
     if(e.target.id === 'openingExperienceOverlay') closeOpeningExperienceModal();
   });
 
+  // Continues on to the (mobile-only) Opening Experience picker either way — see
+  // applyFirstRunExperience()'s own comment for why this one always precedes that one, not the
+  // other way round.
+  document.getElementById('welcomeNameContinueBtn').addEventListener('click', function(){
+    if(confirmWelcomeName()){ renderBoard(); renderAssigneeFilterChips(); }
+    applyOpeningExperience();
+  });
+  document.getElementById('welcomeNameSkipBtn').addEventListener('click', function(){
+    skipWelcomeName();
+    applyOpeningExperience();
+  });
+  document.getElementById('welcomeNameClose').addEventListener('click', function(){
+    skipWelcomeName();
+    applyOpeningExperience();
+  });
+  document.getElementById('welcomeNameOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'welcomeNameOverlay'){ skipWelcomeName(); applyOpeningExperience(); }
+  });
+  document.getElementById('welcomeNameInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      if(confirmWelcomeName()){ renderBoard(); renderAssigneeFilterChips(); }
+      applyOpeningExperience();
+    }
+  });
+
   document.addEventListener('keydown', function(e){
     if(e.key !== 'Escape') return;
     // Full-screen ERD covers the whole viewport above the Project Search modal itself (and, while
@@ -1707,6 +1734,7 @@ function wireEvents(){
     else if(isSearchHashtagPanelOpen()) closeSearchHashtagPanel();
     else if(isMobileDrawerOpen()) closeMobileDrawer();
     else if(isUfoModalOpen()) closeUfoModal();
+    else if(isWelcomeNameModalOpen()){ skipWelcomeName(); applyOpeningExperience(); }
     else if(isOpeningExperienceModalOpen()) closeOpeningExperienceModal();
     else if(isChatFullscreenOpen()) closeChatFullscreen();
     else if(isChatPanelOpen()) closeChatPanel();
@@ -1806,17 +1834,35 @@ function applyOpeningExperience(){
   if(getOpeningExperience() === 'todo') openTodoOverlay();
 }
 
+/* Runs once, right at startup, ahead of applyOpeningExperience() — `justSeeded` (loadDB()'s own
+   return value) is true only when this is a brand-new seed DB, never on a returning visit. A
+   brand-new visitor is asked their name first (modals/welcome-name.js, turning the seed project's
+   anonymous unassigned tasks into a real, personalized starting point — see storage.js's
+   createSeedDB() comment for why this replaced two fake pre-assigned seed members); the mobile-only
+   Opening Experience picker still follows immediately after that modal closes (see its own click/
+   Escape handlers, all of which call applyOpeningExperience() next), not before it, so a first-time
+   mobile visitor never sees two competing modals stacked at once. A returning visitor (justSeeded
+   false) skips straight to applyOpeningExperience() exactly as before this feature existed. */
+function applyFirstRunExperience(justSeeded){
+  if(isServerLoggedIn()) return;
+  if(justSeeded){
+    openWelcomeNameModal();
+    return;
+  }
+  applyOpeningExperience();
+}
+
 /* =========================================================
    INIT
    ========================================================= */
 function init(){
-  loadDB();
+  var justSeeded = loadDB();
   wireEvents();
   renderAll();
   checkProjectAlerts();
   openTaskFromHashIfPresent();
   handleSsoCallbackIfPresent();
-  applyOpeningExperience();
+  applyFirstRunExperience(justSeeded);
   applyBoardBackground();
   applyHeaderColor();
   reportPageLoadTiming(); // last step of init() — see page-load-telemetry.js for why here specifically

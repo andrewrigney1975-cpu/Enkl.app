@@ -10,7 +10,34 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
-  // Seeded Sample Project has 2 members (John Brown, Jan Smith) and 5 tasks.
+  // Seed data no longer includes fake members (see storage.js's createSeedDB() comment) — recreate
+  // the same "2 members, 3 of 5 tasks assigned (John x2, Jan x1)" shape this test was originally
+  // written against, via the same UI actions modals/team.js and modals/task.js already expose.
+  doc.getElementById('manageTeamBtn').click();
+  await wait(20);
+  doc.getElementById('newMemberNameInput').value = 'John Brown';
+  doc.getElementById('addMemberBtn').click();
+  await wait(20);
+  doc.getElementById('newMemberNameInput').value = 'Jan Smith';
+  doc.getElementById('addMemberBtn').click();
+  await wait(20);
+  doc.getElementById('teamDoneBtn').click();
+  await wait(20);
+
+  async function assignSeedTaskTo(titleSubstring, memberName){
+    const card = Array.from(doc.querySelectorAll('.kf-card')).find(c => c.textContent.indexOf(titleSubstring) !== -1);
+    card.click();
+    await wait(20);
+    const select = doc.getElementById('taskAssigneeSelect');
+    const opt = Array.from(select.options).find(o => o.textContent === memberName);
+    select.value = opt.value;
+    doc.getElementById('taskSaveBtn').click();
+    await wait(20);
+  }
+  await assignSeedTaskTo('Configure project modules', 'John Brown');
+  await assignSeedTaskTo('Draft project objectives', 'Jan Smith');
+  await assignSeedTaskTo('Set up Team members', 'John Brown');
+
   const wrap = doc.getElementById('assigneeFilterWrap');
   log('dropdown filter is visible when the project has members', !wrap.classList.contains('kf-vis-hidden'));
 

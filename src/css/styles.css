@@ -310,6 +310,10 @@
     color: var(--kf-header-fg, #fff);
   }
 
+  .kf-logo-light {
+    font-weight: 200;
+  }
+
   .kf-header-divider {
     width: 1px;
     height: 28px;
@@ -1516,12 +1520,12 @@
   }
 
   .kf-chat-message-author {
-    font-size: 12px;
+    font-size: 9px;
     font-weight: 600;
   }
 
   .kf-chat-message-time {
-    font-size: 11px;
+    font-size: 9px;
     color: var(--kf-text-faint);
   }
 
@@ -1540,6 +1544,14 @@
   .kf-chat-message-deleted .kf-chat-message-text {
     color: var(--kf-text-faint);
     font-style: italic;
+  }
+
+  /* A message that's nothing but one or more emoji reads better large, matching the "big emoji"
+     convention most chat apps use — see views/chat.js's isEmojiOnlyMessage() for the detection rule
+     (any actual text content anywhere in the message falls back to the normal 13px size instead). */
+  .kf-chat-message-text.kf-chat-message-emoji-only {
+    font-size: 26px;
+    line-height: 1.2;
   }
 
   /* The current user's own messages — avatar flipped to the right, meta row and message text

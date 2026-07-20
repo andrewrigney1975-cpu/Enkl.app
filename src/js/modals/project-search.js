@@ -49,11 +49,13 @@ export function openProjectSearchOverlay(){
 }
 
 export function closeProjectSearchOverlay(){
-  clearTimeout(projectSearchDebounceId);
-  document.getElementById('projectSearchOverlay').classList.add('hidden');
-  // Defensive: don't leave the ERD stuck full-screen (covering the whole viewport, above this very
-  // overlay) the next time Project Search is reopened.
-  closeProjectQueryErdFullscreen();
+  confirmDiscardQueryChangesThen(function(){
+    clearTimeout(projectSearchDebounceId);
+    document.getElementById('projectSearchOverlay').classList.add('hidden');
+    // Defensive: don't leave the ERD stuck full-screen (covering the whole viewport, above this very
+    // overlay) the next time Project Search is reopened.
+    closeProjectQueryErdFullscreen();
+  }, 'before closing');
 }
 
 export function isProjectSearchOverlayOpen(){
@@ -182,23 +184,28 @@ export function showProjectSearchQueryView(){
     toast('Only a Project Administrator or Org Admin can run advanced queries.');
     return;
   }
-  document.getElementById('projectSearchTabSearchBtn').classList.remove('active');
-  document.getElementById('projectSearchTabQueryBtn').classList.add('active');
-  document.getElementById('projectSearchSimpleView').classList.add('hidden');
-  document.getElementById('projectSearchQueryView').classList.remove('hidden');
-  document.getElementById('projectSearchSimpleFooter').classList.add('hidden');
-  document.getElementById('projectSearchQueryFooter').classList.remove('hidden');
-  document.getElementById('projectQuerySaveRow').classList.add('hidden');
-  document.getElementById('projectQuerySavedPanel').classList.add('hidden');
-  // Expose via API has no meaning for a local-only project — there's no server row of any kind to
-  // attach an API key or a view-filter to (see CLAUDE.md §20) — so the control isn't offered at all,
-  // not merely disabled, same exemption every other server-only permission gate in this app makes.
-  document.getElementById('projectQueryExposeApiRow').classList.toggle('hidden', !isServerAuthoritative(getCurrentProject()));
-  openProjectQuerySchemaPanel(); // Tables & Columns is shown by default when the Advanced Query view opens
-  hideProjectQueryIntellisense();
-  clearLoadedSavedQuery();
-  showProjectQueryResultsTableView();
-  document.getElementById('projectQuerySql').focus();
+  // Re-entering this view (e.g. the tab button is clicked again, or after switching away to Simple
+  // Search) always resets loaded-query tracking below — if that would silently abandon unsaved edits
+  // to a saved query, confirm first, same as every other path that would discard them.
+  confirmDiscardQueryChangesThen(function(){
+    document.getElementById('projectSearchTabSearchBtn').classList.remove('active');
+    document.getElementById('projectSearchTabQueryBtn').classList.add('active');
+    document.getElementById('projectSearchSimpleView').classList.add('hidden');
+    document.getElementById('projectSearchQueryView').classList.remove('hidden');
+    document.getElementById('projectSearchSimpleFooter').classList.add('hidden');
+    document.getElementById('projectSearchQueryFooter').classList.remove('hidden');
+    document.getElementById('projectQuerySaveRow').classList.add('hidden');
+    document.getElementById('projectQuerySavedPanel').classList.add('hidden');
+    // Expose via API has no meaning for a local-only project — there's no server row of any kind to
+    // attach an API key or a view-filter to (see CLAUDE.md §20) — so the control isn't offered at all,
+    // not merely disabled, same exemption every other server-only permission gate in this app makes.
+    document.getElementById('projectQueryExposeApiRow').classList.toggle('hidden', !isServerAuthoritative(getCurrentProject()));
+    openProjectQuerySchemaPanel(); // Tables & Columns is shown by default when the Advanced Query view opens
+    hideProjectQueryIntellisense();
+    clearLoadedSavedQuery();
+    showProjectQueryResultsTableView();
+    document.getElementById('projectQuerySql').focus();
+  }, 'before switching views');
 }
 
 /* =========================================================
@@ -796,15 +803,26 @@ function resetProjectQueryToNew(){
 }
 
 export function handleProjectQueryNewClick(){
+  confirmDiscardQueryChangesThen(resetProjectQueryToNew, 'before starting a new query');
+}
+
+// Shared by every path that would otherwise silently abandon a dirty saved query (New, closing the
+// whole overlay, re-entering the Advanced Query view from Simple Search) — same confirmDialog
+// shape/semantics throughout: Confirm saves (via the same "Update Query" path) then proceeds, Cancel
+// discards the edit and proceeds anyway, X/outside-click aborts the whole action, leaving the edit in
+// place untouched (see confirm.js's onCancel doc comment for why only the labeled Cancel button fires
+// the discard branch). `actionPhrase` only changes the wording of what happens after saving/discarding
+// (e.g. "before starting a new query" vs "before closing"), not the underlying save/discard behavior.
+function confirmDiscardQueryChangesThen(proceedFn, actionPhrase){
   if(!isLoadedQueryDirty()){
-    resetProjectQueryToNew();
+    proceedFn();
     return;
   }
   confirmDialog(
     'Save changes to "' + loadedSavedQueryName + '"?',
-    'This query has unsaved changes. Click Confirm to save them before starting a new query, or Cancel to discard the changes.',
-    function(){ performSavedQueryUpdate(resetProjectQueryToNew); },
-    function(){ resetProjectQueryToNew(); }
+    'This query has unsaved changes. Click Confirm to save them ' + actionPhrase + ', or Cancel to discard the changes.',
+    function(){ performSavedQueryUpdate(proceedFn); },
+    function(){ proceedFn(); }
   );
 }
 

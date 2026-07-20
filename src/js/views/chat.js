@@ -457,6 +457,17 @@ function wireNewChatPicker(root){
 
 /* ---- Thread view ---- */
 
+// Matches a message consisting of nothing but one or more emoji (optionally separated by
+// whitespace) — \p{Extended_Pictographic} covers the emoji character set itself,
+// \p{Emoji_Modifier} the Fitzpatrick skin-tone modifiers, and the zero-width-joiner (U+200D)
+// and variation-selector code points multi-part emoji sequences (e.g. a family or a flag) are built
+// from. Any actual text content anywhere in the message — even a single letter — fails this and
+// falls back to the normal message font size.
+var EMOJI_ONLY_MESSAGE_RE = /^[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200d\ufe0f\s]+$/u;
+function isEmojiOnlyMessage(text){
+  return !!text && EMOJI_ONLY_MESSAGE_RE.test(text);
+}
+
 function messageRowHtml(message, channel){
   var isAuthor = message.authorUserId && message.authorUserId === getCurrentUserId();
   var canEdit = isAuthor && !message.isDeleted;
@@ -464,6 +475,7 @@ function messageRowHtml(message, channel){
   var canReact = !message.isDeleted; // any channel member/admin — reacting is a form of viewing, not authorship
   var showRealText = !message.isDeleted || (isOrgAdmin() && chatState.revealDeletedForAdmin);
   var text = showRealText ? highlightMentions(message.text, channel) : 'Message deleted';
+  var isEmojiOnly = showRealText && isEmojiOnlyMessage(message.text);
 
   return (
     '<div class="kf-chat-message-row' + (message.isDeleted ? ' kf-chat-message-deleted' : '') + (isAuthor ? ' kf-chat-message-own' : '') + '" data-message-id="' + message.id + '">' +
@@ -474,7 +486,7 @@ function messageRowHtml(message, channel){
           '<span class="kf-chat-message-time">' + escapeHTML(utcISOToLocalDisplayDateTime(message.dateCreated)) + '</span>' +
           (message.isDeleted ? '<span class="kf-chat-deleted-icon" title="Deleted">' + iconSvg('trash', 11) + '</span>' : '') +
         '</div>' +
-        '<div class="kf-chat-message-text">' + text + '</div>' +
+        '<div class="kf-chat-message-text' + (isEmojiOnly ? ' kf-chat-message-emoji-only' : '') + '">' + text + '</div>' +
         reactionPillsHtml(message) +
         (canReact || canEdit || canDelete ? '<div class="kf-chat-message-actions">' +
           (canReact ? '<button type="button" data-action="react" title="Add reaction">' + iconSvg('smile', 12) + '</button>' : '') +

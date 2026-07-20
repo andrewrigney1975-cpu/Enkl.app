@@ -274,8 +274,9 @@ export function renderProjectSelect(){
 }
 
 // Captured once from the DOM the first time renderToolbar runs, rather than hardcoded here, so the
-// header text (currently "Enkl Task") only has to be changed in index.html to stay in sync.
-var _baseLogoText = null;
+// header text (currently "Enklr Task", with "Task" wrapped in its own lighter-weight span) only has
+// to be changed in index.html to stay in sync.
+var _baseLogoHTML = null;
 
 export function renderToolbar(){
   var p = getCurrentProject();
@@ -313,9 +314,14 @@ export function renderToolbar(){
 
   var logoTextEl = document.getElementById('kfLogoText');
   if(logoTextEl){
-    if(_baseLogoText === null) _baseLogoText = logoTextEl.textContent;
+    // Captured as markup (not .textContent, which would flatten and permanently lose the "Task"
+    // <span> the light-weight logo styling lives on) the very first time this runs, then reused as
+    // the base every subsequent call — appending an org name re-sets innerHTML each time, so the
+    // captured markup must be the ORIGINAL, not whatever's currently on the page (which, after the
+    // first login, would already have a stale org name suffix baked in from before this ran again).
+    if(_baseLogoHTML === null) _baseLogoHTML = logoTextEl.innerHTML;
     var orgName = loggedIn ? getOrgName() : null;
-    logoTextEl.textContent = orgName ? (_baseLogoText + ' - ' + orgName) : _baseLogoText;
+    logoTextEl.innerHTML = orgName ? (_baseLogoHTML + ' - ' + escapeHTML(orgName)) : _baseLogoHTML;
   }
 
   // Unlike Manage Users below, this has a real "target" button (myPreferencesBtn, in the

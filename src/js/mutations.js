@@ -60,6 +60,20 @@ export function addMember(project, name){
   saveDB();
   return member;
 }
+/* First-run onboarding (storage.js's createSeedDB() no longer seeds fake members/assignees — see
+   its own comment) — called once, right after the very first-ever page load, from
+   modals/welcome-name.js's confirm handler. Turns the sample project's anonymous, unassigned seed
+   tasks into a real, personalized starting point: adds the visitor as a real team member and
+   assigns every existing task to them. Assumes `project` really is the fresh seed project with no
+   other members yet, which app.js's gating (loadDB()'s "was this DB just seeded" return value)
+   guarantees — this is never invoked again on any later run. */
+export function claimSeedProjectAsFirstUser(project, name){
+  var member = addMember(project, name);
+  if(!member) return null;
+  getTasksArray(project).forEach(function(t){ t.assigneeId = member.id; });
+  saveDB();
+  return member;
+}
 export function renameMember(project, memberId, name){
   var member = getMemberById(project, memberId);
   if(!member) return;

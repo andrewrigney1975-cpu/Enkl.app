@@ -24,13 +24,36 @@ function installFakeFileReader(window){
   const doc = window.document;
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra!==undefined?' :: '+extra:'')); }
 
+  // Seed data no longer includes fake members or roles (see storage.js's createSeedDB() comment) —
+  // recreate the same "John Brown/Project Manager, Jan Smith/Developer" shape this test was
+  // originally written against, via the same add-member + role-input UI this test itself exercises
+  // below for Jordan Park/Casey Wu.
+  doc.getElementById('manageTeamBtn').click();
+  await wait(20);
+  doc.getElementById('newMemberNameInput').value = 'John Brown';
+  doc.getElementById('addMemberBtn').click();
+  await wait(10);
+  let johnSetupRow = Array.from(doc.querySelectorAll('.kf-member-row')).find(r => r.querySelector('.kf-member-name-input').value === 'John Brown');
+  johnSetupRow.querySelector('.kf-member-role-input').value = 'Project Manager';
+  johnSetupRow.querySelector('.kf-member-role-input').dispatchEvent(new window.Event('change', { bubbles: true }));
+  await wait(10);
+  doc.getElementById('newMemberNameInput').value = 'Jan Smith';
+  doc.getElementById('addMemberBtn').click();
+  await wait(10);
+  let janSetupRow = Array.from(doc.querySelectorAll('.kf-member-row')).find(r => r.querySelector('.kf-member-name-input').value === 'Jan Smith');
+  janSetupRow.querySelector('.kf-member-role-input').value = 'Developer';
+  janSetupRow.querySelector('.kf-member-role-input').dispatchEvent(new window.Event('change', { bubbles: true }));
+  await wait(10);
+  doc.getElementById('teamDoneBtn').click();
+  await wait(10);
+
   let raw = JSON.parse(window.localStorage.getItem('kanbanflow_v1_db'));
   let proj = raw.projects[raw.currentProjectId];
-  log('seed project has exactly the 2 specified roles', JSON.stringify(proj.roles) === JSON.stringify(['Project Manager','Developer']), JSON.stringify(proj.roles));
+  log('project has exactly the 2 roles just set', JSON.stringify(proj.roles) === JSON.stringify(['Project Manager','Developer']), JSON.stringify(proj.roles));
   const john = proj.members.find(m => m.name === 'John Brown');
   const jan = proj.members.find(m => m.name === 'Jan Smith');
-  log('John Brown is seeded as Project Manager', john.role === 'Project Manager', john.role);
-  log('Jan Smith is seeded as Developer', jan.role === 'Developer', jan.role);
+  log('John Brown is set up as Project Manager', john.role === 'Project Manager', john.role);
+  log('Jan Smith is set up as Developer', jan.role === 'Developer', jan.role);
 
   doc.getElementById('manageTeamBtn').click();
   await wait(20);

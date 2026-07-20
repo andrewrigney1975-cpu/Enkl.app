@@ -261,6 +261,10 @@ export function clearHeaderColor(){
   }
 }
 
+/* Returns true only when a fresh seed DB was just created here (nothing existed yet, or what was
+   there was corrupted beyond use) — app.js's applyFirstRunExperience() uses this, and only this, to
+   decide whether to show the first-run "what's your name?" prompt (modals/welcome-name.js). An
+   existing user's returning session (the normal case) always returns false, so it's never re-prompted. */
 export function loadDB(){
   var raw;
   try{
@@ -273,7 +277,7 @@ export function loadDB(){
       state.db = JSON.parse(raw);
       if(state.db && state.db.projects && state.db.projectOrder){
         migrateDB();
-        return;
+        return false;
       }
     }catch(e){
       console.error('Enkl: corrupted data, resetting', e);
@@ -281,6 +285,7 @@ export function loadDB(){
   }
   state.db = createSeedDB();
   saveDB();
+  return true;
 }
 
 /* Backfills fields added after a user's data was first saved, so boards
@@ -752,10 +757,17 @@ export function createSeedDB(){
   var c4 = makeColumn('Done', true);
   p.columns = [c1, c2, c3, c4];
 
-  var john = {id: uid('member'), name: 'John Brown', color: memberColorForIndex(0), role: 'Project Manager'};
-  var jan = {id: uid('member'), name: 'Jan Smith', color: memberColorForIndex(1), role: 'Developer'};
-  p.members = [john, jan];
-  p.roles = ['Project Manager', 'Developer'];
+  // Deliberately no seed members and no seed task assignees (there used to be two fictional
+  // members here, "John Brown"/"Jan Smith", with the seed tasks pre-assigned to them) — a real
+  // visitor is prompted for their own name on first run instead (app.js's applyFirstRunExperience(),
+  // modals/welcome-name.js) and becomes this project's first, real, sole member with every seed task
+  // assigned to them. This matters beyond cosmetics: the first member ever added to a brand-new
+  // Organisation becomes its Org Admin on migration (MigrationEntityBuilder.cs's
+  // isFirstAdminOfNewOrg) — leaving two fake seed members in place meant a real user who later
+  // migrated this project could end up migrating in as an ordinary member while "John Brown" became
+  // the org's admin instead of them.
+  p.members = [];
+  p.roles = [];
 
   function addSeedTask(col, title, desc, priority, deps, assigneeId, businessValue, taskCost){
     var n = p.taskCounter++;
@@ -791,9 +803,9 @@ export function createSeedDB(){
   }
 
   var t1 = addSeedTask(c1, 'Look at Project and App Settings', 'There are lots of options available to extend the app to make it more structured and specific to your needs. Open up Project Settings to see what elese it can do for you.', 'low', [], null, 200, 80);
-  var t2 = addSeedTask(c2, 'Configure project modules, columns and details', 'Define how projects, columns and tasks are structured. Replace these default Tasks with real activities', 'high', [t1], john.id, 800, 150);
-  var t3 = addSeedTask(c2, 'Draft project objectives', 'Set the goals of this project. Gives you milestones and targets to reach. The extended Objectives module really helps formalise these goals.', 'medium', [t2], jan.id, 500, 200);
-  var t4 = addSeedTask(c3, 'Set up Team members for this project', 'Assign people and roles to the project.', 'critical', [t2, t3], john.id, 900, 400);
+  var t2 = addSeedTask(c2, 'Configure project modules, columns and details', 'Define how projects, columns and tasks are structured. Replace these default Tasks with real activities', 'high', [t1], null, 800, 150);
+  var t3 = addSeedTask(c2, 'Draft project objectives', 'Set the goals of this project. Gives you milestones and targets to reach. The extended Objectives module really helps formalise these goals.', 'medium', [t2], null, 500, 200);
+  var t4 = addSeedTask(c3, 'Set up Team members for this project', 'Assign people and roles to the project.', 'critical', [t2, t3], null, 900, 400);
   addSeedTask(c4, 'Create project board', 'Document setup and usage instructions.', 'trivial', [], null, 100, 30);
 
   return {
