@@ -11,10 +11,11 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   function log(label, ok, extra){ console.log((ok?'PASS':'FAIL') + ' - ' + label + (extra?' :: '+extra:'')); }
 
   // ── 1. Tab title and header logo ──────────────────────────────────────────
-  // Renamed to "Enkl Task" after this test was written (a later, deliberate naming update).
-  log('tab title is "Enkl Task"', doc.title === 'Enkl Task', doc.title);
+  // Renamed to "Enklr Task" after this test was written (a later, deliberate naming update — the
+  // header logo's "Task" is also its own lighter-weight <span> now, see styles.css's .kf-logo-light).
+  log('tab title is "Enklr Task"', doc.title === 'Enklr Task', doc.title);
   const logo = doc.querySelector('.kf-logo');
-  log('header logo reads "Enkl Task"', logo.textContent.trim() === 'Enkl Task', logo.textContent.trim());
+  log('header logo reads "Enklr Task"', logo.textContent.trim() === 'Enklr Task', logo.textContent.trim());
 
   // ── 2. No leftover references to either previous brand name ──────────────
   log('no "KanbanFlow" text remains anywhere in the file', html.indexOf('KanbanFlow') === -1);

@@ -19,6 +19,26 @@ function makeFakeJwt(payload){
     runScripts: 'dangerously', resources: 'usable', url: 'http://localhost/', pretendToBeVisual: true,
     beforeParse(w){ w.localStorage.setItem('kanbanflow_server_jwt', makeFakeJwt({orgAdmin: 'true'})); }
   });
+  // No live backend — the fake JWT above makes isServerLoggedIn() true, so app.js's init() also
+  // fires off connectEventStream()/initChat()/pullServerProjectsIntoLocal() same as every other
+  // logged-in session. Stubbed here, same convention chat_test.js/change_auditing_confirm_test.js
+  // already established, rather than leaving window.fetch undefined.
+  dom.window.fetch = async function(url){
+    if(url === '/api/projects') return {ok: true, status: 200, json: async function(){ return []; }};
+    if(url === '/api/chat/org-users') return {ok: true, status: 200, json: async function(){ return []; }};
+    if(url === '/api/chat/channels') return {ok: true, status: 200, json: async function(){ return {channels: [], adminVisibleChannels: []}; }};
+    if(url === '/api/organisations/me') return {ok: true, status: 200, json: async function(){ return {id: 'org-1', name: 'Test Org', hasCustomDefaultPassword: false, users: []}; }};
+    if(url === '/api/events/stream'){
+      // A stream that reports "done" on the very first read — live-updates.js's connectLoop()
+      // already treats this exactly like a normal server-closed connection (reconnect on a backoff),
+      // not an error, so nothing here needs to simulate an actual open SSE connection.
+      return {
+        ok: true, status: 200,
+        body: { getReader: function(){ return { read: async function(){ return {done: true, value: undefined}; } }; } }
+      };
+    }
+    return {ok: false, status: 404, json: async function(){ return {message: 'Not found (unhandled in test fake): ' + url}; }};
+  };
   await wait(800);
   const doc = dom.window.document;
   doc.getElementById('projectSearchBtn').click();
@@ -87,4 +107,5 @@ function makeFakeJwt(payload){
   log('whitespace click after an edge click clears all dimming (edges)', inner.querySelectorAll('.kf-erd-edge.kf-erd-dimmed').length === 0);
 
   console.log('Schema ERD interactivity test complete.');
-})();
+  process.exit(0);
+})().catch(e => { console.error('CRASHED', e); process.exit(1); });

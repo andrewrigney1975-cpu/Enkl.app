@@ -50,7 +50,7 @@ function pngDimensions(buf){
 
   log('apple-mobile-web-app-capable is set to yes', /<meta name="apple-mobile-web-app-capable" content="yes">/.test(html));
   log('apple-mobile-web-app-status-bar-style is set', /<meta name="apple-mobile-web-app-status-bar-style" content="[^"]+">/.test(html));
-  log('apple-mobile-web-app-title is set to Enkl', /<meta name="apple-mobile-web-app-title" content="Enkl">/.test(html));
+  log('apple-mobile-web-app-title is set to Enklr', /<meta name="apple-mobile-web-app-title" content="Enklr">/.test(html));
 
   const appleIconMatches = [...html.matchAll(/<link rel="apple-touch-icon"[^>]*href="data:image\/png;base64,([A-Za-z0-9+/=]+)">/g)];
   log('at least one apple-touch-icon link exists', appleIconMatches.length >= 1, appleIconMatches.length);
