@@ -6,8 +6,36 @@ on:
   pull_request:
 
 jobs:
+  # Gates the backend-only jobs below (build/lint/contract-parity — contract-parity alone runs
+  # 30+ minutes) so a purely frontend change only runs Frontend build + test suite, not the whole
+  # pipeline. Deliberately conservative about what counts as "backend": docker-compose.yml and this
+  # workflow file itself are included even though they're not under api/**/php-api/**/mariadb-api/**,
+  # so editing either always re-runs everything rather than risking a false "nothing to check" skip.
+  # frontend-build-and-test has no such gate — it always runs, so an API change still gets the "full
+  # CI run" the frontend job is part of, not just the backend-specific jobs.
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'api/**'
+              - 'php-api/**'
+              - 'mariadb-api/**'
+              - 'contract-tests/**'
+              - 'docker-compose.yml'
+              - '.github/workflows/ci.yml'
+
   dotnet-build:
     name: .NET API build
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -21,6 +49,8 @@ jobs:
 
   php-lint:
     name: PHP API lint
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -37,6 +67,8 @@ jobs:
 
   mariadb-lint:
     name: MariaDB API lint
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -72,6 +104,8 @@ jobs:
 
   contract-parity:
     name: Cross-tier contract parity
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     services:
       db-net:
