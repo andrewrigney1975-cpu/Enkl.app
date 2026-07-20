@@ -2274,6 +2274,20 @@
     white-space: nowrap;
   }
 
+  .kf-orguser-row-inactive {
+    opacity: 0.6;
+  }
+
+  .kf-orguser-inactive-badge {
+    font-weight: 500;
+    color: var(--kf-text-faint);
+  }
+
+  .kf-orguser-deactivate-btn {
+    white-space: nowrap;
+    color: var(--kf-danger);
+  }
+
   .kf-member-add-row input {
     flex: 1;
   }

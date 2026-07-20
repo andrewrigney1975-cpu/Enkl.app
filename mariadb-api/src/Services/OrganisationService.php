@@ -195,6 +195,38 @@ final class OrganisationService
         return true;
     }
 
+    /**
+     * Org-admin-initiated deprovisioning — flips IsActive false and rotates SecurityStamp, the same
+     * pattern ScimUserService's Active-flag path already uses for SCIM-driven deactivation. Rotating
+     * SecurityStamp means any already-issued JWT for this user is rejected on its very next request,
+     * not just at its natural ~8h expiry. An OrgAdmin cannot deactivate their own account — a guard
+     * against a self-lockout misclick, not itself a security boundary. Idempotent: deactivating an
+     * already-inactive user returns true without rotating the stamp again. MariaDB port: no
+     * gen_random_uuid() function exists here — generate the replacement SecurityStamp in PHP and
+     * bind it, same as setUserAdmin above.
+     */
+    public function deactivateUser(string $callerOrganisationId, string $callerUserId, string $targetUserId): bool
+    {
+        if ($targetUserId === $callerUserId) {
+            throw new ApiValidationException('You cannot deactivate your own account.');
+        }
+
+        $stmt = $this->db->prepare('SELECT "OrganisationId", "IsActive" FROM "Users" WHERE "Id" = :id');
+        $stmt->execute(['id' => $targetUserId]);
+        $row = $stmt->fetch();
+        if ($row === false || $row['OrganisationId'] !== $callerOrganisationId) {
+            return false;
+        }
+
+        if (!(bool) $row['IsActive']) {
+            return true;
+        }
+
+        $stmt = $this->db->prepare('UPDATE "Users" SET "IsActive" = 0, "SecurityStamp" = :stamp WHERE "Id" = :id');
+        $stmt->execute(['stamp' => Uuid::v4(), 'id' => $targetUserId]);
+        return true;
+    }
+
     /** Read-only listing for the SSO & Provisioning modal's Org Teams section — SCIM (ScimGroupService)
      * is the only writer of OrgTeams/OrgTeamMember, mirroring GetOrgTeamsAsync in OrganisationService.cs. */
     public function getOrgTeams(string $organisationId): array

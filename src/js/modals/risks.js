@@ -3,7 +3,7 @@ import { ui, toast } from '../ui.js';
 import { getCurrentProject } from '../store.js';
 import { escapeHTML } from '../views/board.js';
 import { memberInitials, utcISOToLocalDateValue, localDateValueToUTCISO, utcISOToLocalDisplayDate, isoToServerDateOnly } from '../date-utils.js';
-import { getMemberById, getRiskById } from '../utils.js';
+import { getMemberById, getRiskById, memberLabel } from '../utils.js';
 import { RISK_LIKELIHOOD_META, RISK_IMPACT_META } from '../config.js';
 import { addRisk, updateRisk, deleteRisk, normalizeRiskStatus, getRiskStatusMeta, riskScore, riskScoreBand, clampRiskScoreValue, buildRiskMatrixSvg } from '../mutations.js';
 import { renderDocumentPickerInto, renderItemPickerInto, getCheckedDocumentIdsFrom, getCheckedItemIdsFrom } from './pickers.js';
@@ -166,7 +166,7 @@ export function renderRisksList(){
 
     var metaHTML = '';
     if(owner){
-      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML(memberInitials(owner.name)) + '</span><span>' + escapeHTML(owner.name) + '</span>';
+      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML(memberInitials(owner.name)) + '</span><span>' + escapeHTML(memberLabel(owner)) + '</span>';
     } else {
       metaHTML += '<span>Unassigned</span>';
     }

@@ -4,6 +4,7 @@ import { getCurrentProject } from '../store.js';
 import { escapeHTML } from '../views/board.js';
 import { iconSvg, hydrateIcons } from '../icons.js';
 import { memberInitials, utcISOToLocalDisplayDate } from '../date-utils.js';
+import { memberLabel } from '../utils.js';
 import { normalizeHeaderButtonVisibility } from '../storage.js';
 import { computeOverallHealth, computeTopTeamMembers, computeBurndownData } from '../features/health.js';
 import { buildRiskMatrixSvg } from '../mutations.js';
@@ -294,7 +295,7 @@ export function renderHealthDashboard(){
       return '<div class="kf-health-top-member-row">' +
         '<span class="kf-health-top-member-rank">' + (idx + 1) + '</span>' +
         '<span class="kf-avatar kf-avatar-sm" style="background:' + row.color + ';">' + escapeHTML(memberInitials(row.name)) + '</span>' +
-        '<span class="kf-health-top-member-name">' + escapeHTML(row.name) +
+        '<span class="kf-health-top-member-name">' + escapeHTML(memberLabel(row)) +
           (row.allocatedFraction != null ? ' <span class="kf-health-top-member-allocated">(' + row.allocatedFraction + '% allocated fraction)</span>' : '') +
           (row.role ? ' <span class="kf-health-top-member-role">' + escapeHTML(row.role) + '</span>' : '') + '</span>' +
         '<span class="kf-health-top-member-bar-track"><span class="kf-health-top-member-bar-fill" style="width:' + barPct + '%;"></span></span>' +

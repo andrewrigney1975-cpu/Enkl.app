@@ -378,7 +378,7 @@ final class ProjectService
     private function fetchMembers(string $projectId): array
     {
         $stmt = $this->db->prepare(<<<SQL
-            SELECT m."Id", m."UserId", u."DisplayName", u."EmailAddress", m."Color", m."Role", m."AllocatedFraction", m."ReportsToId", m."IsProjectAdmin"
+            SELECT m."Id", m."UserId", u."DisplayName", u."EmailAddress", u."IsActive", m."Color", m."Role", m."AllocatedFraction", m."ReportsToId", m."IsProjectAdmin"
             FROM "ProjectMembers" m JOIN "Users" u ON u."Id" = m."UserId"
             WHERE m."ProjectId" = :pid
         SQL);
@@ -386,7 +386,7 @@ final class ProjectService
         return array_map(static fn(array $m): array => [
             'id' => $m['Id'], 'userId' => $m['UserId'], 'displayName' => $m['DisplayName'], 'email' => $m['EmailAddress'],
             'color' => $m['Color'], 'role' => $m['Role'], 'allocatedFraction' => $m['AllocatedFraction'] !== null ? (int) $m['AllocatedFraction'] : null, 'reportsToId' => $m['ReportsToId'],
-            'isProjectAdmin' => (bool) $m['IsProjectAdmin'],
+            'isProjectAdmin' => (bool) $m['IsProjectAdmin'], 'isActive' => (bool) $m['IsActive'],
         ], $stmt->fetchAll());
     }
 

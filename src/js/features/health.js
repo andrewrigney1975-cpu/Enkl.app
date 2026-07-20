@@ -263,12 +263,12 @@ export function computeTopTeamMembers(project, options){
     var key = (groupByUserId && m && m.userId) ? m.userId : t.assigneeId;
     counts[key] = (counts[key] || 0) + 1;
     if(!infoByKey[key]){
-      infoByKey[key] = {name: m ? m.name : 'Unknown', role: m ? (m.role || null) : null, color: m ? m.color : '#8993a4', allocatedFraction: m ? (m.allocatedFraction != null ? m.allocatedFraction : null) : null};
+      infoByKey[key] = {name: m ? m.name : 'Unknown', role: m ? (m.role || null) : null, color: m ? m.color : '#8993a4', allocatedFraction: m ? (m.allocatedFraction != null ? m.allocatedFraction : null) : null, isActive: m ? (m.isActive !== false) : true};
     }
   });
   var rows = Object.keys(counts).map(function(key){
     var info = infoByKey[key];
-    return {memberId: key, name: info.name, role: info.role, color: info.color, allocatedFraction: info.allocatedFraction, count: counts[key]};
+    return {memberId: key, name: info.name, role: info.role, color: info.color, allocatedFraction: info.allocatedFraction, isActive: info.isActive, count: counts[key]};
   });
   rows.sort(function(a, b){
     if(b.count !== a.count) return b.count - a.count;

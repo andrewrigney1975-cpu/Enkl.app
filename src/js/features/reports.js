@@ -1,6 +1,6 @@
 "use strict";
 import { getCurrentProject } from '../store.js';
-import { escapeHTML, getTaskById, getDocumentById, getRiskById, getPrincipleById, getObjectiveById, getMemberById } from '../utils.js';
+import { escapeHTML, getTaskById, getDocumentById, getRiskById, getPrincipleById, getObjectiveById, getMemberById, memberLabel } from '../utils.js';
 import { RISK_LIKELIHOOD_META, RISK_IMPACT_META, TEAM_COMMITTEE_TYPES } from '../config.js';
 import { riskScore, riskScoreBand, buildTeamCommitteeTree, buildRiskMatrixSvg } from '../mutations.js';
 import { markdownToHtml } from '../rich-text/markdown.js';
@@ -193,7 +193,7 @@ function renderTeamMembersSection(project){
     ? members.map(function(m){
         return '<div class="kf-report-member-row">' +
           '<span class="kf-avatar kf-avatar-sm" style="background:' + m.color + ';">' + escapeHTML(memberInitials(m.name)) + '</span>' +
-          '<span class="kf-report-member-name">' + escapeHTML(m.name) + '</span>' +
+          '<span class="kf-report-member-name">' + escapeHTML(memberLabel(m)) + '</span>' +
           '<span class="kf-report-member-role">' + escapeHTML(m.role || 'No role set') + '</span>' +
         '</div>';
       }).join('')
@@ -281,7 +281,7 @@ function renderTeamHierarchySection(project){
         var members = (node.memberIds || []).map(function(id){ return getMemberById(project, id); }).filter(Boolean);
         var typeLabel = node.type === 'committee' ? 'Committee' : 'Team';
         var membersHTML = members.length
-          ? '<div class="kf-report-team-tree-members">' + members.map(function(m){ return escapeHTML(m.name); }).join(', ') + '</div>'
+          ? '<div class="kf-report-team-tree-members">' + members.map(function(m){ return escapeHTML(memberLabel(m)); }).join(', ') + '</div>'
           : '';
         return '<div class="kf-report-team-tree-row" style="padding-left:' + (depth * 20) + 'px;">' +
           '<span class="kf-report-team-tree-name">' + escapeHTML(node.name) + '</span>' +

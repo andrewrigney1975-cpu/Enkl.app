@@ -1,5 +1,5 @@
 "use strict";
-import { getTasksArray, getColumn, getMemberById, getTaskTypeById, getReleaseById, isTaskOverdue, isTaskBlocked, getTaskOverrunStatus, escapeHTML } from '../utils.js';
+import { getTasksArray, getColumn, getMemberById, getTaskTypeById, getReleaseById, isTaskOverdue, isTaskBlocked, getTaskOverrunStatus, escapeHTML, memberLabel } from '../utils.js';
 import { getCurrentProject } from '../store.js';
 import { ui } from '../ui.js';
 import { getPriority } from '../ui.js';
@@ -414,7 +414,7 @@ export function buildTaskListRow(project, t){
   var col = getColumn(project, t.columnId);
 
   var assigneeHTML = assignee
-    ? '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';">' + escapeHTML(memberInitials(assignee.name)) + '</span><span>' + escapeHTML(assignee.name) + '</span>'
+    ? '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';">' + escapeHTML(memberInitials(assignee.name)) + '</span><span>' + escapeHTML(memberLabel(assignee)) + '</span>'
     : '<span style="color:var(--kf-text-faint);">Unassigned</span>';
 
   var taskType = getTaskTypeById(project, t.typeId);

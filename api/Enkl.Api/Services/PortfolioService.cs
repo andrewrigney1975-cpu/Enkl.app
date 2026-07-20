@@ -105,7 +105,7 @@ public class PortfolioService
 
         var members = await _db.ProjectMembers
             .Where(m => validProjectIds.Contains(m.ProjectId))
-            .Select(m => new MemberDto(m.Id, m.UserId, m.User.DisplayName, m.User.EmailAddress, m.Color, m.Role, m.AllocatedFraction, m.ReportsToId, m.IsProjectAdmin))
+            .Select(m => new MemberDto(m.Id, m.UserId, m.User.DisplayName, m.User.EmailAddress, m.Color, m.Role, m.AllocatedFraction, m.ReportsToId, m.IsProjectAdmin, m.User.IsActive))
             .ToListAsync();
 
         var columns = await _db.Columns

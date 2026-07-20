@@ -153,6 +153,34 @@ public class OrganisationService
         return true;
     }
 
+    /// <summary>
+    /// Org-admin-initiated deprovisioning — flips IsActive false and rotates SecurityStamp, the same
+    /// pattern ScimUserService's Active-flag path already uses for SCIM-driven deactivation. Rotating
+    /// SecurityStamp means any already-issued JWT for this user is rejected on its very next request
+    /// (§4/H2's revocation mechanism), not just at its natural ~8h expiry. An OrgAdmin cannot
+    /// deactivate their own account — a guard against a self-lockout misclick, not itself a security
+    /// boundary. Idempotent: deactivating an already-inactive user returns true without rotating the
+    /// stamp again. Does not touch ProjectMember/OrgTeamMember rows or reassign anything they own —
+    /// see the frontend's own handling of an inactive member's still-displayed name/assignments.
+    /// </summary>
+    public async Task<bool> DeactivateUserAsync(Guid callerOrganisationId, Guid callerUserId, Guid targetUserId)
+    {
+        if (targetUserId == callerUserId)
+        {
+            throw new ApiValidationException("You cannot deactivate your own account.");
+        }
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId);
+        if (user is null || user.OrganisationId != callerOrganisationId) return false;
+
+        if (!user.IsActive) return true;
+
+        user.IsActive = false;
+        user.SecurityStamp = Guid.NewGuid();
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
     /// <summary>Read-only listing for the SSO & Provisioning modal's Org Teams section — see
     /// OrgTeamSummaryDto's own comment for why there's no corresponding write method here.</summary>
     public async Task<List<OrgTeamSummaryDto>> GetOrgTeamsAsync(Guid organisationId)

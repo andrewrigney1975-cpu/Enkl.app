@@ -372,5 +372,5 @@ public class ChatService
 
     private static ChatChannelDto ToChannelDto(ChatChannel c, IReadOnlyCollection<Guid> onlineUserIds) =>
         new(c.Id, c.Name, c.IsDirectMessage, c.DateCreated,
-            c.Members.Select(m => new ChatChannelMemberDto(m.UserId, m.User.DisplayName, onlineUserIds.Contains(m.UserId))).ToList());
+            c.Members.Select(m => new ChatChannelMemberDto(m.UserId, m.User.DisplayName, onlineUserIds.Contains(m.UserId), m.User.IsActive)).ToList());
 }

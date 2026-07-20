@@ -227,6 +227,18 @@ export function getMemberById(project, memberId){
   return null;
 }
 
+/* The one place a member's display-name TEXT (as opposed to the raw name string used for initials,
+   sorting, search, or data export/import) gets built — appends " (Inactive)" once a deprovisioned
+   org user's isActive flag reaches the frontend. Deliberately not baked into member.name itself:
+   that field also drives memberInitials() and CSV/JSON export/import, where a literal "(Inactive)"
+   suffix would corrupt the initials or round-trip back in on the next import. Call this wherever a
+   member's name is rendered as visible text; keep using member.name directly for initials/sorting/
+   search/export. */
+export function memberLabel(member){
+  if(!member) return '';
+  return member.name + (member.isActive === false ? ' (Inactive)' : '');
+}
+
 export function getMemberByName(project, name){
   if(!name || !project || !project.members) return null;
   var lower = name.toLowerCase();
@@ -303,7 +315,7 @@ export function getRetrospectiveActionItemById(retrospective, itemId){
 
 export function assigneeDisplayName(project, assigneeId){
   var m = getMemberById(project, assigneeId);
-  return m ? m.name : 'Unassigned';
+  return m ? memberLabel(m) : 'Unassigned';
 }
 
 /* Library of selectable icons for Task Types */

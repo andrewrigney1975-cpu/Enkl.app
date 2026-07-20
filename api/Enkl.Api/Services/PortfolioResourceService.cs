@@ -48,7 +48,7 @@ public class PortfolioResourceService
 
         return await _db.ProjectMembers
             .Where(m => m.ProjectId == projectId)
-            .Select(m => new MemberDto(m.Id, m.UserId, m.User.DisplayName, m.User.EmailAddress, m.Color, m.Role, m.AllocatedFraction, m.ReportsToId, m.IsProjectAdmin))
+            .Select(m => new MemberDto(m.Id, m.UserId, m.User.DisplayName, m.User.EmailAddress, m.Color, m.Role, m.AllocatedFraction, m.ReportsToId, m.IsProjectAdmin, m.User.IsActive))
             .ToListAsync();
     }
 

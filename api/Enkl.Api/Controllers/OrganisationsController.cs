@@ -46,6 +46,13 @@ public class OrganisationsController : ControllerBase
         return ok ? NoContent() : NotFound();
     }
 
+    [HttpPost("users/{userId:guid}/deactivate")]
+    public async Task<IActionResult> DeactivateUser(Guid userId)
+    {
+        var ok = await _organisations.DeactivateUserAsync(User.OrgId(), User.UserId(), userId);
+        return ok ? NoContent() : NotFound();
+    }
+
     [HttpGet("org-teams")]
     public async Task<IActionResult> GetOrgTeams()
     {

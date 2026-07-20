@@ -3,7 +3,7 @@ import { state } from '../storage.js';
 import { normalizeHeaderButtonVisibility, isTimeTrackingEnabled, saveDB } from '../storage.js';
 import { PRIORITY_META, PRIORITY_ORDER, PRIORITY_COLORS, MOBILE_BREAKPOINT } from '../config.js';
 import { iconSvg } from '../icons.js';
-import { getTasksArray, getColumn, getMemberById, getTaskTypeById, isTaskBlocked, isTaskOverdue, getTaskOverrunStatus, getDescendants, buildChildrenMap, wouldCreateCycle, escapeHTML } from '../utils.js';
+import { getTasksArray, getColumn, getMemberById, getTaskTypeById, isTaskBlocked, isTaskOverdue, getTaskOverrunStatus, getDescendants, buildChildrenMap, wouldCreateCycle, escapeHTML, memberLabel } from '../utils.js';
 import { memberInitials, utcISOToLocalDisplayDate, utcISOToLocalDateValue, localDateValueToUTCISO, clampTaskScore, clampProgress, defaultStartDateValue, defaultEndDateValue, lightenHexColor, darkenHexColor } from '../date-utils.js';
 import { getCurrentProject } from '../store.js';
 import { ui } from '../ui.js';
@@ -692,7 +692,7 @@ export function renderCard(project, task){
   topRowHTML += '<span class="kf-card-type-slot">' +
       ((taskType && taskType.iconName) ? '<span class="kf-card-type-icon" title="' + escapeHTML(taskType.name) + '">' + iconSvg(taskType.iconName, 13) + '</span>' : '') +
     '</span></span><span class="kf-card-avatar-slot">' +
-    (assignee ? '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';" title="Assigned to ' + escapeHTML(assignee.name) + '">' + escapeHTML(memberInitials(assignee.name)) + '</span>' : '') +
+    (assignee ? '<span class="kf-avatar kf-avatar-sm" style="background:' + assignee.color + ';" title="Assigned to ' + escapeHTML(memberLabel(assignee)) + '">' + escapeHTML(memberInitials(assignee.name)) + '</span>' : '') +
     '</span>';
 
   // Row 2 (title) is rendered separately below — a natural 1-or-2-line block, only as tall

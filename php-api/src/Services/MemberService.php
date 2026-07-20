@@ -146,7 +146,7 @@ final class MemberService
         $this->db->prepare('INSERT INTO "ProjectMembers" ("Id", "ProjectId", "UserId", "Color") VALUES (:id, :pid, :uid, :color)')
             ->execute(['id' => $memberId, 'pid' => $projectId, 'uid' => $user['Id'], 'color' => $color]);
 
-        return ['id' => $memberId, 'userId' => $user['Id'], 'displayName' => $user['DisplayName'], 'email' => $user['EmailAddress'] ?? null, 'color' => $color, 'role' => null, 'allocatedFraction' => null, 'reportsToId' => null, 'isProjectAdmin' => false];
+        return ['id' => $memberId, 'userId' => $user['Id'], 'displayName' => $user['DisplayName'], 'email' => $user['EmailAddress'] ?? null, 'color' => $color, 'role' => null, 'allocatedFraction' => null, 'reportsToId' => null, 'isProjectAdmin' => false, 'isActive' => (bool) ($user['IsActive'] ?? true)];
     }
 
     // ARCHITECTURE-REVIEW.md finding 3.1: the conditional Users.DisplayName update and the
@@ -171,7 +171,7 @@ final class MemberService
     private function updateInTransaction(string $projectId, string $memberId, array $request): ?array
     {
         $stmt = $this->db->prepare(<<<SQL
-            SELECT m.*, u."DisplayName" AS "UserDisplayName", u."EmailAddress" AS "UserEmailAddress" FROM "ProjectMembers" m
+            SELECT m.*, u."DisplayName" AS "UserDisplayName", u."EmailAddress" AS "UserEmailAddress", u."IsActive" AS "UserIsActive" FROM "ProjectMembers" m
             JOIN "Users" u ON u."Id" = m."UserId"
             WHERE m."Id" = :id AND m."ProjectId" = :pid
         SQL);
@@ -216,7 +216,7 @@ final class MemberService
         $this->db->prepare('UPDATE "ProjectMembers" SET "Role" = :role, "AllocatedFraction" = :allocatedFraction, "ReportsToId" = :reportsToId WHERE "Id" = :id')
             ->execute(['role' => $role, 'allocatedFraction' => $allocatedFraction, 'reportsToId' => $reportsToId, 'id' => $memberId]);
 
-        return ['id' => $memberId, 'userId' => $member['UserId'], 'displayName' => $displayName, 'email' => $member['UserEmailAddress'], 'color' => $member['Color'], 'role' => $role, 'allocatedFraction' => $allocatedFraction, 'reportsToId' => $reportsToId, 'isProjectAdmin' => (bool) $member['IsProjectAdmin']];
+        return ['id' => $memberId, 'userId' => $member['UserId'], 'displayName' => $displayName, 'email' => $member['UserEmailAddress'], 'color' => $member['Color'], 'role' => $role, 'allocatedFraction' => $allocatedFraction, 'reportsToId' => $reportsToId, 'isProjectAdmin' => (bool) $member['IsProjectAdmin'], 'isActive' => (bool) $member['UserIsActive']];
     }
 
     // ARCHITECTURE-REVIEW.md finding 3.1: unlinking ReportsTo and deleting the member row used to be
@@ -269,7 +269,7 @@ final class MemberService
     public function setProjectAdmin(string $projectId, string $memberId, bool $isProjectAdmin): ?array
     {
         $stmt = $this->db->prepare(<<<SQL
-            SELECT m.*, u."DisplayName" AS "UserDisplayName", u."EmailAddress" AS "UserEmailAddress" FROM "ProjectMembers" m
+            SELECT m.*, u."DisplayName" AS "UserDisplayName", u."EmailAddress" AS "UserEmailAddress", u."IsActive" AS "UserIsActive" FROM "ProjectMembers" m
             JOIN "Users" u ON u."Id" = m."UserId"
             WHERE m."Id" = :id AND m."ProjectId" = :pid
         SQL);
@@ -290,7 +290,7 @@ final class MemberService
             'id' => $memberId, 'userId' => $member['UserId'], 'displayName' => $member['UserDisplayName'],
             'email' => $member['UserEmailAddress'], 'color' => $member['Color'], 'role' => $member['Role'],
             'allocatedFraction' => $member['AllocatedFraction'], 'reportsToId' => $member['ReportsToId'],
-            'isProjectAdmin' => $isProjectAdmin,
+            'isProjectAdmin' => $isProjectAdmin, 'isActive' => (bool) $member['UserIsActive'],
         ];
     }
 

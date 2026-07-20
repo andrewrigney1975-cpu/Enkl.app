@@ -43,6 +43,12 @@ final class OrganisationsController extends BaseController
         return $ok ? $this->noContent($response) : $this->notFound($response);
     }
 
+    public function deactivateUser(Request $request, Response $response, array $args): Response
+    {
+        $ok = $this->service()->deactivateUser($this->callerOrgId($request), $this->callerUserId($request), $args['userId']);
+        return $ok ? $this->noContent($response) : $this->notFound($response);
+    }
+
     public function getOrgTeams(Request $request, Response $response): Response
     {
         return $this->json($response, $this->service()->getOrgTeams($this->callerOrgId($request)));

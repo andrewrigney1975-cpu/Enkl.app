@@ -7,7 +7,7 @@ import {
 import { CHAT_EMOJI } from '../features/chat-emoji.js';
 import { getCurrentUserId, isOrgAdmin } from '../api.js';
 import { isServerLoggedIn } from '../features/migration.js';
-import { escapeHTML } from '../utils.js';
+import { escapeHTML, memberLabel } from '../utils.js';
 import { utcISOToLocalDisplayDateTime, memberInitials } from '../date-utils.js';
 import { iconSvg, hydrateIcons } from '../icons.js';
 import { toast } from '../ui.js';
@@ -98,7 +98,7 @@ function renderIntellisenseDropdown(textarea){
   if(!dropdown || !_intellisense) return;
 
   dropdown.innerHTML = _intellisense.options.map(function(opt, i){
-    var label = _intellisense.kind === 'mention' ? escapeHTML(opt.displayName) : (opt.char + ' :' + escapeHTML(opt.code) + ':');
+    var label = _intellisense.kind === 'mention' ? escapeHTML(memberLabel({name: opt.displayName, isActive: opt.isActive})) : (opt.char + ' :' + escapeHTML(opt.code) + ':');
     return '<div class="kf-intellisense-option' + (i === _intellisense.activeIndex ? ' active' : '') + '" data-index="' + i + '">' + label + '</div>';
   }).join('');
   dropdown.classList.remove('hidden');
@@ -318,7 +318,7 @@ function channelDisplayName(channel){
   if(channel.name) return channel.name;
   if(channel.isDirectMessage){
     var other = channel.members.find(function(m){ return m.userId !== getCurrentUserId(); });
-    return other ? other.displayName : 'Direct message';
+    return other ? memberLabel({name: other.displayName, isActive: other.isActive}) : 'Direct message';
   }
   return 'Chat';
 }
@@ -468,6 +468,11 @@ function isEmojiOnlyMessage(text){
   return !!text && EMOJI_ONLY_MESSAGE_RE.test(text);
 }
 
+function messageAuthorLabel(message, channel){
+  var member = channel && message.authorUserId ? (channel.members || []).filter(function(m){ return m.userId === message.authorUserId; })[0] : null;
+  return memberLabel({name: message.authorName || 'Unknown', isActive: member ? member.isActive !== false : true});
+}
+
 function messageRowHtml(message, channel){
   var isAuthor = message.authorUserId && message.authorUserId === getCurrentUserId();
   var canEdit = isAuthor && !message.isDeleted;
@@ -482,7 +487,7 @@ function messageRowHtml(message, channel){
       '<div class="kf-chat-message-avatar">' + escapeHTML(memberInitials(message.authorName || '?')) + '</div>' +
       '<div class="kf-chat-message-content">' +
         '<div class="kf-chat-message-meta">' +
-          '<span class="kf-chat-message-author">' + escapeHTML(message.authorName || 'Unknown') + '</span>' +
+          '<span class="kf-chat-message-author">' + escapeHTML(messageAuthorLabel(message, channel)) + '</span>' +
           '<span class="kf-chat-message-time">' + escapeHTML(utcISOToLocalDisplayDateTime(message.dateCreated)) + '</span>' +
           (message.isDeleted ? '<span class="kf-chat-deleted-icon" title="Deleted">' + iconSvg('trash', 11) + '</span>' : '') +
         '</div>' +

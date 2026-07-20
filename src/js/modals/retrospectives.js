@@ -4,7 +4,7 @@ import { getCurrentProject } from '../store.js';
 import { escapeHTML } from '../views/board.js';
 import { iconSvg } from '../icons.js';
 import { utcISOToLocalDateValue, localDateValueToUTCISO, utcISOToLocalDisplayDate, isoToServerDateOnly } from '../date-utils.js';
-import { getReleaseById, getRetrospectiveById, getRetrospectiveItemById } from '../utils.js';
+import { getReleaseById, getRetrospectiveById, getRetrospectiveItemById, memberLabel } from '../utils.js';
 import { isRetrospectiveEnabled } from '../storage.js';
 import {
   addRetrospective, updateRetrospective, deleteRetrospective,
@@ -479,7 +479,7 @@ function populateRetroActionAssigneeSelect(sel, project, currentAssigneeId){
   (project.members || []).forEach(function(m){
     var opt = document.createElement('option');
     opt.value = m.id;
-    opt.textContent = m.name;
+    opt.textContent = memberLabel(m);
     if(currentAssigneeId === m.id) opt.selected = true;
     sel.appendChild(opt);
   });

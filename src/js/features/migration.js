@@ -452,7 +452,7 @@ function buildLocalProjectFromServerDetail(detail, existingLocal){
   });
 
   var members = detail.members.map(function(m){
-    return {id: m.id, userId: m.userId || null, name: m.displayName, email: m.email || null, color: m.color, role: m.role || null, allocatedFraction: m.allocatedFraction != null ? m.allocatedFraction : null, reportsToId: m.reportsToId || null, isProjectAdmin: !!m.isProjectAdmin};
+    return {id: m.id, userId: m.userId || null, name: m.displayName, email: m.email || null, color: m.color, role: m.role || null, allocatedFraction: m.allocatedFraction != null ? m.allocatedFraction : null, reportsToId: m.reportsToId || null, isProjectAdmin: !!m.isProjectAdmin, isActive: m.isActive !== false};
   });
   var releases = (detail.releases || []).map(function(r){
     return {id: r.id, name: r.name, status: r.status, ownerId: r.ownerId || null, startDate: serverDateOnlyToIso(r.startDate), endDate: serverDateOnlyToIso(r.endDate), dateCreated: now, dateLastModified: now};

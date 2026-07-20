@@ -15,7 +15,7 @@ public record UpdateProjectRequest(string Name, string Key, DateOnly? StartDate,
 /// </summary>
 public record CreateProjectResponseDto(ProjectDetailDto Project, string Token, DateTime TokenExpiresAt, string? Warning);
 
-public record MemberDto(Guid Id, Guid UserId, string DisplayName, string? Email, string Color, string? Role, int? AllocatedFraction, Guid? ReportsToId, bool IsProjectAdmin);
+public record MemberDto(Guid Id, Guid UserId, string DisplayName, string? Email, string Color, string? Role, int? AllocatedFraction, Guid? ReportsToId, bool IsProjectAdmin, bool IsActive);
 public record CreateMemberRequest(string Name, string? Email);
 public record UpdateMemberRequest(string Name, string? Role, int? AllocatedFraction, Guid? ReportsToId);
 public record SetProjectAdminRequest(bool IsProjectAdmin);

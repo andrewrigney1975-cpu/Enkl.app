@@ -129,7 +129,7 @@ public class MemberService
         _db.ProjectMembers.Add(member);
         await _db.SaveChangesAsync();
 
-        return new MemberDto(member.Id, member.UserId, user.DisplayName, user.EmailAddress, member.Color, member.Role, member.AllocatedFraction, member.ReportsToId, member.IsProjectAdmin);
+        return new MemberDto(member.Id, member.UserId, user.DisplayName, user.EmailAddress, member.Color, member.Role, member.AllocatedFraction, member.ReportsToId, member.IsProjectAdmin, user.IsActive);
     }
 
     public async Task<MemberDto?> UpdateAsync(Guid projectId, Guid memberId, UpdateMemberRequest request)
@@ -165,7 +165,7 @@ public class MemberService
         }
 
         await _db.SaveChangesAsync();
-        return new MemberDto(member.Id, member.UserId, member.User.DisplayName, member.User.EmailAddress, member.Color, member.Role, member.AllocatedFraction, member.ReportsToId, member.IsProjectAdmin);
+        return new MemberDto(member.Id, member.UserId, member.User.DisplayName, member.User.EmailAddress, member.Color, member.Role, member.AllocatedFraction, member.ReportsToId, member.IsProjectAdmin, member.User.IsActive);
     }
 
     public async Task<bool> DeleteAsync(Guid projectId, Guid memberId)
@@ -208,7 +208,7 @@ public class MemberService
 
         member.IsProjectAdmin = isProjectAdmin;
         await _db.SaveChangesAsync();
-        return new MemberDto(member.Id, member.UserId, member.User.DisplayName, member.User.EmailAddress, member.Color, member.Role, member.AllocatedFraction, member.ReportsToId, member.IsProjectAdmin);
+        return new MemberDto(member.Id, member.UserId, member.User.DisplayName, member.User.EmailAddress, member.Color, member.Role, member.AllocatedFraction, member.ReportsToId, member.IsProjectAdmin, member.User.IsActive);
     }
 
     /// <summary>

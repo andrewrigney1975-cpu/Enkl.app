@@ -3,7 +3,7 @@ import { ui, toast } from '../ui.js';
 import { getCurrentProject } from '../store.js';
 import { escapeHTML } from '../views/board.js';
 import { memberInitials, utcISOToLocalDisplayDate } from '../date-utils.js';
-import { getMemberById, getDecisionById } from '../utils.js';
+import { getMemberById, getDecisionById, memberLabel } from '../utils.js';
 import { addDecision, updateDecision, deleteDecision, normalizeDecisionType, normalizeDecisionStatus, getDecisionStatusMeta, getDecisionTypeMeta } from '../mutations.js';
 import { renderDocumentPickerInto, renderRiskPickerInto, renderItemPickerInto, getCheckedDocumentIdsFrom, getCheckedRiskIdsFrom, getCheckedItemIdsFrom } from './pickers.js';
 import { populateOwnerSelect, populateTaskSelect } from './documents.js';
@@ -155,7 +155,7 @@ export function renderDecisionsList(){
 
     var metaHTML = '';
     if(owner){
-      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML(memberInitials(owner.name)) + '</span><span>' + escapeHTML(owner.name) + '</span>';
+      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML(memberInitials(owner.name)) + '</span><span>' + escapeHTML(memberLabel(owner)) + '</span>';
     } else {
       metaHTML += '<span>Unassigned</span>';
     }

@@ -243,6 +243,9 @@ export function setOrgUserAdminApi(userId, isOrgAdmin){
 export function setOrgUserEmailApi(userId, emailAddress){
   return apiFetch('/organisations/me/users/' + userId + '/email', {method: 'PUT', body: JSON.stringify({emailAddress: emailAddress})});
 }
+export function deactivateOrgUserApi(userId){
+  return apiFetch('/organisations/me/users/' + userId + '/deactivate', {method: 'POST'});
+}
 export function setOrgDefaultPasswordApi(password){
   return apiFetch('/organisations/me/default-password', {method: 'PUT', body: JSON.stringify({password: password})});
 }

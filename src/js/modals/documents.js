@@ -4,7 +4,7 @@ import { getCurrentProject } from '../store.js';
 import { escapeHTML } from '../views/board.js';
 import { iconSvg } from '../icons.js';
 import { memberInitials, utcISOToLocalDateValue, utcISOToLocalDisplayDate } from '../date-utils.js';
-import { getMemberById, getTasksArray, getDocumentById } from '../utils.js';
+import { getMemberById, getTasksArray, getDocumentById, memberLabel } from '../utils.js';
 import { addDocument, updateDocument, deleteDocument, normalizeDocumentationUrl } from '../mutations.js';
 import { renderDocumentPickerInto, getCheckedDocumentIdsFrom } from './pickers.js';
 import { confirmDialog } from './confirm.js';
@@ -230,7 +230,7 @@ function renderDocumentMap(){
       ? '<g transform="translate(' + (DOCMAP_NODE_W - 24) + ',8)" style="color:var(--kf-text-secondary);"><title>Has a linked URL</title>' + iconSvg('externalLink', 16) + '</g>'
       : '';
     var ownerBadge = owner
-      ? '<g><title>' + escapeHTML(owner.name) + '</title><circle cx="' + (DOCMAP_NODE_W - 18) + '" cy="' + (DOCMAP_NODE_H - 16) + '" r="10" fill="' + owner.color + '"></circle>' +
+      ? '<g><title>' + escapeHTML(memberLabel(owner)) + '</title><circle cx="' + (DOCMAP_NODE_W - 18) + '" cy="' + (DOCMAP_NODE_H - 16) + '" r="10" fill="' + owner.color + '"></circle>' +
         '<text x="' + (DOCMAP_NODE_W - 18) + '" y="' + (DOCMAP_NODE_H - 12.5) + '" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">' + escapeHTML(memberInitials(owner.name)) + '</text></g>'
       : '';
     return (
@@ -269,7 +269,7 @@ export function populateOwnerSelect(selectEl, project, currentOwnerId){
   (project.members || []).forEach(function(m){
     var opt = document.createElement('option');
     opt.value = m.id;
-    opt.textContent = m.name;
+    opt.textContent = memberLabel(m);
     selectEl.appendChild(opt);
   });
   selectEl.value = currentOwnerId || '';
@@ -385,7 +385,7 @@ export function renderDocumentsList(){
 
     var metaHTML = '';
     if(owner){
-      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML(memberInitials(owner.name)) + '</span><span>' + escapeHTML(owner.name) + '</span>';
+      metaHTML += '<span class="kf-avatar kf-avatar-sm" style="background:' + owner.color + ';">' + escapeHTML(memberInitials(owner.name)) + '</span><span>' + escapeHTML(memberLabel(owner)) + '</span>';
     } else {
       metaHTML += '<span>Unassigned</span>';
     }

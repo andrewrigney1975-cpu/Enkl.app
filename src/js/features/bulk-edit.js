@@ -1,7 +1,7 @@
 "use strict";
 import { ui, toast, getPriority } from '../ui.js';
 import { getCurrentProject } from '../store.js';
-import { getTasksArray } from '../utils.js';
+import { getTasksArray, memberLabel } from '../utils.js';
 import { PRIORITY_ORDER, TASK_SCORE_MIN, TASK_SCORE_MAX, TASK_PROGRESS_MIN, TASK_PROGRESS_MAX, PRIORITY_META } from '../config.js';
 import { clampTaskScore, clampProgress, utcISOToLocalDateValue, localDateValueToUTCISO } from '../date-utils.js';
 import { moveTaskToColumn, pushTaskAuditEntry } from '../mutations.js';
@@ -195,7 +195,7 @@ function renderBulkEditRow(project, t){
   (project.members || []).forEach(function(m){
     var opt = document.createElement('option');
     opt.value = m.id;
-    opt.textContent = m.name;
+    opt.textContent = memberLabel(m);
     assigneeSelect.appendChild(opt);
   });
   var currentAssignee = bulkEditFieldValue(t.id, 'assigneeId', t.assigneeId) || '';

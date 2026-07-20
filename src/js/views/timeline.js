@@ -1,5 +1,5 @@
 "use strict";
-import { getTasksArray, getColumn, getMemberById, getTaskTypeById, isTaskOverdue, escapeHTML } from '../utils.js';
+import { getTasksArray, getColumn, getMemberById, getTaskTypeById, isTaskOverdue, escapeHTML, memberLabel } from '../utils.js';
 import { getCurrentProject } from '../store.js';
 import { ui } from '../ui.js';
 import { getPriority } from '../ui.js';
@@ -344,7 +344,7 @@ export function renderTimeline(){
     if(assignee){
       var avatar = buildEl('span', 'kf-avatar kf-avatar-sm', escapeHTML(memberInitials(assignee.name)));
       avatar.style.background = assignee.color;
-      avatar.title = assignee.name;
+      avatar.title = memberLabel(assignee);
       nameCell.appendChild(avatar);
     }
     var nameText = document.createElement('div');

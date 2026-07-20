@@ -1,6 +1,6 @@
 "use strict";
 import { state, isTimeTrackingEnabled, isSubTasksEnabled } from '../storage.js';
-import { getTasksArray, getColumn, getMemberById, getTaskTypeById, isTaskBlocked, isTaskOverdue, buildChildrenMap, escapeHTML } from '../utils.js';
+import { getTasksArray, getColumn, getMemberById, getTaskTypeById, isTaskBlocked, isTaskOverdue, buildChildrenMap, escapeHTML, memberLabel } from '../utils.js';
 import { getCurrentProject } from '../store.js';
 import { PRIORITY_COLORS } from '../config.js';
 import { iconSvg } from '../icons.js';
@@ -420,7 +420,7 @@ export function renderDependencyMap(){
       ? '<g transform="translate(74,6)" style="color:var(--kf-text-secondary);"><title>' + escapeHTML(taskType.name) + '</title>' + iconSvg(taskType.iconName,16) + '</g>'
       : '';
     var avatarBadge = assignee
-      ? '<g><title>' + escapeHTML(assignee.name) + '</title><circle cx="' + (n.w - 19) + '" cy="17" r="9" fill="' + assignee.color + '"></circle>' +
+      ? '<g><title>' + escapeHTML(memberLabel(assignee)) + '</title><circle cx="' + (n.w - 19) + '" cy="17" r="9" fill="' + assignee.color + '"></circle>' +
         '<text x="' + (n.w - 19) + '" y="20.5" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">' + escapeHTML(memberInitials(assignee.name)) + '</text></g>'
       : '';
     var archivedBadge = t.archived

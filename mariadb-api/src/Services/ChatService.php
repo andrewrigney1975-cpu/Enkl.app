@@ -398,13 +398,17 @@ final class ChatService
         return $result;
     }
 
-    /** @param string[] $onlineUserIds @return array<int, array{userId: string, displayName: string, isOnline: bool}> */
+    /** @param string[] $onlineUserIds @return array<int, array{userId: string, displayName: string, isOnline: bool, isActive: bool}> */
     private function channelMembers(string $channelId, array $onlineUserIds): array
     {
-        $names = $this->channelMemberDisplayNames($channelId);
+        // A separate query from channelMemberDisplayNames() rather than extending its shape — that
+        // helper backs mention-text-parsing at 5 call sites expecting a plain userId=>displayName
+        // map, and isActive/isOnline aren't needed there.
+        $stmt = $this->db->prepare('SELECT m."UserId", u."DisplayName", u."IsActive" FROM "ChatChannelMembers" m JOIN "Users" u ON u."Id" = m."UserId" WHERE m."ChannelId" = :cid');
+        $stmt->execute(['cid' => $channelId]);
         $result = [];
-        foreach ($names as $userId => $displayName) {
-            $result[] = ['userId' => $userId, 'displayName' => $displayName, 'isOnline' => in_array($userId, $onlineUserIds, true)];
+        foreach ($stmt->fetchAll() as $row) {
+            $result[] = ['userId' => $row['UserId'], 'displayName' => $row['DisplayName'], 'isOnline' => in_array($row['UserId'], $onlineUserIds, true), 'isActive' => (bool) $row['IsActive']];
         }
         return $result;
     }

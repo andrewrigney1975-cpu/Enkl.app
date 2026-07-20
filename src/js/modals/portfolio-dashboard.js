@@ -2,6 +2,7 @@
 import { toast } from '../ui.js';
 import { escapeHTML } from '../views/board.js';
 import { memberInitials } from '../date-utils.js';
+import { memberLabel } from '../utils.js';
 import { getPortfolioSelectedProjectIds, setPortfolioSelectedProjectIds } from '../storage.js';
 import { portfolioApi, isOrgAdmin } from '../api.js';
 import { computeOverallHealth, computeTopTeamMembers } from '../features/health.js';
@@ -248,7 +249,7 @@ function buildPortfolioPseudoProject(aggregate){
   });
   var columns = (aggregate.columns || []).map(function(c){ return {id: c.id, done: c.done}; });
   var members = (aggregate.members || []).map(function(m){
-    return {id: m.id, userId: m.userId, name: m.displayName, color: m.color, role: m.role || null};
+    return {id: m.id, userId: m.userId, name: m.displayName, color: m.color, role: m.role || null, isActive: m.isActive !== false};
   });
   var releases = (aggregate.releases || []).map(function(r){ return {id: r.id, status: r.status, endDate: r.endDate}; });
   var risks = (aggregate.risks || []).map(function(r){
@@ -427,7 +428,7 @@ function renderTopMembers(){
     return '<div class="kf-health-top-member-row">' +
       '<span class="kf-health-top-member-rank">' + (idx + 1) + '</span>' +
       '<span class="kf-avatar kf-avatar-sm" style="background:' + row.color + ';">' + escapeHTML(memberInitials(row.name)) + '</span>' +
-      '<span class="kf-health-top-member-name">' + escapeHTML(row.name) + (row.role ? ' <span class="kf-health-top-member-role">' + escapeHTML(row.role) + '</span>' : '') + '</span>' +
+      '<span class="kf-health-top-member-name">' + escapeHTML(memberLabel(row)) + (row.role ? ' <span class="kf-health-top-member-role">' + escapeHTML(row.role) + '</span>' : '') + '</span>' +
       '<span class="kf-health-top-member-bar-track"><span class="kf-health-top-member-bar-fill" style="width:' + barPct + '%;"></span></span>' +
       '<span class="kf-health-top-member-count">' + row.count + '</span>' +
     '</div>';

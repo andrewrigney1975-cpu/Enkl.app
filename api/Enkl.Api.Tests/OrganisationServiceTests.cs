@@ -94,4 +94,75 @@ public class OrganisationServiceTests
         Assert.True(PasswordHasher.Verify("OrgChosenPassword2!", newUser.PasswordHash!));
         Assert.True(newUser.MustChangePassword);
     }
+
+    [Fact]
+    public async Task DeactivateUserAsync_FlipsIsActiveFalse_AndRotatesSecurityStamp()
+    {
+        using var scope = _fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var organisations = scope.ServiceProvider.GetRequiredService<OrganisationService>();
+
+        var (org, admin) = await TestDataHelper.SeedOrgAndUserAsync(db, TestDataHelper.Unique("org"), TestDataHelper.Unique("admin"));
+        var target = await TestDataHelper.SeedUserInOrgAsync(db, org.Id, TestDataHelper.Unique("target"));
+        var stampBefore = target.SecurityStamp;
+
+        var ok = await organisations.DeactivateUserAsync(org.Id, admin.Id, target.Id);
+        Assert.True(ok);
+
+        var reloaded = await db.Users.AsNoTracking().FirstAsync(u => u.Id == target.Id);
+        Assert.False(reloaded.IsActive);
+        Assert.NotEqual(stampBefore, reloaded.SecurityStamp);
+    }
+
+    [Fact]
+    public async Task DeactivateUserAsync_IsIdempotent_DoesNotRotateStampAgainWhenAlreadyInactive()
+    {
+        using var scope = _fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var organisations = scope.ServiceProvider.GetRequiredService<OrganisationService>();
+
+        var (org, admin) = await TestDataHelper.SeedOrgAndUserAsync(db, TestDataHelper.Unique("org"), TestDataHelper.Unique("admin"));
+        var target = await TestDataHelper.SeedUserInOrgAsync(db, org.Id, TestDataHelper.Unique("target"));
+
+        Assert.True(await organisations.DeactivateUserAsync(org.Id, admin.Id, target.Id));
+        var stampAfterFirst = (await db.Users.AsNoTracking().FirstAsync(u => u.Id == target.Id)).SecurityStamp;
+
+        var okAgain = await organisations.DeactivateUserAsync(org.Id, admin.Id, target.Id);
+        Assert.True(okAgain);
+
+        var stampAfterSecond = (await db.Users.AsNoTracking().FirstAsync(u => u.Id == target.Id)).SecurityStamp;
+        Assert.Equal(stampAfterFirst, stampAfterSecond);
+    }
+
+    [Fact]
+    public async Task DeactivateUserAsync_RejectsSelfDeactivation()
+    {
+        using var scope = _fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var organisations = scope.ServiceProvider.GetRequiredService<OrganisationService>();
+
+        var (org, admin) = await TestDataHelper.SeedOrgAndUserAsync(db, TestDataHelper.Unique("org"), TestDataHelper.Unique("admin"));
+
+        await Assert.ThrowsAsync<ApiValidationException>(() => organisations.DeactivateUserAsync(org.Id, admin.Id, admin.Id));
+
+        var reloaded = await db.Users.AsNoTracking().FirstAsync(u => u.Id == admin.Id);
+        Assert.True(reloaded.IsActive);
+    }
+
+    [Fact]
+    public async Task DeactivateUserAsync_ReturnsFalse_ForUserInAnotherOrg()
+    {
+        using var scope = _fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var organisations = scope.ServiceProvider.GetRequiredService<OrganisationService>();
+
+        var (org, admin) = await TestDataHelper.SeedOrgAndUserAsync(db, TestDataHelper.Unique("org"), TestDataHelper.Unique("admin"));
+        var (_, otherOrgUser) = await TestDataHelper.SeedOrgAndUserAsync(db, TestDataHelper.Unique("otherOrg"), TestDataHelper.Unique("otherUser"));
+
+        var ok = await organisations.DeactivateUserAsync(org.Id, admin.Id, otherOrgUser.Id);
+        Assert.False(ok);
+
+        var reloaded = await db.Users.AsNoTracking().FirstAsync(u => u.Id == otherOrgUser.Id);
+        Assert.True(reloaded.IsActive);
+    }
 }

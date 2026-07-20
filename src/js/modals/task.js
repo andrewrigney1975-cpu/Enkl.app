@@ -1,7 +1,7 @@
 "use strict";
 import { ui, toast, getPriority } from '../ui.js';
 import { getCurrentProject } from '../store.js';
-import { getTasksArray, getDescendants, wouldCreateCycle, getColumn, getMemberById, getReleaseById, getTaskTypeById, getTaskAncestorIds, getSubtasksOf, getSubtaskDescendantIds, wouldCreateParentCycle } from '../utils.js';
+import { getTasksArray, getDescendants, wouldCreateCycle, getColumn, getMemberById, getReleaseById, getTaskTypeById, getTaskAncestorIds, getSubtasksOf, getSubtaskDescendantIds, wouldCreateParentCycle, memberLabel } from '../utils.js';
 import { clampTaskScore, clampProgress, clampEffortHours, utcISOToLocalDateValue, utcISOToLocalDisplayDate, utcISOToLocalDisplayDateTime, localDateValueToUTCISO, defaultStartDateValue, defaultEndDateValue, isoToServerDateOnly } from '../date-utils.js';
 import { iconSvg } from '../icons.js';
 import { PRIORITY_ORDER } from '../config.js';
@@ -201,7 +201,7 @@ function populateFullForm(project, task, descriptionValue){
   (project.members || []).forEach(function(m){
     var opt = document.createElement('option');
     opt.value = m.id;
-    opt.textContent = m.name;
+    opt.textContent = memberLabel(m);
     if(task && task.assigneeId === m.id) opt.selected = true;
     assigneeSelect.appendChild(opt);
   });
@@ -251,7 +251,7 @@ function formatAuditValue(project, field, value){
   switch(field){
     case 'columnId': return (getColumn(project, value) || {}).name || '—';
     case 'parentTaskId': return (project.tasks[value] || {}).key || '—';
-    case 'assigneeId': return (getMemberById(project, value) || {}).name || '—';
+    case 'assigneeId': { var auditMember = getMemberById(project, value); return auditMember ? memberLabel(auditMember) : '—'; }
     case 'releaseId': return (getReleaseById(project, value) || {}).name || '—';
     case 'typeId': return (getTaskTypeById(project, value) || {}).name || '—';
     case 'priority': return getPriority(value).label;

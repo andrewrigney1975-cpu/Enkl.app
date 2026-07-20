@@ -1,9 +1,10 @@
 "use strict";
 import { toast } from '../ui.js';
 import { escapeHTML, renderBoard, renderAssigneeFilterChips } from '../views/board.js';
-import { getMyOrganisationApi, createOrgUserApi, setOrgUserAdminApi, setOrgUserEmailApi, setOrgDefaultPasswordApi, isOrgAdmin, memberApi } from '../api.js';
+import { getMyOrganisationApi, createOrgUserApi, setOrgUserAdminApi, setOrgUserEmailApi, setOrgDefaultPasswordApi, deactivateOrgUserApi, isOrgAdmin, getCurrentUserId, memberApi } from '../api.js';
 import { getCurrentProject } from '../store.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+import { confirmDialog } from './confirm.js';
 
 /* Org-level user administration — distinct from modals/team.js's "Add team member", which creates a
    User account implicitly (as a side effect of project membership) with a fixed default password.
@@ -48,12 +49,16 @@ export function renderOrgUsersList(){
       return;
     }
     listEl.innerHTML = '';
+    var callerId = getCurrentUserId();
     org.users.slice().sort(function(a, b){ return a.displayName.localeCompare(b.displayName, undefined, {sensitivity: 'base'}); }).forEach(function(u){
+      var isInactive = u.isActive === false;
       var row = document.createElement('div');
-      row.className = 'kf-member-row kf-orguser-row';
+      row.className = 'kf-member-row kf-orguser-row' + (isInactive ? ' kf-orguser-row-inactive' : '');
       row.innerHTML =
         '<div class="kf-orguser-row-name">' +
-          '<div class="kf-orguser-display-name">' + escapeHTML(u.displayName) + '</div>' +
+          '<div class="kf-orguser-display-name">' + escapeHTML(u.displayName) +
+            (isInactive ? ' <span class="kf-orguser-inactive-badge">(Inactive)</span>' : '') +
+          '</div>' +
           '<div class="kf-orguser-username">@' + escapeHTML(u.username) + '</div>' +
         '</div>' +
         (u.emailAddress
@@ -64,8 +69,11 @@ export function renderOrgUsersList(){
               '<button class="kf-btn kf-btn-ghost" data-action="save-email">Save</button>' +
             '</div>') +
         '<label class="kf-orguser-admin-toggle">' +
-          '<input type="checkbox"' + (u.isOrgAdmin ? ' checked' : '') + '>Admin' +
-        '</label>';
+          '<input type="checkbox"' + (u.isOrgAdmin ? ' checked' : '') + (isInactive ? ' disabled' : '') + '>Admin' +
+        '</label>' +
+        (isInactive || u.id === callerId
+          ? ''
+          : '<button class="kf-btn kf-btn-ghost kf-orguser-deactivate-btn" data-action="deactivate" title="Deactivate this user — they will be signed out and can no longer log in">Deactivate</button>');
       var adminCheckbox = row.querySelector('input[type=checkbox]');
       adminCheckbox.addEventListener('change', function(){
         var nextValue = adminCheckbox.checked;
@@ -85,6 +93,25 @@ export function renderOrgUsersList(){
           }, function(e){
             toast('Could not save email address: ' + (e.message || 'unknown error'));
           });
+        });
+      }
+      var deactivateBtn = row.querySelector('[data-action="deactivate"]');
+      if(deactivateBtn){
+        deactivateBtn.addEventListener('click', function(){
+          confirmDialog(
+            'Deactivate ' + u.displayName + '?',
+            'They will be signed out immediately and can no longer log in. Any tasks assigned to them, ' +
+            'or governance items they own, will keep showing their name marked "(Inactive)" — you can ' +
+            'reassign those manually afterwards. This cannot be undone from this screen.',
+            function(){
+              deactivateOrgUserApi(u.id).then(function(){
+                toast('"' + u.displayName + '" has been deactivated.');
+                renderOrgUsersList();
+              }, function(e){
+                toast('Could not deactivate user: ' + (e.message || 'unknown error'));
+              });
+            }
+          );
         });
       }
       listEl.appendChild(row);

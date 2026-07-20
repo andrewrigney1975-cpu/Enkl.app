@@ -8,7 +8,7 @@ namespace Enkl.Api.Dtos;
 /// </summary>
 public record ChatOrgUserDto(Guid Id, string DisplayName, bool IsOnline);
 
-public record ChatChannelMemberDto(Guid UserId, string DisplayName, bool IsOnline);
+public record ChatChannelMemberDto(Guid UserId, string DisplayName, bool IsOnline, bool IsActive);
 
 public record ChatChannelDto(
     Guid Id, string? Name, bool IsDirectMessage, DateTime DateCreated,
