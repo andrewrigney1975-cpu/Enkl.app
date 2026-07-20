@@ -1,6 +1,6 @@
-# Enkl.app
+# Enklr.app
 
-Enkl ("en-kel" - from the Swedish word for 'simple') - a Kanban board and project management/planning for small teams - portable, single file, with no external dependencies
+Enklr ("en-klear" - from the Swedish word for 'simple') - a Kanban board and project management/planning for individuals, small teams & enterprises - portable, single file, with no external dependencies scaling out to SaaS with cloud-projects, SSO & SCIM
 
 #### Extended project management and governance modules
 - Principles
@@ -14,6 +14,12 @@ Overall health and key area metrics
 - Burndown velocity and project duration prediction
 - Risk analysis
 - Team member load identification
+
+#### Extended Features
+- Portfolio Health
+- Portfolio Planning
+- Organisation-wide chat
+- Advanced Querying and APIs
 
 ### Screenshots
 
