@@ -438,6 +438,36 @@ final class PortfolioService
         ], $stmt->fetchAll());
     }
 
+    /**
+     * The Resources list also shows a project's *real* team (ProjectMembers, added via the normal
+     * Team modal), not just the manually-typed placeholder rows above — with or without an
+     * allocation set, so an active project that already has real people on it doesn't look
+     * unstaffed here just because nobody has entered a placeholder row for them too. Read-only from
+     * this endpoint's perspective (editing a real member happens through the Team modal, not here);
+     * same org-ownership re-validation and null-vs-empty-array distinction as listResources.
+     */
+    public function listRealMembers(string $organisationId, string $projectId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM "Projects" WHERE "Id" = :id AND "OrganisationId" = :orgId');
+        $stmt->execute(['id' => $projectId, 'orgId' => $organisationId]);
+        if ($stmt->fetch() === false) {
+            return null;
+        }
+
+        $stmt = $this->db->prepare(<<<SQL
+            SELECT m."Id", m."UserId", u."DisplayName", u."EmailAddress", m."Color", m."Role", m."AllocatedFraction", m."ReportsToId", m."IsProjectAdmin"
+            FROM "ProjectMembers" m
+            JOIN "Users" u ON u."Id" = m."UserId"
+            WHERE m."ProjectId" = :pid
+        SQL);
+        $stmt->execute(['pid' => $projectId]);
+        return array_map(static fn(array $m): array => [
+            'id' => $m['Id'], 'userId' => $m['UserId'], 'displayName' => $m['DisplayName'], 'email' => $m['EmailAddress'],
+            'color' => $m['Color'], 'role' => $m['Role'], 'allocatedFraction' => $m['AllocatedFraction'] === null ? null : (int) $m['AllocatedFraction'],
+            'reportsToId' => $m['ReportsToId'], 'isProjectAdmin' => (bool) $m['IsProjectAdmin'],
+        ], $stmt->fetchAll());
+    }
+
     public function addResource(string $organisationId, string $projectId, array $request): ?array
     {
         $stmt = $this->db->prepare('SELECT 1 FROM "Projects" WHERE "Id" = :id AND "OrganisationId" = :orgId');

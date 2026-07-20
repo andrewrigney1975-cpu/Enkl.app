@@ -191,6 +191,7 @@ function registerRoutes(App $app): void
         $group->delete('/categories/{categoryId}', [PortfolioController::class, 'deleteCategory']);
         $group->put('/categories/{categoryId}/sort-order', [PortfolioController::class, 'updateCategorySortOrder']);
         $group->get('/projects/{projectId}/resources', [PortfolioController::class, 'listResources']);
+        $group->get('/projects/{projectId}/members', [PortfolioController::class, 'listRealMembers']);
         $group->post('/projects/{projectId}/resources', [PortfolioController::class, 'addResource']);
         $group->put('/projects/{projectId}/resources/{resourceId}', [PortfolioController::class, 'updateResource']);
         $group->delete('/projects/{projectId}/resources/{resourceId}', [PortfolioController::class, 'removeResource']);

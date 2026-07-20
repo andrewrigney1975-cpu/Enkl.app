@@ -35,6 +35,23 @@ public class PortfolioResourceService
             .ToListAsync();
     }
 
+    /// <summary>The Resources list also shows a project's *real* team (ProjectMembers, added via the
+    /// normal Team modal), not just the manually-typed placeholder rows above — with or without an
+    /// allocation set, so an active project that already has real people on it doesn't look
+    /// unstaffed here just because nobody has entered a placeholder row for them too. Read-only from
+    /// this endpoint's perspective (editing a real member happens through the Team modal, not here);
+    /// same org-ownership re-validation and null-vs-empty-list distinction as ListResourcesAsync.</summary>
+    public async Task<List<MemberDto>?> ListRealMembersAsync(Guid organisationId, Guid projectId)
+    {
+        var projectExists = await _db.Projects.AnyAsync(p => p.Id == projectId && p.OrganisationId == organisationId);
+        if (!projectExists) return null;
+
+        return await _db.ProjectMembers
+            .Where(m => m.ProjectId == projectId)
+            .Select(m => new MemberDto(m.Id, m.UserId, m.User.DisplayName, m.User.EmailAddress, m.Color, m.Role, m.AllocatedFraction, m.ReportsToId, m.IsProjectAdmin))
+            .ToListAsync();
+    }
+
     public async Task<ProjectResourcePlaceholderDto?> AddResourceAsync(Guid organisationId, Guid projectId, CreateProjectResourcePlaceholderRequest request)
     {
         var projectExists = await _db.Projects.AnyAsync(p => p.Id == projectId && p.OrganisationId == organisationId);

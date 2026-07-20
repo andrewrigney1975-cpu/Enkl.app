@@ -139,6 +139,13 @@ public class PortfolioController : ControllerBase
         return resources is null ? NotFound() : Ok(resources);
     }
 
+    [HttpGet("projects/{projectId:guid}/members")]
+    public async Task<IActionResult> ListRealMembers(Guid projectId)
+    {
+        var members = await _resources.ListRealMembersAsync(User.OrgId(), projectId);
+        return members is null ? NotFound() : Ok(members);
+    }
+
     [HttpPost("projects/{projectId:guid}/resources")]
     public async Task<IActionResult> AddResource(Guid projectId, CreateProjectResourcePlaceholderRequest request)
     {

@@ -2375,6 +2375,32 @@
     color: var(--kf-text);
   }
 
+  /* Portfolio Planner Resources modal's read-only "Team members" section (modals/portfolio-planner.js's
+     renderPortfolioPlannerTeamMembersList) — reuses .kf-member-row's border/padding for visual
+     consistency with the editable placeholder-resource rows just below it, but with plain text
+     spans instead of inputs, since these rows have no edit/remove control at all. */
+  .kf-portfolio-planner-team-member-row {
+    justify-content: space-between;
+  }
+
+  .kf-portfolio-planner-team-member-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--kf-text);
+  }
+
+  .kf-portfolio-planner-team-member-role {
+    font-size: 12px;
+    color: var(--kf-text-secondary);
+  }
+
+  .kf-portfolio-planner-team-member-allocation {
+    font-size: 12px;
+    color: var(--kf-text-faint);
+    min-width: 70px;
+    text-align: right;
+  }
+
   .kf-member-row .kf-member-role-input {
     flex: 0.65;
     border-left: 1px solid var(--kf-border);

@@ -125,6 +125,12 @@ final class PortfolioController extends BaseController
         return $resources !== null ? $this->json($response, $resources) : $this->notFound($response);
     }
 
+    public function listRealMembers(Request $request, Response $response, array $args): Response
+    {
+        $members = $this->service()->listRealMembers($this->callerOrgId($request), $args['projectId']);
+        return $members !== null ? $this->json($response, $members) : $this->notFound($response);
+    }
+
     public function addResource(Request $request, Response $response, array $args): Response
     {
         $body = $this->body($request);

@@ -601,6 +601,13 @@ export var portfolioApi = {
   listResources: function(projectId){
     return apiFetch('/organisations/me/portfolio/projects/' + projectId + '/resources', {method: 'GET'});
   },
+  /* The project's REAL team (ProjectMembers, added via the normal Team modal) — shown alongside the
+     manually-typed placeholder resources above so an active project that already has real people on
+     it doesn't look unstaffed here. Read-only from this call's perspective; editing a real member
+     happens through the Team modal, not here. */
+  listRealMembers: function(projectId){
+    return apiFetch('/organisations/me/portfolio/projects/' + projectId + '/members', {method: 'GET'});
+  },
   addResource: function(projectId, role, userId, allocatedFraction){
     return apiFetch('/organisations/me/portfolio/projects/' + projectId + '/resources', {method: 'POST', body: JSON.stringify({role: role, userId: userId || null, allocatedFraction: allocatedFraction})});
   },

@@ -560,6 +560,7 @@ export function savePortfolioPlannerAddProjectFromModal(){
    ========================================================= */
 var _resourcesModalProjectId = null;
 var _resourcesList = [];
+var _realMembersList = [];
 var _orgRoles = [];
 var _orgUsers = [];
 
@@ -569,23 +570,48 @@ export function openPortfolioPlannerResourcesModal(projectId){
   _resourcesModalProjectId = projectId;
   document.getElementById('portfolioPlannerResourcesTitle').textContent = project.name + ' — Resources';
   document.getElementById('portfolioPlannerResourcesList').innerHTML = '<div class="kf-health-empty">Loading…</div>';
+  document.getElementById('portfolioPlannerTeamMembersList').innerHTML = '<div class="kf-health-empty">Loading…</div>';
   document.getElementById('portfolioPlannerResourceRoleInput').value = '';
   document.getElementById('portfolioPlannerResourceAllocatedInput').value = '100';
   document.getElementById('portfolioPlannerResourcePersonSelect').innerHTML = '<option value="">Unassigned</option>';
   document.getElementById('portfolioPlannerResourcesOverlay').classList.remove('hidden');
 
-  Promise.all([portfolioApi.listResources(projectId), portfolioApi.listRoles(), getMyOrganisationApi()]).then(function(results){
+  Promise.all([portfolioApi.listResources(projectId), portfolioApi.listRoles(), getMyOrganisationApi(), portfolioApi.listRealMembers(projectId)]).then(function(results){
     if(_resourcesModalProjectId !== projectId) return; // closed/switched before this resolved
     _resourcesList = results[0] || [];
     _orgRoles = results[1] || [];
     // Deactivated accounts are never offered as a placeholder assignee.
     _orgUsers = (results[2] && results[2].users || []).filter(function(u){ return u.isActive !== false; })
       .sort(function(a, b){ return a.displayName.localeCompare(b.displayName, undefined, {sensitivity: 'base'}); });
+    _realMembersList = results[3] || [];
     populatePersonSelectOptions(document.getElementById('portfolioPlannerResourcePersonSelect'));
     renderPortfolioPlannerResourcesList();
+    renderPortfolioPlannerTeamMembersList();
   }, function(){
     document.getElementById('portfolioPlannerResourcesList').innerHTML = '<div class="kf-health-empty">Could not load resources.</div>';
+    document.getElementById('portfolioPlannerTeamMembersList').innerHTML = '<div class="kf-health-empty">Could not load team members.</div>';
   });
+}
+
+/* Read-only — a project's REAL team (ProjectMembers, added via the normal Team modal), shown so an
+   active project that already has real people on it doesn't look unstaffed here just because nobody
+   has entered a matching placeholder row for them too. Shown with or without an allocation set
+   (an unallocated real member is still real staffing, worth seeing here). Editing a real member
+   happens through the Team modal, not this one — there's deliberately no edit/remove control on
+   these rows. */
+function renderPortfolioPlannerTeamMembersList(){
+  var listEl = document.getElementById('portfolioPlannerTeamMembersList');
+  if(_realMembersList.length === 0){
+    listEl.innerHTML = '<div class="kf-member-empty">No team members on this project yet.</div>';
+    return;
+  }
+  listEl.innerHTML = _realMembersList.map(function(m){
+    return '<div class="kf-member-row kf-portfolio-planner-team-member-row">' +
+      '<span class="kf-portfolio-planner-team-member-name">' + escapeHTML(m.displayName) + '</span>' +
+      (m.role ? '<span class="kf-portfolio-planner-team-member-role">' + escapeHTML(m.role) + '</span>' : '') +
+      '<span class="kf-portfolio-planner-team-member-allocation">' + (m.allocatedFraction != null ? m.allocatedFraction + '%' : 'Unallocated') + '</span>' +
+    '</div>';
+  }).join('');
 }
 export function closePortfolioPlannerResourcesModal(){
   document.getElementById('portfolioPlannerResourcesOverlay').classList.add('hidden');

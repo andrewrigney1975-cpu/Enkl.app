@@ -3,6 +3,7 @@ using Enkl.Api.Dtos;
 using Enkl.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace Enkl.Api.Tests;
 
@@ -152,5 +153,52 @@ public class PortfolioServiceTests
 
         Assert.NotNull(added);
         Assert.Null(added!.UserId);
+    }
+
+    [Fact]
+    public async Task PortfolioResourceService_ListRealMembersAsync_ReturnsAllocatedAndUnallocatedMembers()
+    {
+        using var scope = _fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var portfolio = scope.ServiceProvider.GetRequiredService<PortfolioService>();
+        var resources = scope.ServiceProvider.GetRequiredService<PortfolioResourceService>();
+        var members = scope.ServiceProvider.GetRequiredService<MemberService>();
+
+        var (org, _) = await TestDataHelper.SeedOrgAndUserAsync(db, TestDataHelper.Unique("org"), TestDataHelper.Unique("user"));
+        var project = await portfolio.CreateProjectAsync(org.Id, new CreatePortfolioProjectRequest(TestDataHelper.Unique("Draft"), null, null, null, null, null));
+
+        var allocated = await members.CreateAsync(project.Id, new CreateMemberRequest(TestDataHelper.Unique("Allocated"), TestDataHelper.Unique("allocated") + "@example.com"));
+        Assert.NotNull(allocated);
+        await members.UpdateAsync(project.Id, allocated!.Id, new UpdateMemberRequest(allocated.DisplayName, "Engineer", 60, null));
+
+        var unallocated = await members.CreateAsync(project.Id, new CreateMemberRequest(TestDataHelper.Unique("Unallocated"), TestDataHelper.Unique("unallocated") + "@example.com"));
+        Assert.NotNull(unallocated);
+
+        var listed = await resources.ListRealMembersAsync(org.Id, project.Id);
+        Assert.NotNull(listed);
+        Assert.Equal(2, listed!.Count);
+
+        var allocatedResult = listed.Single(m => m.Id == allocated.Id);
+        Assert.Equal(60, allocatedResult.AllocatedFraction);
+        Assert.Equal("Engineer", allocatedResult.Role);
+
+        var unallocatedResult = listed.Single(m => m.Id == unallocated!.Id);
+        Assert.Null(unallocatedResult.AllocatedFraction);
+    }
+
+    [Fact]
+    public async Task PortfolioResourceService_ListRealMembersAsync_ReturnsNullForProjectInAnotherOrg()
+    {
+        using var scope = _fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var portfolio = scope.ServiceProvider.GetRequiredService<PortfolioService>();
+        var resources = scope.ServiceProvider.GetRequiredService<PortfolioResourceService>();
+
+        var (org, _) = await TestDataHelper.SeedOrgAndUserAsync(db, TestDataHelper.Unique("org"), TestDataHelper.Unique("user"));
+        var (otherOrg, _) = await TestDataHelper.SeedOrgAndUserAsync(db, TestDataHelper.Unique("org"), TestDataHelper.Unique("user"));
+        var project = await portfolio.CreateProjectAsync(org.Id, new CreatePortfolioProjectRequest(TestDataHelper.Unique("Draft"), null, null, null, null, null));
+
+        var listed = await resources.ListRealMembersAsync(otherOrg.Id, project.Id);
+        Assert.Null(listed);
     }
 }
