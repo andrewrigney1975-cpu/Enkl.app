@@ -139,6 +139,13 @@ Map the three Compose services onto:
 
 ### AWS
 
+**A full step-by-step guide (actual `aws` CLI commands, not just this summary table) lives in
+[`DEPLOYMENT-AWS.md`](DEPLOYMENT-AWS.md)** — read that instead of trying to derive the specifics from
+this table alone. It also covers two AWS-specific gotchas not obvious from the table below: RDS Proxy
+breaks this app's `LISTEN`/`NOTIFY`-based SSE stream (don't put one in front of the database), and
+`web/nginx.conf` needs a `localhost`-vs-container-name edit if `web`/`api` run as sidecar containers
+in one ECS task.
+
 | Compose piece | AWS equivalent |
 |---|---|
 | Images | Amazon ECR (one repo per image) |
