@@ -4606,6 +4606,34 @@
     gap: 10px;
   }
 
+  /* First-run "what's your name?" modal (modals/welcome-name.js) — the animated logo sits to the
+     left, question text fills the remaining width, matching the app's other icon+text modal intro
+     layouts (e.g. Opening Experience's own graphic+question) rather than a new pattern. */
+  .kf-welcome-name-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    margin-bottom: 16px;
+  }
+
+  .kf-welcome-name-logo svg {
+    display: block;
+  }
+
+  .kf-welcome-name-question {
+    margin: 0;
+    font-size: 14px;
+    color: var(--kf-text);
+    line-height: 1.5;
+  }
+
+  /* The three bars inside the welcome-name logo (welcome-name.js's own JS) get a new random height
+     roughly every 150-350ms, independently per bar — this transition is what turns those otherwise
+     instant attribute snaps into a smooth "talking" motion, rather than a jarring flicker. */
+  .kf-welcome-logo-bar {
+    transition: height 150ms ease-out;
+  }
+
   /* Task modal only, 25% wider than the base .kf-modal (560px -> 700px), desktop only — below the
      app's MOBILE_BREAKPOINT (config.js) the base rule's max-width:100% already governs, and 700px
      would just get clamped there anyway, but scoping to desktop keeps the intent explicit. */
