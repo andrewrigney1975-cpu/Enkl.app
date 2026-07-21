@@ -4621,6 +4621,14 @@
     width: 900px;
   }
 
+  /* Each Manage Users row now packs name+"(Inactive)" badge + username, email (or the email-missing
+     backfill input+Save button), Admin checkbox, AND a Deactivate button all on one line — the
+     shared .kf-modal-md width crowds this down to an unreadable sliver, same "widen just for this
+     modal" precedent as #teamOverlay/#apiEndpointsOverlay above. */
+  #orgUsersOverlay .kf-modal {
+    width: 760px;
+  }
+
   .kf-opening-experience-body {
     display: flex;
     flex-direction: column;
