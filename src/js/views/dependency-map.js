@@ -124,7 +124,7 @@ function assignVerticalLanes(geomById){
    every 90-degree corner rounded to a small fillet — each straight segment
    is shortened by the fillet radius on either side of a bend, joined by a
    quadratic curve through the original corner point. */
-function roundedOrthogonalPathD(points, radius){
+export function roundedOrthogonalPathD(points, radius){
   if(points.length < 2) return '';
   var pts = points.filter(function(p, i){
     return i === 0 || p.x !== points[i-1].x || p.y !== points[i-1].y;

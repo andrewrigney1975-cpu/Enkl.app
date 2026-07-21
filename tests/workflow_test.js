@@ -234,12 +234,15 @@ function installFakeFileReader(window){
   doc.getElementById('workflowClose').click();
   await wait(10);
 
-  /* ---- Curved connectors: edges render as cubic beziers with dot markers ---- */
+  /* ---- Connectors: orthogonal with rounded (filleted) corners, matching the Dependency Graph's
+     own edge style (roundedOrthogonalPathD, shared from dependency-map.js) — no cubic bezier ("C")
+     commands at all; a "Q" fillet only appears where the route actually bends, so an already-level
+     pair of nodes legitimately renders a plain straight "L" segment with no "Q". */
   doc.getElementById('workflowBtn').click();
   await wait(20);
   const samplePath = doc.querySelector('#workflowInner .kf-wfedge');
-  log('connector paths use a cubic bezier curve ("C"), not a straight line ("L")',
-      samplePath && samplePath.getAttribute('d').indexOf(' C ') !== -1 && samplePath.getAttribute('d').indexOf(' L ') === -1,
+  log('connector paths are orthogonal with rounded corners ("L"/"Q"), not a cubic bezier ("C")',
+      samplePath && samplePath.getAttribute('d').indexOf(' L ') !== -1 && samplePath.getAttribute('d').indexOf(' C ') === -1,
       samplePath && samplePath.getAttribute('d'));
   log('connectors carry both a start marker and an end marker (dot style)',
       samplePath && !!samplePath.getAttribute('marker-start') && !!samplePath.getAttribute('marker-end'),

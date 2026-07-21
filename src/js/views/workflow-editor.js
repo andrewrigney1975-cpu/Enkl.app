@@ -8,6 +8,13 @@ import { updateProjectWorkflowApi, updateColumnApi } from '../api.js';
 import { escapeHTML, getColumn } from '../utils.js';
 import { clampColumnCap } from '../storage.js';
 import { renderBoard } from './board.js';
+import { roundedOrthogonalPathD, DEPMAP_CORNER_RADIUS } from './dependency-map.js';
+
+/* Stub distance a connector travels straight out from a node's face before its first bend — same
+   role as dependency-map.js's own DEPMAP_EDGE_STUB, kept as this view's own constant since Workflow
+   nodes attach from any of 4 sides (not just left/right), so the two views' routing geometry differs
+   even though they share the same fillet-rounding renderer. */
+var WORKFLOW_EDGE_STUB = 24;
 
 function iconHTML(name, size){ return '<span class="kf-icon">'+iconSvg(name,size)+'</span>'; }
 
@@ -112,11 +119,38 @@ function sideNormal(side){
   return {right: {x: 1, y: 0}, left: {x: -1, y: 0}, top: {x: 0, y: -1}, bottom: {x: 0, y: 1}}[side];
 }
 
-/* Curved connector (matching dependency-map.js's cubic-bezier edges),
-   generalized from that view's fixed left-to-right attachment to any
-   of the 4 sides — each endpoint attaches at the midpoint of whichever
-   side faces the other node, with control points pulling the curve out
-   perpendicular to that side so it flows smoothly out of the box. */
+/* Orthogonal connector with rounded (filleted) corners — same visual style as dependency-map.js's
+   edges (roundedOrthogonalPathD, imported above), generalized from that view's fixed left-to-right
+   attachment to any of the 4 sides: each endpoint attaches at the midpoint of whichever side faces
+   the other node, and the vertex list between them is built here (dependency-map.js's own
+   buildOrthogonalPoints assumes both ends exit horizontally, which doesn't hold once a node can
+   attach from its top/bottom too). */
+function buildWorkflowOrthogonalPoints(start, dir1, end, dir2){
+  // Already a straight shot out of both faces — skip the stub/bend entirely, same as
+  // dependency-map.js's own y1===y2 "simple" case, rather than drawing needless dog-legs on the
+  // most common adjacent-node layout.
+  if(dir1.x !== 0 && dir2.x !== 0 && start.y === end.y) return [start, end];
+  if(dir1.y !== 0 && dir2.y !== 0 && start.x === end.x) return [start, end];
+
+  var p1 = {x: start.x + dir1.x * WORKFLOW_EDGE_STUB, y: start.y + dir1.y * WORKFLOW_EDGE_STUB};
+  var p2 = {x: end.x + dir2.x * WORKFLOW_EDGE_STUB, y: end.y + dir2.y * WORKFLOW_EDGE_STUB};
+  var mid;
+  if(dir1.x !== 0 && dir2.x !== 0){
+    var midX = (p1.x + p2.x) / 2;
+    mid = [{x: midX, y: p1.y}, {x: midX, y: p2.y}];
+  } else if(dir1.y !== 0 && dir2.y !== 0){
+    var midY = (p1.y + p2.y) / 2;
+    mid = [{x: p1.x, y: midY}, {x: p2.x, y: midY}];
+  } else if(dir1.x !== 0){
+    // One side exits horizontally, the other vertically — a single corner, aligned to the
+    // horizontal exit's x-travel first, then turning to match the vertical exit's approach.
+    mid = [{x: p2.x, y: p1.y}];
+  } else {
+    mid = [{x: p1.x, y: p2.y}];
+  }
+  return [start, p1].concat(mid, [p2, end]);
+}
+
 function edgePathD(fromPos, toPos){
   var fromCenter = {x: fromPos.x + WORKFLOW_NODE_W / 2, y: fromPos.y + WORKFLOW_NODE_H / 2};
   var toCenter = {x: toPos.x + WORKFLOW_NODE_W / 2, y: toPos.y + WORKFLOW_NODE_H / 2};
@@ -124,12 +158,8 @@ function edgePathD(fromPos, toPos){
   var endSide = pickAttachmentSide(toCenter, fromCenter);
   var start = sideMidpoint(fromPos, startSide);
   var end = sideMidpoint(toPos, endSide);
-  var dist = Math.hypot(end.x - start.x, end.y - start.y);
-  var bend = Math.max(40, dist * 0.4);
-  var sn = sideNormal(startSide), en = sideNormal(endSide);
-  var c1 = {x: start.x + sn.x * bend, y: start.y + sn.y * bend};
-  var c2 = {x: end.x + en.x * bend, y: end.y + en.y * bend};
-  return 'M ' + start.x + ' ' + start.y + ' C ' + c1.x + ' ' + c1.y + ', ' + c2.x + ' ' + c2.y + ', ' + end.x + ' ' + end.y;
+  var points = buildWorkflowOrthogonalPoints(start, sideNormal(startSide), end, sideNormal(endSide));
+  return roundedOrthogonalPathD(points, DEPMAP_CORNER_RADIUS);
 }
 
 export function updateWorkflowModeButtons(){
@@ -379,10 +409,12 @@ function updateWorkflowDraftEdge(clientX, clientY){
   var fromCenter = {x: fromNode.x + WORKFLOW_NODE_W / 2, y: fromNode.y + WORKFLOW_NODE_H / 2};
   var side = pickAttachmentSide(fromCenter, point);
   var start = sideMidpoint(fromNode, side);
-  var sn = sideNormal(side);
-  var bend = Math.max(40, Math.hypot(point.x - start.x, point.y - start.y) * 0.4);
-  var c1 = {x: start.x + sn.x * bend, y: start.y + sn.y * bend};
-  draft.setAttribute('d', 'M ' + start.x + ' ' + start.y + ' C ' + c1.x + ' ' + c1.y + ', ' + point.x + ' ' + point.y + ', ' + point.x + ' ' + point.y);
+  var dir1 = sideNormal(side);
+  // No "end side" exists yet while still dragging (the cursor isn't attached to a node) — a single
+  // stub-out-then-straight-to-cursor segment, filleted the same way, rather than the full two-sided
+  // routing edgePathD does once a real target side is known.
+  var stub = {x: start.x + dir1.x * WORKFLOW_EDGE_STUB, y: start.y + dir1.y * WORKFLOW_EDGE_STUB};
+  draft.setAttribute('d', roundedOrthogonalPathD([start, stub, point], DEPMAP_CORNER_RADIUS));
 }
 
 function startWorkflowEdgeDraw(columnId, clientX, clientY){
