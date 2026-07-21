@@ -67,6 +67,13 @@ var DEPMAP_ANCHOR_MARGIN = 20;
    the two stubs are joined — this is what keeps a same-column subtask
    connector from being drawn straight through the card(s) between it. */
 function orthogonalPointsAreSimple(x1, y1, dir1, x2, y2, dir2){
+  // Same-side attachment (both stub outward in the same direction — e.g. a subtask pair stacked
+  // in the same column, both attaching on their shared right edge) can never take the "simple"
+  // mid-x path below: with x1 === x2, midX collapses to exactly x1/x2, producing a degenerate
+  // bend that draws a straight line glued to the node's own edge instead of the intended
+  // stub-and-join route. Found live: this exact case rendered a subtask connector lying in
+  // perfect line with the card's right edge instead of inset from it.
+  if(dir1 === dir2) return false;
   var midX = (x1 + x2) / 2;
   return (dir1 > 0 ? midX >= x1 : midX <= x1) && (dir2 < 0 ? midX <= x2 : midX >= x2);
 }
