@@ -44,6 +44,15 @@ public class ProjectsController : ControllerBase
         return result is null ? Unauthorized() : Ok(result);
     }
 
+    // Same "no ProjectMember policy" reasoning as CreateProject above — this is the pre-creation
+    // uniqueness check for the "New Project" flow, called before a project (and thus a projectId to
+    // scope {projectId:guid}/key-availability below to) exists at all.
+    [HttpGet("key-availability")]
+    public async Task<IActionResult> CheckKeyAvailabilityForCreation([FromQuery] string key)
+    {
+        return Ok(await _projects.CheckKeyAvailabilityForCreationAsync(User.OrgId(), key));
+    }
+
     [HttpPut("{projectId:guid}")]
     [Authorize(Policy = "ProjectMember")]
     public async Task<IActionResult> UpdateProject(Guid projectId, UpdateProjectRequest request)
@@ -57,6 +66,24 @@ public class ProjectsController : ControllerBase
     public async Task<IActionResult> DeleteProject(Guid projectId)
     {
         return await _projects.DeleteAsync(projectId) ? NoContent() : NotFound();
+    }
+
+    // Org-Admin-only: changing a project's key is restricted well above ordinary project editing
+    // (ProjectMember above) — see ProjectService.ChangeKeyAsync's own doc comment for why.
+    [HttpGet("{projectId:guid}/key-availability")]
+    [Authorize(Policy = "OrgAdmin")]
+    public async Task<IActionResult> CheckKeyAvailability(Guid projectId, [FromQuery] string key)
+    {
+        var result = await _projects.CheckKeyAvailabilityAsync(User.OrgId(), projectId, key);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPut("{projectId:guid}/key")]
+    [Authorize(Policy = "OrgAdmin")]
+    public async Task<IActionResult> ChangeKey(Guid projectId, ChangeProjectKeyRequest request)
+    {
+        var result = await _projects.ChangeKeyAsync(User.OrgId(), projectId, request.NewKey);
+        return result is null ? NotFound() : Ok(result);
     }
 
     // Project Administrator capability: "change app settings" — see ProjectAdminAuthorizationHandler.

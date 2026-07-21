@@ -31,6 +31,49 @@ export function renameProject(projectId, name, key, startDate, endDate, descript
   p.dateLastModified = new Date().toISOString();
   saveDB();
 }
+
+/* Same normalization renameProject/createDefaultProject already apply to a local project's key
+   (uppercase, 6-char cap) — pulled out so the availability check below and the actual save always
+   agree on what the key will actually be stored as. */
+export function normalizeLocalProjectKey(key){
+  return (key || '').toUpperCase().slice(0, 6);
+}
+
+/* Client-side counterpart to the server tier's uniqueness check (ProjectService.CheckKeyAvailabilityAsync)
+   — a local-only project has no organisation to scope against, so "unique" here means unique among
+   every OTHER project already sitting in this browser's own localStorage (see features/import.js's
+   uniqueProjectKey for the analogous auto-suffixing helper used on import; this one is a plain
+   boolean check with an excludable id, needed for both new-project creation and editing). */
+export function isLocalProjectKeyAvailable(key, excludeProjectId){
+  var normalized = normalizeLocalProjectKey(key);
+  return !Object.keys(state.db.projects).some(function(id){
+    return id !== excludeProjectId && state.db.projects[id].key === normalized;
+  });
+}
+
+/* Local-only counterpart to the server tier's ProjectService.ChangeKeyAsync — cascades the new key
+   prefix onto every task in this project (active and archived alike; project.tasks has no separate
+   archive store, same as the server's Tasks table gated only by task.archived) rather than leaving
+   every task's own key stale, which renameProject alone would do (it only ever touches project.key).
+   Deliberately a separate function from renameProject, mirroring modals/project.js's cloud-project
+   split between updateProjectOnServer (name/dates/description, key left untouched) and
+   changeProjectKeyApi (the cascading key change alone) — same shape, just entirely client-side. */
+export function changeLocalProjectKey(projectId, newKey){
+  var p = state.db.projects[projectId];
+  if(!p) return;
+  var normalized = normalizeLocalProjectKey(newKey);
+  var oldKey = p.key;
+  if(normalized === oldKey) return;
+  p.key = normalized;
+  Object.keys(p.tasks).forEach(function(taskId){
+    var t = p.tasks[taskId];
+    if(t.key && t.key.indexOf(oldKey + '-') === 0){
+      t.key = normalized + t.key.slice(oldKey.length);
+    }
+  });
+  p.dateLastModified = new Date().toISOString();
+  saveDB();
+}
 export function deleteProject(projectId){
   delete state.db.projects[projectId];
   state.db.projectOrder = state.db.projectOrder.filter(function(id){ return id !== projectId; });

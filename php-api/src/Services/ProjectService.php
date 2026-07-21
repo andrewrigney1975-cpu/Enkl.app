@@ -257,6 +257,93 @@ final class ProjectService
         return ['id' => $projectId, 'name' => $name, 'key' => $key];
     }
 
+    /** Pure check, no mutation — re-derives org membership from the caller's own JWT claim
+     * (organisationId), never a client-supplied value, same cross-org-isolation shape as
+     * PortfolioService. A wrong-org or nonexistent projectId returns null (404) either way — no
+     * enumeration oracle. */
+    public function checkKeyAvailability(string $organisationId, string $projectId, string $requestedKey): ?array
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM "Projects" WHERE "Id" = :id AND "OrganisationId" = :orgId');
+        $stmt->execute(['id' => $projectId, 'orgId' => $organisationId]);
+        if ($stmt->fetch() === false) {
+            return null;
+        }
+
+        $normalized = $this->deriveProjectKey($requestedKey, '');
+        $available = false;
+        if ($normalized !== '') {
+            $stmt = $this->db->prepare('SELECT 1 FROM "Projects" WHERE "Key" = :key AND "OrganisationId" = :orgId AND "Id" != :id');
+            $stmt->execute(['key' => $normalized, 'orgId' => $organisationId, 'id' => $projectId]);
+            $available = $stmt->fetch() === false;
+        }
+        return ['available' => $available, 'normalizedKey' => $normalized];
+    }
+
+    /** Same check as checkKeyAvailability, but for a project that doesn't exist yet (creation time) —
+     * any authenticated org user may create a project (see ProjectsController::create, ungated by any
+     * per-project policy), so this has no projectId to verify against, just the caller's own org. */
+    public function checkKeyAvailabilityForCreation(string $organisationId, string $requestedKey): array
+    {
+        $normalized = $this->deriveProjectKey($requestedKey, '');
+        $available = false;
+        if ($normalized !== '') {
+            $stmt = $this->db->prepare('SELECT 1 FROM "Projects" WHERE "Key" = :key AND "OrganisationId" = :orgId');
+            $stmt->execute(['key' => $normalized, 'orgId' => $organisationId]);
+            $available = $stmt->fetch() === false;
+        }
+        return ['available' => $available, 'normalizedKey' => $normalized];
+    }
+
+    /** Org-Admin-only, cascading rename: unlike update()'s silent auto-suffix-on-collision behavior
+     * (fine for an incidental name-driven key derivation), an explicit key CHANGE the caller is about
+     * to irreversibly confirm must fail loudly on collision instead — re-checked here even though the
+     * frontend already called checkKeyAvailability, closing the race window between that check and
+     * this commit. Every task's Key ("{oldKey}-{counter}") is rebuilt by a length-prefix replace via
+     * SUBSTRING so it stays correct even if a key itself contains a hyphen (deriveProjectKey doesn't
+     * strip them) — active and archived tasks are the same table (Tasks.Archived is a plain bool), so
+     * one statement covers both. */
+    public function changeKey(string $organisationId, string $projectId, string $newKey): ?array
+    {
+        $stmt = $this->db->prepare('SELECT "Key", "Name" FROM "Projects" WHERE "Id" = :id AND "OrganisationId" = :orgId');
+        $stmt->execute(['id' => $projectId, 'orgId' => $organisationId]);
+        $project = $stmt->fetch();
+        if ($project === false) {
+            return null;
+        }
+
+        $normalized = $this->deriveProjectKey($newKey, '');
+        if ($normalized === '') {
+            throw new ApiValidationException('Project key is required.');
+        }
+        $dupStmt = $this->db->prepare('SELECT 1 FROM "Projects" WHERE "Key" = :key AND "OrganisationId" = :orgId AND "Id" != :id');
+        $dupStmt->execute(['key' => $normalized, 'orgId' => $organisationId, 'id' => $projectId]);
+        if ($dupStmt->fetch() !== false) {
+            throw new ApiValidationException('That project key is already in use in this organisation.');
+        }
+
+        $oldKey = $project['Key'];
+        if ($normalized === $oldKey) {
+            return ['id' => $projectId, 'name' => $project['Name'], 'key' => $oldKey];
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $this->db->prepare('UPDATE "Projects" SET "Key" = :key, "DateLastModified" = now() WHERE "Id" = :id')
+                ->execute(['key' => $normalized, 'id' => $projectId]);
+            $this->db->prepare(
+                'UPDATE "Tasks" SET "Key" = :newKey || SUBSTRING("Key" FROM :oldKeyLen + 1) WHERE "ProjectId" = :projectId'
+            )->execute(['newKey' => $normalized, 'oldKeyLen' => strlen($oldKey), 'projectId' => $projectId]);
+            $this->db->commit();
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+
+        return ['id' => $projectId, 'name' => $project['Name'], 'key' => $normalized];
+    }
+
     public function delete(string $projectId): bool
     {
         // Every child entity's ProjectId FK is Cascade (Columns, Tasks, Members, Releases, ...), so

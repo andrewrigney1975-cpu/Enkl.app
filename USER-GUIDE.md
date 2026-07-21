@@ -389,6 +389,29 @@ One more distinction worth knowing: a lot of this only applies once you're serve
 or C). A fully local project (Option A) has no accounts, no roles, and no "who's an admin" question
 to answer at all — it's just you.
 
+**Project keys are checked for uniqueness, and changing one is always a confirmed, cascading action** —
+this applies everywhere a project's key can be set, in every one of Enklr Task's three "who can see
+it" tiers, though who's allowed to *initiate* it differs:
+
+- **Creating a new project** (server-connected or fully local — Option A, B, or C): whatever key you
+  type is checked before the project is created. If another project already uses it (within your
+  organisation for a server-connected project; among your other local projects for a fully local one),
+  you're asked to pick a different one before the project is created — nothing is silently renamed for
+  you behind the scenes.
+- **Changing an existing, server-connected project's key**: only an Org Admin can do this — everyone
+  else sees the key as a read-only label in Edit Project. This isn't an arbitrary restriction: every
+  task's own identifier ("MOB-42") is built from the project's key, so changing it is a genuinely big
+  deal, not a cosmetic rename. Enklr Task first checks that the new key isn't already used by another
+  project in your organisation — if it is, you'll be asked to pick a different one. Once you confirm a
+  key that *is* available, you'll see one more warning: this cannot be undone, and it updates the key
+  on **every task in the project, active and archived alike** — so any bookmark, email, or external
+  reference to the old "MOB-42"-style ids will stop resolving to that task under its old name.
+- **Changing an existing, fully local project's key** (Option A — no accounts, no roles, so there's no
+  "Org Admin" to restrict this to): the same uniqueness check, the same "this cannot be undone, every
+  task's key updates too" warning, and the same all-tasks-including-archived cascade apply — just
+  checked against your other local projects instead of an organisation, and available to whoever's
+  sitting at the browser, since there's no one else it could be restricted to.
+
 ---
 
 ## 14. Quick reference index

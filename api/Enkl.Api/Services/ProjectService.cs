@@ -208,6 +208,73 @@ public class ProjectService
         return new ProjectSummaryDto(project.Id, project.Name, project.Key);
     }
 
+    /// <summary>Pure check, no mutation — re-derives org membership from the caller's own JWT claim
+    /// (organisationId), never a client-supplied value, same cross-org-isolation shape as
+    /// PortfolioService. A wrong-org or nonexistent projectId returns null (404) either way — no
+    /// enumeration oracle.</summary>
+    public async Task<KeyAvailabilityDto?> CheckKeyAvailabilityAsync(Guid organisationId, Guid projectId, string requestedKey)
+    {
+        var exists = await _db.Projects.AsNoTracking().AnyAsync(p => p.Id == projectId && p.OrganisationId == organisationId);
+        if (!exists) return null;
+
+        var normalized = ProjectKeyResolver.DeriveKey(requestedKey, "");
+        var available = normalized.Length > 0 && !await _db.Projects.AsNoTracking()
+            .AnyAsync(p => p.Key == normalized && p.OrganisationId == organisationId && p.Id != projectId);
+        return new KeyAvailabilityDto(available, normalized);
+    }
+
+    /// <summary>Same check as CheckKeyAvailabilityAsync, but for a project that doesn't exist yet
+    /// (creation time) — any authenticated org user may create a project (see ProjectsController's
+    /// CreateProject, ungated by any per-project policy), so this has no projectId to verify against,
+    /// just the caller's own org.</summary>
+    public async Task<KeyAvailabilityDto> CheckKeyAvailabilityForCreationAsync(Guid organisationId, string requestedKey)
+    {
+        var normalized = ProjectKeyResolver.DeriveKey(requestedKey, "");
+        var available = normalized.Length > 0 && !await _db.Projects.AsNoTracking()
+            .AnyAsync(p => p.Key == normalized && p.OrganisationId == organisationId);
+        return new KeyAvailabilityDto(available, normalized);
+    }
+
+    /// <summary>Org-Admin-only, cascading rename: unlike UpdateAsync's silent auto-suffix-on-collision
+    /// behavior (fine for an incidental name-driven key derivation), an explicit key CHANGE the caller
+    /// is about to irreversibly confirm must fail loudly on collision instead — re-checked here even
+    /// though the frontend already called CheckKeyAvailabilityAsync, closing the race window between
+    /// that check and this commit. Every task's Key ("{oldKey}-{counter}") is rebuilt by a length-
+    /// prefix replace so it stays correct even if a key itself contains a hyphen (DeriveKey doesn't
+    /// strip them) — active and archived tasks are the same table (TaskItem.Archived is a plain bool),
+    /// so one statement covers both.</summary>
+    public async Task<ProjectSummaryDto?> ChangeKeyAsync(Guid organisationId, Guid projectId, string newKey)
+    {
+        var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == projectId && p.OrganisationId == organisationId);
+        if (project is null) return null;
+
+        var normalized = ProjectKeyResolver.DeriveKey(newKey, "");
+        if (normalized.Length == 0) throw new ApiValidationException("Project key is required.");
+        if (await _db.Projects.AnyAsync(p => p.Key == normalized && p.OrganisationId == organisationId && p.Id != projectId))
+            throw new ApiValidationException("That project key is already in use in this organisation.");
+
+        var oldKey = project.Key;
+        if (normalized == oldKey) return new ProjectSummaryDto(project.Id, project.Name, project.Key);
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            project.Key = normalized;
+            project.DateLastModified = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            await _db.Tasks.Where(t => t.ProjectId == projectId)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.Key, t => normalized + t.Key.Substring(oldKey.Length)));
+            await tx.CommitAsync();
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
+
+        return new ProjectSummaryDto(project.Id, project.Name, project.Key);
+    }
+
     public async Task<bool> DeleteAsync(Guid projectId)
     {
         var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == projectId);

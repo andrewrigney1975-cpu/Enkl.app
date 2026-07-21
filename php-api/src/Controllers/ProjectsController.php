@@ -37,6 +37,15 @@ final class ProjectsController extends BaseController
         return $result === null ? $this->json($response, ['message' => 'Unauthorized.'], 401) : $this->json($response, $result);
     }
 
+    // Same "no ProjectMember membership required" reasoning as create() above — this is the
+    // pre-creation uniqueness check for the "New Project" flow, called before a project (and thus a
+    // projectId to scope checkKeyAvailability below to) exists at all.
+    public function checkKeyAvailabilityForCreation(Request $request, Response $response): Response
+    {
+        $key = (string) ($request->getQueryParams()['key'] ?? '');
+        return $this->json($response, $this->service()->checkKeyAvailabilityForCreation($this->callerOrgId($request), $key));
+    }
+
     public function update(Request $request, Response $response, array $args): Response
     {
         $result = $this->service()->update($args['projectId'], $this->body($request));
@@ -46,6 +55,23 @@ final class ProjectsController extends BaseController
     public function delete(Request $request, Response $response, array $args): Response
     {
         return $this->service()->delete($args['projectId']) ? $this->noContent($response) : $this->notFound($response);
+    }
+
+    // Org-Admin-only: changing a project's key is restricted well above ordinary project editing —
+    // see ProjectService::changeKey's own doc comment for why. Both routes are gated by
+    // OrgAdminMiddleware in routes.php, not just the ProjectMember group these sit alongside.
+    public function checkKeyAvailability(Request $request, Response $response, array $args): Response
+    {
+        $key = (string) ($request->getQueryParams()['key'] ?? '');
+        $result = $this->service()->checkKeyAvailability($this->callerOrgId($request), $args['projectId'], $key);
+        return $result === null ? $this->notFound($response) : $this->json($response, $result);
+    }
+
+    public function changeKey(Request $request, Response $response, array $args): Response
+    {
+        $body = $this->body($request);
+        $result = $this->service()->changeKey($this->callerOrgId($request), $args['projectId'], (string) ($body['newKey'] ?? ''));
+        return $result === null ? $this->notFound($response) : $this->json($response, $result);
     }
 
     public function updateSettings(Request $request, Response $response, array $args): Response

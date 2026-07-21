@@ -239,11 +239,21 @@ function registerRoutes(App $app): void
     // ---- Projects (list/detail/create need only auth; everything under {projectId} needs membership) ----
     $app->get('/api/projects', [ProjectsController::class, 'listMine'])->add(RequireAuthMiddleware::class);
     $app->post('/api/projects', [ProjectsController::class, 'create'])->add(RequireAuthMiddleware::class);
+    // Pre-creation key-uniqueness check for the "New Project" flow — sits outside the {projectId}
+    // group (there's no project yet), same reasoning as create() just above.
+    $app->get('/api/projects/key-availability', [ProjectsController::class, 'checkKeyAvailabilityForCreation'])->add(RequireAuthMiddleware::class);
 
     $app->group('/api/projects/{projectId}', function ($group) {
         $group->get('', [ProjectsController::class, 'detail']);
         $group->put('', [ProjectsController::class, 'update']);
         $group->delete('', [ProjectsController::class, 'delete']);
+        // Changing a project's key is Org-Admin-only — well above ordinary ProjectMember editing
+        // (the plain PUT '' above) — see ProjectService::changeKey's own doc comment for why. Nested
+        // in its own sub-group, same "extra check on just these routes" shape as teams-committees below.
+        $group->group('', function ($keyGroup) {
+            $keyGroup->get('/key-availability', [ProjectsController::class, 'checkKeyAvailability']);
+            $keyGroup->put('/key', [ProjectsController::class, 'changeKey']);
+        })->add(OrgAdminMiddleware::class);
         // Project Administrator capabilities ("change app settings", "manage workflow") — see
         // Auth/ProjectAdminMiddleware.php's own doc comment.
         $group->put('/settings', [ProjectsController::class, 'updateSettings'])->add(ProjectAdminMiddleware::class);

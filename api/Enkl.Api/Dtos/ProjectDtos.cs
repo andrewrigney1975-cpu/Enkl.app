@@ -6,6 +6,13 @@ public record ProjectSummaryDto(Guid Id, string Name, string Key);
 public record CreateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate, Guid? TemplateId = null, string? Description = null);
 public record UpdateProjectRequest(string Name, string Key, DateOnly? StartDate, DateOnly? EndDate, string? Description = null);
 
+/// <summary>NormalizedKey is whatever ProjectKeyResolver.DeriveKey actually turned the caller's raw
+/// input into (trimmed, uppercased, length-capped) — the frontend's confirmation dialog and the
+/// follow-up ChangeProjectKeyRequest should both use this value, not the raw input, so what the user
+/// confirmed is exactly what gets persisted.</summary>
+public record KeyAvailabilityDto(bool Available, string NormalizedKey);
+public record ChangeProjectKeyRequest(string NewKey);
+
 /// <summary>
 /// Creating a project changes who the caller has access to — but membership is embedded in the JWT
 /// at login time (see JwtTokenService), so the token that authenticated this very request doesn't

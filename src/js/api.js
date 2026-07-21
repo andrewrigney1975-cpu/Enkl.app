@@ -343,6 +343,24 @@ export function deleteProjectApi(projectId){
   return apiFetch('/projects/' + projectId, {method: 'DELETE'});
 }
 
+/* Org-Admin-only project key change — see ProjectsController.cs's CheckKeyAvailability/ChangeKey
+   (both [Authorize(Policy = "OrgAdmin")]) for the full "why" (a project's Task rows each store a
+   literal "{key}-{counter}" Key column, so changing the project's key must cascade to every task,
+   both active and archived — never done silently, always through this explicit, confirmed path). */
+export function checkProjectKeyAvailabilityApi(projectId, key){
+  return apiFetch('/projects/' + projectId + '/key-availability?key=' + encodeURIComponent(key), {method: 'GET'});
+}
+export function changeProjectKeyApi(projectId, newKey){
+  return apiFetch('/projects/' + projectId + '/key', {method: 'PUT', body: JSON.stringify({newKey: newKey})});
+}
+
+/* Pre-creation counterpart to checkProjectKeyAvailabilityApi above — there's no projectId yet, so
+   this checks uniqueness org-wide via a dedicated route (any authenticated user may create a
+   project, no OrgAdmin gate here — see ProjectsController.cs's CheckKeyAvailabilityForCreation). */
+export function checkNewProjectKeyAvailabilityApi(key){
+  return apiFetch('/projects/key-availability?key=' + encodeURIComponent(key), {method: 'GET'});
+}
+
 export function addColumnApi(projectId, name, done, color){
   return apiFetch('/projects/' + projectId + '/columns', {method: 'POST', body: JSON.stringify({name: name, done: done, color: color})});
 }

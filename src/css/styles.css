@@ -4965,6 +4965,15 @@
     min-height: 70px;
   }
 
+  /* #projectKeyInput only, when locked for a non-Org-Admin editing an existing server project (see
+     modals/project.js's openProjectModal) — visually reads as a plain read-only label rather than an
+     editable field, without needing a whole second markup element just for that state. */
+  #projectKeyInput.kf-readonly-field {
+    background: var(--kf-hover-tint);
+    color: var(--kf-text-secondary);
+    cursor: not-allowed;
+  }
+
   /* Rich-text editor (src/js/rich-text/editor.js) — the toolbar row plus the contenteditable
      surface it controls. The surface's border/padding/background match .kf-field textarea above
      exactly (it's a <div>, not one of the input types that shared selector list already covers, so
