@@ -125,6 +125,7 @@ builder.Services.AddScoped<ScimUserService>();
 builder.Services.AddScoped<ScimGroupService>();
 builder.Services.AddScoped<TelemetryService>();
 builder.Services.AddScoped<OrganisationApiKeyService>();
+builder.Services.AddScoped<AnnouncementService>();
 builder.Services.AddScoped<PublicQueryExecutionService>();
 builder.Services.AddSingleton<SseBroadcaster>();
 builder.Services.AddSingleton<SsoExchangeCodeStore>();

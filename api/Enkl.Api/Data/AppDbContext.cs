@@ -42,6 +42,9 @@ public class AppDbContext : DbContext
     public DbSet<ChatChannelMember> ChatChannelMembers => Set<ChatChannelMember>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<ChatMessageReaction> ChatMessageReactions => Set<ChatMessageReaction>();
+    public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<AnnouncementOrganisation> AnnouncementOrganisations => Set<AnnouncementOrganisation>();
+    public DbSet<AnnouncementAcknowledgement> AnnouncementAcknowledgements => Set<AnnouncementAcknowledgement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

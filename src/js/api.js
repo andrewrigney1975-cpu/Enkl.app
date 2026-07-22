@@ -464,6 +464,30 @@ export var chatApi = {
   }
 };
 
+/* Any authenticated user (active/acknowledge) vs. Org-Admin-only management (list/create/update/
+   delete under organisations/me) — see AnnouncementsController.cs/OrganisationAnnouncementsController.cs
+   for the same split server-side. */
+export var announcementApi = {
+  active: function(){
+    return apiFetch('/announcements/active', {method: 'GET'});
+  },
+  acknowledge: function(announcementId){
+    return apiFetch('/announcements/' + announcementId + '/acknowledge', {method: 'POST'});
+  },
+  listForOrg: function(){
+    return apiFetch('/organisations/me/announcements', {method: 'GET'});
+  },
+  create: function(body){
+    return apiFetch('/organisations/me/announcements', {method: 'POST', body: JSON.stringify(body)});
+  },
+  update: function(announcementId, body){
+    return apiFetch('/organisations/me/announcements/' + announcementId, {method: 'PUT', body: JSON.stringify(body)});
+  },
+  remove: function(announcementId){
+    return apiFetch('/organisations/me/announcements/' + announcementId, {method: 'DELETE'});
+  }
+};
+
 export var releaseApi = makeEntityApi('releases');
 export var taskTypeApi = makeEntityApi('task-types');
 export var principleApi = makeEntityApi('principles');

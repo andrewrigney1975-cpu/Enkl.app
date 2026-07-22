@@ -11,6 +11,7 @@ use Enkl\Api\Auth\RateLimitMiddleware;
 use Enkl\Api\Auth\RequireAuthMiddleware;
 use Enkl\Api\Auth\ScimAuthMiddleware;
 use Enkl\Api\Auth\SessionValidationMiddleware;
+use Enkl\Api\Controllers\AnnouncementsController;
 use Enkl\Api\Controllers\AuthController;
 use Enkl\Api\Controllers\ChatController;
 use Enkl\Api\Controllers\ColumnsController;
@@ -23,6 +24,7 @@ use Enkl\Api\Controllers\ObjectivesController;
 use Enkl\Api\Controllers\OrganisationPrinciplesController;
 use Enkl\Api\Controllers\OrganisationSsoConfigController;
 use Enkl\Api\Controllers\OrganisationsController;
+use Enkl\Api\Controllers\OrganisationAnnouncementsController;
 use Enkl\Api\Controllers\OrganisationApiKeyController;
 use Enkl\Api\Controllers\PortfolioController;
 use Enkl\Api\Controllers\PrinciplesController;
@@ -163,6 +165,22 @@ function registerRoutes(App $app): void
             $adminGroup->post('/truncate', [ChatController::class, 'truncate']);
         })->add(OrgAdminMiddleware::class);
     })->add(RequireAuthMiddleware::class);
+
+    // ---- Announcements: any authenticated user reads what's currently active/relevant to them and
+    // acknowledges ones they've seen (no OrgAdmin/ProjectMemberMiddleware) — see
+    // OrganisationAnnouncementsController's own group below for the Org-Admin-only CRUD surface. ----
+    $app->group('/api/announcements', function ($group) {
+        $group->get('/active', [AnnouncementsController::class, 'getActive']);
+        $group->post('/{announcementId}/acknowledge', [AnnouncementsController::class, 'acknowledge']);
+    })->add(RequireAuthMiddleware::class);
+
+    // ---- Announcements management (OrgAdmin only, own org's Scope="org" rows) ----
+    $app->group('/api/organisations/me/announcements', function ($group) {
+        $group->get('', [OrganisationAnnouncementsController::class, 'list']);
+        $group->post('', [OrganisationAnnouncementsController::class, 'create']);
+        $group->put('/{announcementId}', [OrganisationAnnouncementsController::class, 'update']);
+        $group->delete('/{announcementId}', [OrganisationAnnouncementsController::class, 'delete']);
+    })->add(OrgAdminMiddleware::class)->add(RequireAuthMiddleware::class);
 
     // ---- Public Query API (the app's first public/3rd-party-facing surface — deliberately
     // namespaced/versioned apart from the internal "api/..." routes, see PublicQueryController.php's

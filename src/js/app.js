@@ -29,7 +29,9 @@ import { connectEventStream, disconnectEventStream } from './features/live-updat
 import { initChat, resetChatState, openChatPanel, closeChatPanel, isChatPanelOpen } from './features/chat.js';
 import { initChatView, toggleChatPanel, chatBackClicked, updateChatBubbleVisibility, isChatFullscreenOpen, openChatFullscreen, toggleChatFullscreen, closeChatFullscreen } from './views/chat.js';
 import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck, setImportToast, setImportRenderAll, setImportResetFilters } from './features/import.js';
-import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder, renderAlertStatusPanel } from './features/session-alerts.js';
+import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder, renderAlertStatusPanel, closeAnnouncementsAlert } from './features/session-alerts.js';
+import { initAnnouncements, resetAnnouncementState, setAnnouncementDeps, getActiveDisruptions } from './features/announcements.js';
+import { escapeHTML } from './utils.js';
 import { setBulkEditDeps, openBulkEditOverlay, closeBulkEditOverlay, isBulkEditOverlayOpen, saveBulkEditChanges } from './features/bulk-edit.js';
 import { getArchivedTasks, openArchivedTasksOverlay, closeArchivedTasksOverlay, isArchivedTasksOverlayOpen, renderArchivedTasksList, reactivateSelectedArchivedTasks, archiveDoneTasksFromModal } from './features/archived-tasks.js';
 import { closeAllExportAsPanels, toggleExportAsPanel, exportSvgElementAsSvgFile, exportSvgElementAsPng } from './features/svg-export.js';
@@ -43,6 +45,7 @@ import { openColumnModal, closeColumnModal, saveColumnFromModal, deleteColumnFro
 import { openProjectModal, closeProjectModal, saveProjectFromModal, handleProjectKeyInput } from './modals/project.js';
 import { openTeamModal, closeTeamModal, addMemberFromModal, wireAddMemberCombobox } from './modals/team.js';
 import { openOrgUsersModal, closeOrgUsersModal, createOrgUserFromModal, saveOrgDefaultPasswordFromModal } from './modals/organisation.js';
+import { openAnnouncementsAdminModal, closeAnnouncementsAdminModal, saveAnnouncementFromModal, cancelAnnouncementEdit } from './modals/announcements-admin.js';
 import { openSsoConfigModal, closeSsoConfigModal, saveSsoConfigFromModal, generateScimTokenFromModal, generateApiKeyFromModal, revokeApiKeyFromModal } from './modals/sso.js';
 import { openSaveAsTemplateModal, closeSaveAsTemplateModal, saveAsTemplateFromModal, openTemplatesModal, closeTemplatesModal } from './modals/templates.js';
 import { openTodoOverlay, closeTodoOverlay, isTodoOverlayOpen, addTodoListFromModal } from './modals/todo.js';
@@ -86,6 +89,7 @@ setBulkEditDeps({ confirmDialog, exportProjectJSON });
 // theme until something else happens to trigger its own re-render (e.g. a hard refresh).
 setThemeDeps({ renderBoard, renderDependencyMap, isDepMapOpen, updatePriorityIcon, renderPriorityFilterChips });
 initChatView();
+setAnnouncementDeps({ onUpdate: renderDisruptionBanner });
 setMutationsToast(toast);
 setMigrationToast(toast);
 setExportToast(toast);
@@ -1238,6 +1242,7 @@ function wireEvents(){
       closeServerLoginModal();
       connectEventStream();
       initChat();
+      initAnnouncements();
       updateChatBubbleVisibility();
       openChatFullscreenFromQueryParamIfPresent();
       pullServerProjectsIntoLocal().then(function(count){
@@ -1253,6 +1258,8 @@ function wireEvents(){
     disconnectEventStream();
     closeChatPanel();
     resetChatState();
+    resetAnnouncementState();
+    renderDisruptionBanner();
     updateChatBubbleVisibility();
     // Server-authoritative projects stay exactly as they are — still flagged server-authoritative,
     // still showing their last-synced data — they just can't push/pull further changes until logged
@@ -1339,6 +1346,18 @@ function wireEvents(){
   document.getElementById('ssoGenerateScimTokenBtn').addEventListener('click', generateScimTokenFromModal);
   document.getElementById('ssoGenerateApiKeyBtn').addEventListener('click', generateApiKeyFromModal);
   document.getElementById('ssoRevokeApiKeyBtn').addEventListener('click', revokeApiKeyFromModal);
+
+  document.getElementById('announcementsAdminLink').addEventListener('click', function(e){
+    e.preventDefault();
+    openAnnouncementsAdminModal();
+  });
+  document.getElementById('announcementsAdminClose').addEventListener('click', closeAnnouncementsAdminModal);
+  document.getElementById('announcementsAdminDoneBtn').addEventListener('click', closeAnnouncementsAdminModal);
+  document.getElementById('announcementsAdminOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'announcementsAdminOverlay') closeAnnouncementsAdminModal();
+  });
+  document.getElementById('announcementAdminSaveBtn').addEventListener('click', saveAnnouncementFromModal);
+  document.getElementById('announcementAdminCancelEditBtn').addEventListener('click', cancelAnnouncementEdit);
 
   document.getElementById('saveAsTemplateLink').addEventListener('click', function(e){
     e.preventDefault();
@@ -1602,6 +1621,12 @@ function wireEvents(){
     if(e.target.id === 'confirmOverlay') closeConfirmDialog();
   });
 
+  document.getElementById('announcementsAlertClose').addEventListener('click', closeAnnouncementsAlert);
+  document.getElementById('announcementsAlertOkBtn').addEventListener('click', closeAnnouncementsAlert);
+  document.getElementById('announcementsAlertOverlay').addEventListener('mousedown', function(e){
+    if(e.target.id === 'announcementsAlertOverlay') closeAnnouncementsAlert();
+  });
+
   document.getElementById('overdueAlertClose').addEventListener('click', closeOverdueAlert);
   document.getElementById('overdueAlertOkBtn').addEventListener('click', closeOverdueAlert);
   document.getElementById('overdueAlertOverlay').addEventListener('mousedown', function(e){
@@ -1821,6 +1846,7 @@ function handleSsoCallbackIfPresent(){
   completeSsoLogin(code).then(function(){
     connectEventStream();
     initChat();
+    initAnnouncements();
     updateChatBubbleVisibility();
     openChatFullscreenFromQueryParamIfPresent();
     pullServerProjectsIntoLocal().then(function(count){
@@ -1861,6 +1887,24 @@ function applyFirstRunExperience(justSeeded){
   applyOpeningExperience();
 }
 
+/* Renders the persistent, non-dismissible Disruption Notice banner (white-on-red, above the header —
+   see styles.css's .kf-disruption-banner) whenever announcementState changes (setAnnouncementDeps'
+   onUpdate above). Hidden (no rows) when no disruption notice is currently in its active window;
+   stacked rows in the rare case more than one is active at once. */
+function renderDisruptionBanner(){
+  var banner = document.getElementById('disruptionBanner');
+  var disruptions = getActiveDisruptions();
+  if(disruptions.length === 0){
+    banner.classList.add('hidden');
+    banner.innerHTML = '';
+    return;
+  }
+  banner.innerHTML = disruptions.map(function(d){
+    return '<div class="kf-disruption-banner-row">' + escapeHTML(d.title) + '</div>';
+  }).join('');
+  banner.classList.remove('hidden');
+}
+
 /* =========================================================
    INIT
    ========================================================= */
@@ -1884,6 +1928,7 @@ function init(){
   if(isServerLoggedIn()){
     connectEventStream();
     initChat();
+    initAnnouncements();
     openChatFullscreenFromQueryParamIfPresent();
     pullServerProjectsIntoLocal().then(function(count){
       if(count > 0) renderAll();

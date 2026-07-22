@@ -18,12 +18,57 @@ import { hydrateIcons } from '../icons.js';
 import { clampTaskScore, utcISOToLocalDisplayDate } from '../date-utils.js';
 import { getTasksArray, isTaskOverdue, isTaskUnscored, getTaskOverrunStatus, escapeHTML } from '../utils.js';
 import { exportProjectJSON } from './export.js';
-import { isServerAuthoritative } from './migration.js';
+import { isServerAuthoritative, isServerLoggedIn } from './migration.js';
+import { announcementState, getUnacknowledgedAnnouncements, getActiveDisruptions, acknowledgeAnnouncement, refreshAnnouncementData } from './announcements.js';
+import { markdownToHtml } from '../rich-text/markdown.js';
 
 var BACKUP_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
 var backupQueue = [];
 
 export function checkProjectAlerts(){
+  // Local-only sessions have no org/announcements concept at all (isServerAuthoritative-style
+  // gating, see root CLAUDE.md §5) — skip straight to the existing per-project chain for them.
+  // A logged-in session re-fetches fresh active announcements first (rather than trusting whatever
+  // announcementState already held from a previous call) since this can run at page-load time before
+  // app.js's own initAnnouncements() call for the "still logged in" reload path has had a chance to.
+  if(isServerLoggedIn()){
+    refreshAnnouncementData().then(checkAnnouncementsAlert);
+  } else {
+    checkOverdueAlert();
+  }
+}
+
+/* First link in the chain — Org-Admin-curated broadcast content takes precedence over the automatic
+   per-project checks below. Unlike those (one category at a time), this shows ONE modal listing
+   every currently-active, unacknowledged announcement (Kind='announcement' only — disruption notices
+   are never acknowledged/queued here, they're a persistent banner instead, see
+   renderDisruptionBanner()) as a digest list, each with its own "Don't show this one again" checkbox,
+   and a single close button that acknowledges whichever are checked. */
+function checkAnnouncementsAlert(){
+  var items = getUnacknowledgedAnnouncements();
+  if(items.length === 0){ checkOverdueAlert(); return; }
+
+  var listEl = document.getElementById('announcementsAlertList');
+  listEl.innerHTML = items.map(function(a, i){
+    return '<div class="kf-announcement-alert-row">' +
+      '<div class="kf-announcement-alert-title">' + escapeHTML(a.title) + '</div>' +
+      '<div class="kf-announcement-alert-body">' + markdownToHtml(a.body || '') + '</div>' +
+      '<label class="kf-announcement-alert-ack">' +
+        '<input type="checkbox" data-announcement-id="' + a.id + '"> Don’t show this one again' +
+      '</label>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('announcementsAlertOverlay').classList.remove('hidden');
+  hydrateIcons(document.getElementById('announcementsAlertOverlay'));
+}
+
+export function closeAnnouncementsAlert(){
+  var overlay = document.getElementById('announcementsAlertOverlay');
+  overlay.querySelectorAll('input[data-announcement-id]:checked').forEach(function(cb){
+    acknowledgeAnnouncement(cb.getAttribute('data-announcement-id'));
+  });
+  overlay.classList.add('hidden');
   checkOverdueAlert();
 }
 
@@ -271,6 +316,17 @@ export function runBackupForReminder(){
    ========================================================= */
 export function summarizeProjectAlerts(){
   var alerts = [];
+
+  // Announcements/Disruption Notices always show here regardless of acknowledgment state — Alert
+  // Status is "what's currently being communicated," even for things already dismissed from the
+  // session-start digest modal (checkAnnouncementsAlert above).
+  announcementState.active.forEach(function(a){
+    alerts.push({
+      icon: a.kind === 'disruption' ? 'warning' : 'bell',
+      message: a.title
+    });
+  });
+
   var project = getCurrentProject();
 
   if(project){
