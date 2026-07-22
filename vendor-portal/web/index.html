@@ -38,6 +38,7 @@
       <button type="button" class="kf-side-nav-item" id="navOrganisationsBtn"><span class="kf-icon" data-icon="orgChart" data-size="16"></span><span>Organisations</span></button>
       <button type="button" class="kf-side-nav-item" id="navLicensesBtn"><span class="kf-icon" data-icon="tag" data-size="16"></span><span>Licenses</span></button>
       <button type="button" class="kf-side-nav-item" id="navContractsBtn"><span class="kf-icon" data-icon="ty_document" data-size="16"></span><span>Contracts</span></button>
+      <button type="button" class="kf-side-nav-item" id="navAnnouncementsBtn"><span class="kf-icon" data-icon="bell" data-size="16"></span><span>Announcements</span></button>
     </nav>
 
     <div class="kf-main-content">
@@ -162,6 +163,58 @@
       <button class="kf-btn kf-btn-danger kf-footer-left hidden" id="contractDeleteBtn"><span class="kf-icon" data-icon="trash" data-size="14"></span>Delete</button>
       <button class="kf-btn kf-btn-secondary" id="contractCancelBtn">Cancel</button>
       <button class="kf-btn kf-btn-primary" id="contractSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Announcement Modal -->
+<div class="kf-overlay hidden" id="announcementOverlay">
+  <div class="kf-modal kf-modal-sm" role="dialog" aria-modal="true">
+    <div class="kf-modal-header">
+      <h2 id="announcementModalTitle">New announcement</h2>
+      <button class="kf-btn kf-btn-ghost" id="announcementModalClose"><span class="kf-icon" data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="kf-modal-body">
+      <div class="kf-field">
+        <label for="announcementTitleInput">Title</label>
+        <input type="text" id="announcementTitleInput" maxlength="200" placeholder="Title">
+      </div>
+      <div class="kf-field">
+        <label for="announcementBodyInput">Body</label>
+        <textarea id="announcementBodyInput" rows="4" maxlength="10000"></textarea>
+      </div>
+      <div class="kf-field-row">
+        <div class="kf-field">
+          <label>Kind</label>
+          <label class="kf-radio-row"><input type="radio" name="announcementKind" id="announcementKindAnnouncement"> Announcement</label>
+          <label class="kf-radio-row"><input type="radio" name="announcementKind" id="announcementKindDisruption"> Disruption Notice</label>
+        </div>
+        <div class="kf-field">
+          <label>Target</label>
+          <label class="kf-radio-row"><input type="radio" name="announcementScope" id="announcementScopeOrgs"> Selected organisations</label>
+          <label class="kf-radio-row"><input type="radio" name="announcementScope" id="announcementScopePlatform"> Platform-wide</label>
+        </div>
+      </div>
+      <div class="kf-field">
+        <label>Organisations</label>
+        <div id="announcementOrgList" class="kf-org-list"></div>
+      </div>
+      <div class="kf-field-row">
+        <div class="kf-field">
+          <label for="announcementStartInput">Start</label>
+          <input type="datetime-local" id="announcementStartInput">
+        </div>
+        <div class="kf-field">
+          <label for="announcementEndInput">End (optional)</label>
+          <input type="datetime-local" id="announcementEndInput">
+        </div>
+      </div>
+      <div class="kf-field-error hidden" id="announcementError"></div>
+    </div>
+    <div class="kf-modal-footer">
+      <button class="kf-btn kf-btn-danger kf-footer-left hidden" id="announcementDeleteBtn"><span class="kf-icon" data-icon="trash" data-size="14"></span>Delete</button>
+      <button class="kf-btn kf-btn-secondary" id="announcementCancelBtn">Cancel</button>
+      <button class="kf-btn kf-btn-primary" id="announcementSaveBtn">Save</button>
     </div>
   </div>
 </div>

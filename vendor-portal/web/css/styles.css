@@ -359,6 +359,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .kf-field input[type=text],
 .kf-field input[type=number],
 .kf-field input[type=date],
+.kf-field input[type=datetime-local],
 .kf-field input[type=password],
 .kf-field input[type=email],
 .kf-field select,
@@ -380,6 +381,45 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .kf-field textarea { min-height: 70px; resize: vertical; }
 .kf-field-error { color: var(--kf-danger); font-size: 12px; margin: -10px 0 16px; }
 .kf-field-error.hidden { display: none; }
+
+.kf-radio-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--kf-text);
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+/* First multi-select control in this portal (see modals.js's openAnnouncementModal) — a plain
+   scrollable checkbox list, not a fancy dropdown, matching this app's existing no-framework style. */
+.kf-org-list {
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid var(--kf-border);
+  border-radius: var(--kf-radius);
+  padding: 6px 10px;
+}
+.kf-org-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--kf-text);
+  padding: 4px 0;
+  cursor: pointer;
+}
+.kf-org-list-disabled {
+  opacity: .5;
+  pointer-events: none;
+}
 
 /* ===== Login screen ===== */
 .kf-login-wrap {

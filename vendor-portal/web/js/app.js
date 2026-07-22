@@ -7,6 +7,7 @@ import { renderDashboard } from './views/dashboard.js';
 import { renderOrganisations } from './views/organisations.js';
 import { renderLicenses } from './views/licenses.js';
 import { renderContracts } from './views/contracts.js';
+import { renderAnnouncements } from './views/announcements.js';
 import { closeAllExportAsPanels } from './features/svg-export.js';
 import { closeDbLatencyModal, isDbLatencyModalOpen } from './features/db-latency-monitor.js';
 import { closeWebappLatencyModal, isWebappLatencyModalOpen } from './features/webapp-latency-monitor.js';
@@ -21,7 +22,8 @@ var VIEWS = {
   dashboard: { render: renderDashboard, navBtn: 'navDashboardBtn' },
   organisations: { render: renderOrganisations, navBtn: 'navOrganisationsBtn' },
   licenses: { render: renderLicenses, navBtn: 'navLicensesBtn' },
-  contracts: { render: renderContracts, navBtn: 'navContractsBtn' }
+  contracts: { render: renderContracts, navBtn: 'navContractsBtn' },
+  announcements: { render: renderAnnouncements, navBtn: 'navAnnouncementsBtn' }
 };
 
 var currentView = 'dashboard';
