@@ -126,7 +126,7 @@ public class PortfolioService
 
         var releases = await _db.Releases
             .Where(r => validProjectIds.Contains(r.ProjectId))
-            .Select(r => new ReleaseDto(r.Id, r.Name, r.Status, r.OwnerId, r.StartDate, r.EndDate))
+            .Select(r => new ReleaseDto(r.Id, r.Name, r.Status, r.OwnerId, r.StartDate, r.EndDate, r.ReleaseNotes))
             .ToListAsync();
 
         var risks = await _db.Risks

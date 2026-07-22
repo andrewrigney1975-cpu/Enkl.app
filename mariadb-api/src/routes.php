@@ -296,6 +296,10 @@ function registerRoutes(App $app): void
         $group->put('/tasks/{taskId}/comments/{commentId}', [TaskCommentsController::class, 'update']);
         $group->delete('/tasks/{taskId}/comments/{commentId}', [TaskCommentsController::class, 'delete']);
         registerEntityRoutes($group, '/releases', ReleasesController::class, 'id');
+        // ReleaseNotes (Release Notes Packager) is Project-Admin-only — see
+        // ReleasesController.php's own note; every other release field stays plain-ProjectMember via
+        // registerEntityRoutes above.
+        $group->put('/releases/{id}/notes', [ReleasesController::class, 'updateNotes'])->add(ProjectAdminMiddleware::class);
         registerEntityRoutes($group, '/task-types', TaskTypesController::class, 'id');
         registerEntityRoutes($group, '/principles', PrinciplesController::class, 'id');
         $group->put('/principles/{id}/share', [PrinciplesController::class, 'share']);

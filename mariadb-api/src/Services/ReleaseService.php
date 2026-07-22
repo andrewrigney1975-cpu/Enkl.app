@@ -35,14 +35,15 @@ final class ReleaseService
             'ownerId' => $request['ownerId'] ?? null, 'start' => $request['startDate'] ?? null, 'end' => $request['endDate'] ?? null,
         ]);
 
-        return ['id' => $id, 'name' => $request['name'] ?? '', 'status' => $status, 'ownerId' => $request['ownerId'] ?? null, 'startDate' => $request['startDate'] ?? null, 'endDate' => $request['endDate'] ?? null];
+        return ['id' => $id, 'name' => $request['name'] ?? '', 'status' => $status, 'ownerId' => $request['ownerId'] ?? null, 'startDate' => $request['startDate'] ?? null, 'endDate' => $request['endDate'] ?? null, 'releaseNotes' => null];
     }
 
     public function update(string $projectId, string $releaseId, array $request): ?array
     {
-        $stmt = $this->db->prepare('SELECT 1 FROM "Releases" WHERE "Id" = :id AND "ProjectId" = :pid');
+        $stmt = $this->db->prepare('SELECT "ReleaseNotes" FROM "Releases" WHERE "Id" = :id AND "ProjectId" = :pid');
         $stmt->execute(['id' => $releaseId, 'pid' => $projectId]);
-        if ($stmt->fetch() === false) {
+        $existing = $stmt->fetch();
+        if ($existing === false) {
             return null;
         }
 
@@ -57,7 +58,28 @@ final class ReleaseService
             'start' => $request['startDate'] ?? null, 'end' => $request['endDate'] ?? null, 'id' => $releaseId,
         ]);
 
-        return ['id' => $releaseId, 'name' => $request['name'] ?? '', 'status' => $status, 'ownerId' => $request['ownerId'] ?? null, 'startDate' => $request['startDate'] ?? null, 'endDate' => $request['endDate'] ?? null];
+        return ['id' => $releaseId, 'name' => $request['name'] ?? '', 'status' => $status, 'ownerId' => $request['ownerId'] ?? null, 'startDate' => $request['startDate'] ?? null, 'endDate' => $request['endDate'] ?? null, 'releaseNotes' => $existing['ReleaseNotes']];
+    }
+
+    /** The ONLY write path for ReleaseNotes — gated by the controller's own ProjectAdminMiddleware
+     * sub-group, never via create()/update() above (see root CLAUDE.md §7's
+     * "one-endpoint-owns-the-field" convention). */
+    public function updateNotes(string $projectId, string $releaseId, ?string $releaseNotes): ?array
+    {
+        $stmt = $this->db->prepare('SELECT "Id", "Name", "Status", "OwnerId", "StartDate", "EndDate" FROM "Releases" WHERE "Id" = :id AND "ProjectId" = :pid');
+        $stmt->execute(['id' => $releaseId, 'pid' => $projectId]);
+        $row = $stmt->fetch();
+        if ($row === false) {
+            return null;
+        }
+
+        $update = $this->db->prepare('UPDATE "Releases" SET "ReleaseNotes" = :notes, "DateLastModified" = now() WHERE "Id" = :id');
+        $update->execute(['notes' => $releaseNotes, 'id' => $releaseId]);
+
+        return [
+            'id' => $row['Id'], 'name' => $row['Name'], 'status' => $row['Status'], 'ownerId' => $row['OwnerId'],
+            'startDate' => $row['StartDate'], 'endDate' => $row['EndDate'], 'releaseNotes' => $releaseNotes,
+        ];
     }
 
     public function delete(string $projectId, string $releaseId): bool

@@ -36,4 +36,16 @@ public class ReleasesController : ControllerBase
     {
         return await _releases.DeleteAsync(projectId, releaseId) ? NoContent() : NotFound();
     }
+
+    // ReleaseNotes is the Release Notes Packager's own admin-only field — this action overrides the
+    // class-level ProjectMember policy with ProjectAdmin (which already means "Project Admin OR Org
+    // Admin", see ProjectAdminAuthorizationHandler.cs), rather than letting any project member write
+    // it via the generic Update action above.
+    [HttpPut("{releaseId:guid}/notes")]
+    [Authorize(Policy = "ProjectAdmin")]
+    public async Task<IActionResult> UpdateNotes(Guid projectId, Guid releaseId, UpdateReleaseNotesRequest request)
+    {
+        var result = await _releases.UpdateNotesAsync(projectId, releaseId, request);
+        return result is null ? NotFound() : Ok(result);
+    }
 }

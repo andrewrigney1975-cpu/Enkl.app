@@ -4,10 +4,38 @@ import { getCurrentProject } from '../store.js';
 import { escapeHTML, renderBoard } from '../views/board.js';
 import { memberInitials, utcISOToLocalDateValue, localDateValueToUTCISO, utcISOToLocalDisplayDate, isoToServerDateOnly } from '../date-utils.js';
 import { getMemberById, getTasksArray, getReleaseById } from '../utils.js';
-import { addRelease, updateRelease, deleteRelease, normalizeReleaseStatus, getReleaseStatusMeta } from '../mutations.js';
+import { addRelease, updateRelease, deleteRelease, normalizeReleaseStatus, getReleaseStatusMeta, computeReleaseNotesMarkdown } from '../mutations.js';
 import { confirmDialog } from './confirm.js';
-import { releaseApi } from '../api.js';
+import { releaseApi, isProjectAdmin, isOrgAdmin } from '../api.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
+import { createRichTextEditor } from '../rich-text/editor.js';
+
+// Lazily created on first showReleasesFormView() call and reused for the whole app session — same
+// pattern as modals/decisions.js's getDecisionDescEditor().
+var releaseNotesEditor = null;
+function getReleaseNotesEditor(){
+  if(!releaseNotesEditor){
+    releaseNotesEditor = createRichTextEditor(document.getElementById('releaseNotesEditor'), document.getElementById('releaseNotesToolbar'), { maxLength: 20000 });
+  }
+  return releaseNotesEditor;
+}
+
+// Release Notes Packager (extends this feature): only meaningful for an existing, already-saved,
+// server-authoritative release — a brand-new unsaved release has no id yet to filter tasks by, and
+// local-only projects have no Project Admin/Org Admin concept at all (root CLAUDE.md §5).
+function canManageReleaseNotes(project, release){
+  return !!release && isServerAuthoritative(project) && (isProjectAdmin(project.serverProjectId) || isOrgAdmin());
+}
+
+/* The live, possibly-unsaved editor draft — used by the Print button so "Generate, then Print"
+   previews what's actually in the editor right now, not whatever was last persisted (a Generate
+   followed immediately by Print, before ever clicking Save, would otherwise show stale/empty
+   content). Returns null when the section isn't currently visible (print button isn't reachable
+   then anyway). */
+export function getCurrentReleaseNotesDraft(){
+  if(document.getElementById('releaseNotesSection').classList.contains('hidden')) return null;
+  return getReleaseNotesEditor().getMarkdown();
+}
 
 export function openReleasesOverlay(){
   var project = getCurrentProject();
@@ -50,7 +78,35 @@ export function showReleasesFormView(releaseId){
   populateReleaseOwnerSelect(project, release ? release.ownerId : null);
   document.getElementById('releaseStartDateInput').value = release ? utcISOToLocalDateValue(release.startDate) : '';
   document.getElementById('releaseEndDateInput').value = release ? utcISOToLocalDateValue(release.endDate) : '';
+
+  var showNotes = canManageReleaseNotes(project, release);
+  document.getElementById('releaseNotesSection').classList.toggle('hidden', !showNotes);
+  if(showNotes) getReleaseNotesEditor().setMarkdown(release.releaseNotes || '');
+
   document.getElementById('releaseNameInput').focus();
+}
+
+/* Drafts Release Notes from every Task (active or archived) tied to the release currently being
+   edited — confirms before overwriting any existing hand-edited text (cheap safety net, since this
+   is a destructive regenerate, not a merge). */
+export function generateReleaseNotesFromModal(){
+  var project = getCurrentProject();
+  var release = project && ui.editingReleaseId ? getReleaseById(project, ui.editingReleaseId) : null;
+  if(!project || !release) return;
+
+  function regenerate(){
+    getReleaseNotesEditor().setMarkdown(computeReleaseNotesMarkdown(project, release));
+  }
+
+  if(getReleaseNotesEditor().getMarkdown().trim()){
+    confirmDialog(
+      'Replace existing Release Notes?',
+      'This will overwrite the current text with a fresh draft generated from this release’s tasks. Your existing edits will be lost.',
+      regenerate
+    );
+  } else {
+    regenerate();
+  }
 }
 
 function populateReleaseOwnerSelect(project, currentOwnerId){
@@ -142,6 +198,12 @@ export async function saveReleaseFromModal(){
       var body = {name: data.name, status: data.status, ownerId: data.ownerId, startDate: isoToServerDateOnly(data.startDate), endDate: isoToServerDateOnly(data.endDate)};
       if(editingId) await releaseApi.update(project.serverProjectId, editingId, body);
       else await releaseApi.create(project.serverProjectId, body);
+      // ReleaseNotes is a separate, Project-Admin/Org-Admin-gated write path (see releaseApi.updateNotes's
+      // own note) — fired right after the main save so the user only ever perceives one Save action,
+      // but only reachable here for an EXISTING release whose notes section was actually shown.
+      if(editingId && !document.getElementById('releaseNotesSection').classList.contains('hidden')){
+        await releaseApi.updateNotes(project.serverProjectId, editingId, getReleaseNotesEditor().getMarkdown());
+      }
       await refreshProjectFromServer(project.id);
       renderBoard();
       toast(editingId ? 'Release updated.' : 'Release created.');

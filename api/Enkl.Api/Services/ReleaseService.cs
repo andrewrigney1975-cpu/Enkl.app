@@ -46,6 +46,20 @@ public class ReleaseService
         return ToDto(release);
     }
 
+    /// <summary>The ONLY write path for ReleaseNotes — gated by ReleasesController's own
+    /// [Authorize(Policy = "ProjectAdmin")] on this one action, never via CreateAsync/UpdateAsync
+    /// above (see root CLAUDE.md §7's "one-endpoint-owns-the-field" convention).</summary>
+    public async Task<ReleaseDto?> UpdateNotesAsync(Guid projectId, Guid releaseId, UpdateReleaseNotesRequest request)
+    {
+        var release = await _db.Releases.FirstOrDefaultAsync(r => r.Id == releaseId && r.ProjectId == projectId);
+        if (release is null) return null;
+
+        release.ReleaseNotes = request.ReleaseNotes;
+        release.DateLastModified = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return ToDto(release);
+    }
+
     public async Task<bool> DeleteAsync(Guid projectId, Guid releaseId)
     {
         var release = await _db.Releases.FirstOrDefaultAsync(r => r.Id == releaseId && r.ProjectId == projectId);
@@ -59,5 +73,5 @@ public class ReleaseService
         return true;
     }
 
-    private static ReleaseDto ToDto(Release r) => new(r.Id, r.Name, r.Status, r.OwnerId, r.StartDate, r.EndDate);
+    private static ReleaseDto ToDto(Release r) => new(r.Id, r.Name, r.Status, r.OwnerId, r.StartDate, r.EndDate, r.ReleaseNotes);
 }

@@ -50,7 +50,7 @@ import { openSsoConfigModal, closeSsoConfigModal, saveSsoConfigFromModal, genera
 import { openSaveAsTemplateModal, closeSaveAsTemplateModal, saveAsTemplateFromModal, openTemplatesModal, closeTemplatesModal } from './modals/templates.js';
 import { openTodoOverlay, closeTodoOverlay, isTodoOverlayOpen, addTodoListFromModal } from './modals/todo.js';
 import { openTaskTypesModal, closeTaskTypesModal, addTaskTypeFromModal } from './modals/task-types.js';
-import { openReleasesOverlay, closeReleasesOverlay, isReleasesOverlayOpen, showReleasesFormView, showReleasesListView, saveReleaseFromModal, deleteReleaseFromModal } from './modals/releases.js';
+import { openReleasesOverlay, closeReleasesOverlay, isReleasesOverlayOpen, showReleasesFormView, showReleasesListView, saveReleaseFromModal, deleteReleaseFromModal, generateReleaseNotesFromModal, getCurrentReleaseNotesDraft } from './modals/releases.js';
 import { openRetrospectivesOverlay, closeRetrospectivesOverlay, isRetrospectivesOverlayOpen, showRetrospectivesFormView, showRetrospectivesListView, saveRetrospectiveFromModal, deleteRetrospectiveFromModal, toggleRetroHowItWorks, cancelRetroPromoteFromModal, saveRetroPromoteFromModal, addRetroActionItemFromInputs } from './modals/retrospectives.js';
 import { openDocumentsOverlay, closeDocumentsOverlay, isDocumentsOverlayOpen, showDocumentsFormView, showDocumentsListView, renderDocumentsList, saveDocumentFromModal, deleteDocumentFromModal, updateDocUrlOpenButtonVisibilityFor, openUrlInputInNewTab } from './modals/documents.js';
 import { scheduleDocumentSuggestions } from './features/document-suggestions.js';
@@ -62,7 +62,7 @@ import { openDecisionsOverlay, closeDecisionsOverlay, isDecisionsOverlayOpen, sh
 import { openPrinciplesOverlay, closePrinciplesOverlay, isPrinciplesOverlayOpen, showPrinciplesFormView, showPrinciplesListView, renderPrinciplesList, savePrincipleFromModal, deletePrincipleFromModal, switchPrinciplesTab, updatePrincipleShareFromModal } from './modals/principles.js';
 import { openObjectivesOverlay, closeObjectivesOverlay, isObjectivesOverlayOpen, showObjectivesFormView, showObjectivesListView, renderObjectivesList, saveObjectiveFromModal, deleteObjectiveFromModal } from './modals/objectives.js';
 import { openTeamsCommitteesOverlay, closeTeamsCommitteesOverlay, isTeamsCommitteesOverlayOpen, showTeamCommitteeFormView, showTeamsCommitteesListView, renderTeamsCommitteesList, saveTeamCommitteeFromModal, deleteTeamCommitteeFromModal } from './modals/teams-committees.js';
-import { openReportOverlay, closeReportOverlay, isReportOverlayOpen, printReport, openProjectManagementReportOverlay } from './features/reports.js';
+import { openReportOverlay, closeReportOverlay, isReportOverlayOpen, printReport, openProjectManagementReportOverlay, openReleaseNotesReportOverlay } from './features/reports.js';
 import { openProjectSearchOverlay, closeProjectSearchOverlay, isProjectSearchOverlayOpen, handleProjectSearchInput, handleProjectSearchResultClick, showProjectSearchSimpleView, showProjectSearchQueryView, toggleProjectQuerySchemaPanel, toggleProjectQuerySavedPanel, handleProjectQuerySavedListClick, handleProjectQuerySaveOrUpdateClick, handleProjectQueryNewClick, hideProjectQuerySaveRow, confirmSaveProjectQuery, showProjectQueryResultsTableView, showProjectQueryResultsJsonView, runProjectQuery, formatProjectQuerySql, exportProjectQueryResultsAsCsv, copyProjectQueryResultsAsJson, copyProjectQueryApiUrl, testProjectQueryApi, exportProjectQueryResultsAsJson, printProjectQueryResults, erdZoomState, setProjectQueryErdZoom, resetProjectQueryErdZoom, zoomProjectQueryErdAtPoint, toggleProjectQueryErdFullscreen, closeProjectQueryErdFullscreen, isProjectQueryErdFullscreenOpen, updateProjectQueryIntellisense, repositionProjectQueryIntellisense, hideProjectQueryIntellisense, isProjectQueryIntellisenseOpen, moveProjectQueryIntellisenseActive, acceptProjectQueryIntellisenseSuggestion, handleProjectQueryIntellisenseClick, handleSchemaErdClick } from './modals/project-search.js';
 import { openAboutModal, closeAboutModal, isAboutModalOpen } from './modals/about.js';
 import { openProjectStorageModal, closeProjectStorageModal, isProjectStorageModalOpen } from './modals/project-storage.js';
@@ -221,6 +221,10 @@ function wireEvents(){
   document.getElementById('releaseFormCancelBtn').addEventListener('click', showReleasesListView);
   document.getElementById('releaseFormSaveBtn').addEventListener('click', saveReleaseFromModal);
   document.getElementById('deleteReleaseBtn').addEventListener('click', deleteReleaseFromModal);
+  document.getElementById('generateReleaseNotesBtn').addEventListener('click', generateReleaseNotesFromModal);
+  document.getElementById('releaseNotesPrintBtn').addEventListener('click', function(){
+    if(ui.editingReleaseId) openReleaseNotesReportOverlay(ui.editingReleaseId, getCurrentReleaseNotesDraft());
+  });
 
   document.getElementById('retrospectivesModalClose').addEventListener('click', closeRetrospectivesOverlay);
   document.getElementById('retrospectivesDoneBtn').addEventListener('click', closeRetrospectivesOverlay);

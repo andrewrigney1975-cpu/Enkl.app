@@ -225,6 +225,16 @@ drawn.
   early, by whoever's establishing conventions for a project.
 - **Releases** — **What**: a register of releases (with status and target dates) that tasks can be
   tied to. **Who**: teams that ship in named batches rather than continuously.
+  - **Release Notes Packager** — **What**: a rich-text "Release Notes" field on each release, plus a
+    **Generate Release Notes** button that auto-drafts it from every task (active or archived) tied
+    to that release — earliest completed first, sub-tasks indented directly under their parent, each
+    entry showing the task's key (a clickable link back to the task), title, description, business
+    value, and completion date. Edit the draft as needed, then save as normal. A **Print** button next
+    to it opens a clean, printable version — project and release details plus the notes — with page
+    breaks kept clear of a single task's content. **Who**: Project Admins and Org Admins only, on a
+    server-connected project — the tool a release manager reaches for instead of writing a changelog
+    from memory. Regenerating replaces the current text (with a confirmation first, since it's a
+    from-scratch redraft, not a merge with anything you've already written).
 - **Workflow** — **What**: a visual editor where each board column becomes a node, and you draw the
   allowed transitions between them as edges. **Who**: Elena or Priya, the first time they want to
   *enforce* that a task can't jump straight from "To Do" to "Done" without passing through "Review."
@@ -488,6 +498,7 @@ it" tiers, though who's allowed to *initiate* it differs:
 | Understand what's blocking a task | [Section 4 — Dependency Map](#4-seeing-your-work-differently--the-views) |
 | Change ten tasks at once | [Section 5 — Bulk Edit](#5-tools--everyday-utilities) |
 | Stop a task moving to Done too early | [Section 5 — Workflow](#5-tools--everyday-utilities) |
+| Draft a changelog from what actually shipped | [Section 5 — Release Notes Packager](#5-tools--everyday-utilities) |
 | Keep a running log of project risk | [Section 6 — Risks](#6-governance--knowledge--the-why-not-just-the-what) |
 | Run a proper end-of-release retro | [Section 6 — Retrospectives](#6-governance--knowledge--the-why-not-just-the-what) |
 | Ask a genuinely custom question of my project data | [Section 7 — Advanced Query](#7-search-and-the-advanced-query-workbench) |

@@ -2614,6 +2614,10 @@
     display: none;
   }
 
+  #releaseNotesSection.hidden {
+    display: none;
+  }
+
   #projectSearchSimpleView.hidden {
     display: none;
   }
@@ -5509,6 +5513,16 @@
     }
 
     .kf-report-item {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* Release Notes Packager's print view — computeReleaseNotesMarkdown() (mutations.js) generates
+       exactly one <p> per task (parent or sub-task), so keeping a single task's content together on
+       one page is just "don't split a <p> inside this report." Scoped to this one report via the
+       marker class openReleaseNotesReportOverlay() sets on #reportBody, so the generic reports
+       sharing the same DOM aren't affected. */
+    #reportBody.kf-release-notes-report p {
       break-inside: avoid;
       page-break-inside: avoid;
     }

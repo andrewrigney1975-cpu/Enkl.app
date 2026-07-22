@@ -2,7 +2,7 @@
 import { state, saveDB, uid, makeColumn, clampColumnCap, defaultTaskTypes, normalizeHeaderButtonVisibility, createDefaultProject, createProjectFromTemplate, isChangeAuditingEnabled, isSubTasksEnabled } from './storage.js';
 import { getTasksArray, getTaskTypeById, getColumn, getMemberById, getReleaseById, getDocumentById, getRiskById, getDecisionById, getPrincipleById, getObjectiveById, getTeamCommitteeById, getRetrospectiveById, getRetrospectiveItemById, getRetrospectiveActionItemById, isValidTaskTypeIconName, TASK_TYPE_ICON_LIBRARY, escapeHTML } from './utils.js';
 import { evaluateColumnMove, getWorkflowConditionField, WORKFLOW_CONDITION_OPERATORS, WORKFLOW_DEFAULT_CONDITION, computeReflowedLayout } from './features/workflow-engine.js';
-import { clampTaskScore, clampProgress, clampEffortHours, clampAllocatedFraction, localDateValueToUTCISO, defaultStartDateValue, defaultEndDateValue, memberColorForIndex } from './date-utils.js';
+import { clampTaskScore, clampProgress, clampEffortHours, clampAllocatedFraction, localDateValueToUTCISO, defaultStartDateValue, defaultEndDateValue, memberColorForIndex, utcISOToLocalDisplayDate } from './date-utils.js';
 import { PRIORITY_META, RISK_STATUS_META, DECISION_TYPE_META, DECISION_STATUS_META, TEAM_COMMITTEE_TYPES } from './config.js';
 import { iconSvg } from './icons.js';
 
@@ -419,6 +419,63 @@ export function deleteRelease(project, releaseId){
   });
   saveDB();
   return unassignedCount;
+}
+
+// Non-breaking space (U+00A0), not the "&nbsp;" HTML entity string — this markdown dialect escapes
+// its ENTIRE input before any syntax matching runs (rich-text/markdown.js's own doc comment: "raw
+// HTML passthrough... deliberately unsupported"), so a literal "&nbsp;" would render as the visible
+// text "&amp;nbsp;", not an indent. A real U+00A0 character is unaffected by escapeHTML() (only
+// &<>"' are escaped) and — unlike an ordinary ASCII space — browsers never collapse it, so it
+// survives as genuine visible indentation with zero markdown-parser support needed.
+var RELEASE_NOTES_INDENT_UNIT = '    ';
+
+/* Depth-first walk of every Task (active or archived) tied to this release, building one Markdown
+   paragraph per task — sorted by dateDone ascending within each sibling group (undated tasks last),
+   sub-tasks indented one level per depth under their parent. Feeds
+   modals/releases.js's "Generate Release Notes" button; each task becomes exactly one blank-line-
+   separated block (rich-text/markdown.js splits blocks on blank lines) so the print view's
+   `break-inside: avoid` on <p> keeps a single task's content from splitting across a page. */
+export function computeReleaseNotesMarkdown(project, release){
+  var tasksInRelease = getTasksArray(project).filter(function(t){ return t.releaseId === release.id; });
+  var byId = {};
+  tasksInRelease.forEach(function(t){ byId[t.id] = t; });
+
+  var childrenByParent = {};
+  var topLevel = [];
+  tasksInRelease.forEach(function(t){
+    if(t.parentTaskId && byId[t.parentTaskId]){
+      (childrenByParent[t.parentTaskId] = childrenByParent[t.parentTaskId] || []).push(t);
+    } else {
+      topLevel.push(t);
+    }
+  });
+
+  function byDateDoneThenKey(a, b){
+    var aTime = a.dateDone ? new Date(a.dateDone).getTime() : Infinity;
+    var bTime = b.dateDone ? new Date(b.dateDone).getTime() : Infinity;
+    if(aTime !== bTime) return aTime - bTime;
+    return a.key.localeCompare(b.key, undefined, {numeric: true});
+  }
+
+  var blocks = [];
+  function walk(task, depth){
+    var indent = RELEASE_NOTES_INDENT_UNIT.repeat(depth);
+    var completed = task.dateDone ? utcISOToLocalDisplayDate(task.dateDone) : '—';
+    // Collapse any blank-line-separated paragraphs within the task's own description into single
+    // newlines, so this task still renders as exactly ONE markdown block (this dialect treats a
+    // blank line as a hard paragraph boundary — see markdownToHtml's block-splitting regex).
+    var description = (task.description || '').replace(/\n[ \t]*\n+/g, '\n').trim();
+
+    var line1 = indent + '**[' + task.key + '](#!/' + encodeURIComponent(task.key) + ') — ' + task.title + '**';
+    var line2 = indent + 'Business Value: ' + clampTaskScore(task.businessValue) + ' · Completed: ' + completed;
+    var block = description ? (line1 + '\n' + line2 + '\n' + indent + description) : (line1 + '\n' + line2);
+    blocks.push(block);
+
+    (childrenByParent[task.id] || []).sort(byDateDoneThenKey).forEach(function(child){ walk(child, depth + 1); });
+  }
+
+  topLevel.sort(byDateDoneThenKey).forEach(function(t){ walk(t, 0); });
+  return blocks.join('\n\n');
 }
 
 /* =========================================================

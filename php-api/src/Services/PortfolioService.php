@@ -179,7 +179,7 @@ final class PortfolioService
             foreach ($releaseStmt->fetchAll() as $r) {
                 $releases[] = [
                     'id' => $r['Id'], 'name' => $r['Name'], 'status' => $r['Status'], 'ownerId' => $r['OwnerId'],
-                    'startDate' => $r['StartDate'], 'endDate' => $r['EndDate'],
+                    'startDate' => $r['StartDate'], 'endDate' => $r['EndDate'], 'releaseNotes' => $r['ReleaseNotes'],
                 ];
             }
 

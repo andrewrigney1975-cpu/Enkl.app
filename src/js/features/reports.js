@@ -1,8 +1,8 @@
 "use strict";
 import { getCurrentProject } from '../store.js';
-import { escapeHTML, getTaskById, getDocumentById, getRiskById, getPrincipleById, getObjectiveById, getMemberById, memberLabel } from '../utils.js';
+import { escapeHTML, getTaskById, getDocumentById, getRiskById, getPrincipleById, getObjectiveById, getMemberById, getReleaseById, memberLabel } from '../utils.js';
 import { RISK_LIKELIHOOD_META, RISK_IMPACT_META, TEAM_COMMITTEE_TYPES } from '../config.js';
-import { riskScore, riskScoreBand, buildTeamCommitteeTree, buildRiskMatrixSvg } from '../mutations.js';
+import { riskScore, riskScoreBand, buildTeamCommitteeTree, buildRiskMatrixSvg, getReleaseStatusMeta } from '../mutations.js';
 import { markdownToHtml } from '../rich-text/markdown.js';
 import { utcISOToLocalDisplayDate, memberInitials } from '../date-utils.js';
 import { computeOrgChartLayout, ORGCHART_NODE_W, ORGCHART_NODE_H, ORGCHART_GAP_Y, ORGCHART_TYPE_ACCENT } from '../views/org-chart.js';
@@ -145,6 +145,9 @@ export function openReportOverlay(entityType){
 }
 export function closeReportOverlay(){
   document.getElementById('reportOverlay').classList.add('hidden');
+  // Clears openReleaseNotesReportOverlay's own marker class so a later, different report opened
+  // against this same shared #reportBody doesn't inherit its page-break CSS scoping.
+  document.getElementById('reportBody').classList.remove('kf-release-notes-report');
 }
 export function isReportOverlayOpen(){
   return !document.getElementById('reportOverlay').classList.contains('hidden');
@@ -353,6 +356,49 @@ export function openProjectManagementReportOverlay(){
     renderEntitySection(project, 'objectives') +
     renderRisksSection(project) +
     renderEntitySection(project, 'decisions', decisionExtraFields);
+
+  document.getElementById('reportOverlay').classList.remove('hidden');
+}
+
+/* =========================================================
+   RELEASE NOTES PACKAGER — a single Release's printable notes: project title, release title/status/
+   dates, "Release Manager" (this is the existing Owner field, just relabeled for this printed
+   output — no separate manager field exists), and the release notes themselves. Reuses the same
+   #reportOverlay/print-CSS machinery as the reports above (bespoke content, same shape as
+   openProjectManagementReportOverlay, since a single fixed-shape item doesn't fit ENTITY_CONFIGS'
+   list-of-many-items design at all). A marker class on #reportBody scopes the page-break CSS
+   (styles.css) to just this report.
+   ========================================================= */
+/* liveNotesOverride: the release form's own getCurrentReleaseNotesDraft() — pass the editor's
+   current (possibly unsaved) content so "Generate, then Print" without saving first previews what
+   was actually just generated, not whatever's still persisted from before. Falls back to the
+   persisted release.releaseNotes when null/undefined (e.g. this overlay is ever opened from
+   somewhere other than the release form itself). */
+export function openReleaseNotesReportOverlay(releaseId, liveNotesOverride){
+  var project = getCurrentProject();
+  var release = project ? getReleaseById(project, releaseId) : null;
+  if(!project || !release) return;
+
+  var notes = liveNotesOverride != null ? liveNotesOverride : release.releaseNotes;
+
+  document.getElementById('reportTitle').textContent = project.name + ' - ' + release.name + ' Release Notes';
+
+  var owner = release.ownerId ? getMemberById(project, release.ownerId) : null;
+  var startLabel = release.startDate ? utcISOToLocalDisplayDate(release.startDate) : '—';
+  var endLabel = release.endDate ? utcISOToLocalDisplayDate(release.endDate) : '—';
+  var notesHTML = notes ? markdownToHtml(notes) : '<div class="kf-health-empty">No release notes yet.</div>';
+
+  var bodyEl = document.getElementById('reportBody');
+  bodyEl.classList.add('kf-release-notes-report');
+  bodyEl.innerHTML =
+    '<h1 class="kf-report-page-title">' + escapeHTML(project.name) + ' — ' + escapeHTML(release.name) + '</h1>' +
+    '<div class="kf-report-project-dates">' +
+      'Status: ' + escapeHTML(getReleaseStatusMeta(release.status).label) + '&nbsp;&nbsp;·&nbsp;&nbsp;' +
+      'Start: ' + escapeHTML(startLabel) + '&nbsp;&nbsp;·&nbsp;&nbsp;' +
+      'End: ' + escapeHTML(endLabel) + '&nbsp;&nbsp;·&nbsp;&nbsp;' +
+      'Release Manager: ' + escapeHTML(owner ? memberLabel(owner) : 'Unassigned') +
+    '</div>' +
+    '<div class="kf-richtext-content">' + notesHTML + '</div>';
 
   document.getElementById('reportOverlay').classList.remove('hidden');
 }

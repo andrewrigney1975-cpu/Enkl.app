@@ -128,7 +128,12 @@ export function htmlToMarkdown(rootEl){
 
 // -------------------- Markdown -> HTML --------------------
 
-var SAFE_URL_RE = /^(https?:\/\/|mailto:|\/)/i;
+// "#" (a same-page fragment/hash-route link, e.g. this app's own "#!/TASK-KEY" deep link — see
+// hash-router.js) is on this allowlist alongside the original three schemes: a pure client-side
+// navigation, not a script-execution vector, so it's a safe addition rather than a narrowing of the
+// original security intent (rejecting things like "javascript:"). Added for the Release Notes
+// Packager's auto-generated task links, but applies uniformly to every rich-text field in the app.
+var SAFE_URL_RE = /^(https?:\/\/|mailto:|\/|#)/i;
 
 function applyBoldItalic(text){
   // Bold's pattern must run first, and non-greedy - otherwise "**x**"'s outer asterisks get

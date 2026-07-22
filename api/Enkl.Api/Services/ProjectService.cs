@@ -78,7 +78,7 @@ public class ProjectService
             project.Members.Select(m => new MemberDto(m.Id, m.UserId, m.User.DisplayName, m.User.EmailAddress, m.Color, m.Role, m.AllocatedFraction, m.ReportsToId, m.IsProjectAdmin, m.User.IsActive)).ToList(),
             project.Columns.OrderBy(c => c.Order).Select(c => new ColumnDto(c.Id, c.Name, c.Done, c.Color, c.Order, c.Cap)).ToList(),
             project.Tasks.Select(ToTaskDto).ToList(),
-            project.Releases.Select(r => new ReleaseDto(r.Id, r.Name, r.Status, r.OwnerId, r.StartDate, r.EndDate)).ToList(),
+            project.Releases.Select(r => new ReleaseDto(r.Id, r.Name, r.Status, r.OwnerId, r.StartDate, r.EndDate, r.ReleaseNotes)).ToList(),
             project.TaskTypes.Select(t => new TaskTypeDto(t.Id, t.Name, t.IconName)).ToList(),
             project.Principles.Select(p => new PrincipleDto(p.Id, p.Key, p.Title, p.Description, p.DocumentUrl, p.IsOrganisationWide)).ToList(),
             project.Documents.Select(d => new DocumentDto(d.Id, d.Key, d.Title, d.Url, d.Description, d.OwnerId, d.TaskId, d.RelatedDocuments.Select(rd => rd.RelatedDocumentId).ToList())).ToList(),

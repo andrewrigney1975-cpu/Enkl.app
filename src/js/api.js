@@ -489,6 +489,13 @@ export var announcementApi = {
 };
 
 export var releaseApi = makeEntityApi('releases');
+
+/* ReleaseNotes (Release Notes Packager) is Project-Admin/Org-Admin-only server-side — see
+   ReleasesController.cs's own dedicated [Authorize(Policy = "ProjectAdmin")] action, never settable
+   via releaseApi.update above. */
+releaseApi.updateNotes = function(projectId, releaseId, releaseNotes){
+  return apiFetch('/projects/' + projectId + '/releases/' + releaseId + '/notes', {method: 'PUT', body: JSON.stringify({releaseNotes: releaseNotes})});
+};
 export var taskTypeApi = makeEntityApi('task-types');
 export var principleApi = makeEntityApi('principles');
 export var documentApi = makeEntityApi('documents');

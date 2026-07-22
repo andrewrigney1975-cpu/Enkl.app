@@ -12,6 +12,10 @@ public class Release
     public ProjectMember? Owner { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
+    /// <summary>Markdown, ProjectAdmin/OrgAdmin-only write path (ReleasesController's dedicated
+    /// notes endpoint) — never settable via the generic Create/Update requests, see
+    /// ReleasesController.cs's own note.</summary>
+    public string? ReleaseNotes { get; set; }
     public DateTime DateCreated { get; set; }
     public DateTime DateLastModified { get; set; }
 }
