@@ -298,6 +298,10 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
    already present in this portal's own License/Contract modal markup, but until now had no matching
    CSS rule at all, so it was a no-op). */
 .kf-modal.kf-modal-sm { width: 420px; }
+/* 25% wider than the plain kf-modal-sm base (420px * 1.25 = 525px) — the Start/End datetime-local
+   pickers plus the Kind/Target radio pair side by side need more room than the sm width gives before
+   date/time pickers start clipping or wrapping awkwardly. */
+.kf-modal.kf-modal-announcement { width: 525px; }
 .kf-modal.kf-modal-lg {
   width: 98vw;
   max-width: 98vw;
