@@ -154,18 +154,71 @@ function buildWorkflowOrthogonalPoints(start, dir1, end, dir2, midOverride){
   return [start, p1].concat(mid, [p2, end]);
 }
 
+/* Perpendicular gap between parallel connectors that both link the exact same pair of nodes — see
+   computeWorkflowMultiEdgeOffsets' own doc comment for why this exists at all. */
+var WORKFLOW_MULTI_EDGE_SPACING = 24;
+
+/* Two or more edges connecting the exact same PAIR of nodes — regardless of direction, so an Allowed
+   3->4 and a Disallowed 4->3 count as the same pair — would otherwise attach at the identical point
+   on both ends and draw as one perfectly overlapping line: pickAttachmentSide/sideMidpoint alone give
+   every edge between the same 2 nodes the exact same start/end coordinates, and a straight adjacent-
+   node shot has no bend at all for computeWorkflowEdgeLaneOverrides to act on (see
+   buildWorkflowOrthogonalPoints' own early-return) — that lane-override mechanism only ever helps
+   edges that share a BEND point, not two edges that are perfectly coincident start-to-end. Grouped by
+   the unordered node-pair key (so direction doesn't split what's really one group), each edge in a
+   group of 2+ gets an offset centered on zero (a 2-edge group spreads evenly to either side of the
+   center line, a 3-edge group adds a center line, etc.), returned as one value per edge id — applied
+   identically to BOTH of that edge's endpoints in workflowEdgeGeometry below, which is what actually
+   keeps the whole connector parallel to (not converging back onto) its siblings along their entire
+   shared span, not just at one end. */
+function computeWorkflowMultiEdgeOffsets(edges, positions){
+  var groups = {};
+  edges.forEach(function(e){
+    var fromPos = positions[e.fromColumnId], toPos = positions[e.toColumnId];
+    if(!fromPos || !toPos) return;
+    var pairKey = [e.fromColumnId, e.toColumnId].slice().sort().join('|');
+    (groups[pairKey] = groups[pairKey] || []).push(e.id);
+  });
+  var offsets = {};
+  Object.keys(groups).forEach(function(key){
+    var ids = groups[key];
+    var n = ids.length;
+    ids.forEach(function(id, i){
+      offsets[id] = n < 2 ? 0 : (i - (n - 1) / 2) * WORKFLOW_MULTI_EDGE_SPACING;
+    });
+  });
+  return offsets;
+}
+
 /* Pure geometry for one edge (attachment sides + stub-exit directions), split out from edgePathD so
    computeWorkflowEdgeLaneOverrides can group edges by this same geometry BEFORE any path string gets
    built — same ordering dependency-map.js's own renderDependencyMap uses (geometry pass, then lane
-   assignment, then path building). */
-function workflowEdgeGeometry(fromPos, toPos){
+   assignment, then path building). `offset` (see computeWorkflowMultiEdgeOffsets) shifts both
+   endpoints along whichever axis the exit side actually lies on (Y for a left/right exit, X for a
+   top/bottom one) — always the SAME axis at both ends for any given node pair, since
+   pickAttachmentSide's horizontal-vs-vertical choice is symmetric for the two directions between the
+   same two centers, so a single offset value keeps the whole connector's stub-and-bend run parallel
+   to its siblings rather than just nudging one end. Clamped so it can never push the anchor past the
+   node's own rounded corner even with several parallel edges sharing one pair. */
+function workflowEdgeGeometry(fromPos, toPos, offset){
   var fromCenter = {x: fromPos.x + WORKFLOW_NODE_W / 2, y: fromPos.y + WORKFLOW_NODE_H / 2};
   var toCenter = {x: toPos.x + WORKFLOW_NODE_W / 2, y: toPos.y + WORKFLOW_NODE_H / 2};
   var startSide = pickAttachmentSide(fromCenter, toCenter);
   var endSide = pickAttachmentSide(toCenter, fromCenter);
+  var start = sideMidpoint(fromPos, startSide);
+  var end = sideMidpoint(toPos, endSide);
+
+  if(offset){
+    var vertical = startSide === 'left' || startSide === 'right';
+    var maxOffset = (vertical ? WORKFLOW_NODE_H : WORKFLOW_NODE_W) / 2 - 10;
+    var clamped = Math.max(-maxOffset, Math.min(maxOffset, offset));
+    if(vertical){ start.y += clamped; end.y += clamped; }
+    else { start.x += clamped; end.x += clamped; }
+  }
+
   return {
-    start: sideMidpoint(fromPos, startSide),
-    end: sideMidpoint(toPos, endSide),
+    start: start,
+    end: end,
     dir1: sideNormal(startSide),
     dir2: sideNormal(endSide)
   };
@@ -209,8 +262,8 @@ function computeWorkflowEdgeLaneOverrides(geoms){
   });
 }
 
-function edgePathD(fromPos, toPos, midOverride){
-  var geom = workflowEdgeGeometry(fromPos, toPos);
+function edgePathD(fromPos, toPos, midOverride, offset){
+  var geom = workflowEdgeGeometry(fromPos, toPos, offset);
   var points = buildWorkflowOrthogonalPoints(geom.start, geom.dir1, geom.end, geom.dir2, midOverride);
   return roundedOrthogonalPathD(points, DEPMAP_CORNER_RADIUS);
 }
@@ -251,20 +304,22 @@ export function renderWorkflowEditor(){
 
   var defsHTML = '<defs>' + dotMarkerPair('allowed', 'var(--kf-good-fg)') + dotMarkerPair('disallowed', 'var(--kf-danger)') + dotMarkerPair('conditional', 'var(--kf-overdue-fg)') + '</defs>';
 
-  // Lane-override pass (see computeWorkflowEdgeLaneOverrides's own doc comment) — must happen before
-  // any path string is built, same ordering dependency-map.js's own render function uses.
+  // Multi-edge (same node-pair) offsets, THEN the lane-override pass (see each function's own doc
+  // comment) — both must happen before any path string is built, same ordering dependency-map.js's
+  // own render function uses for its own two offset mechanisms.
+  var edgeOffsets = computeWorkflowMultiEdgeOffsets(project.workflow.edges, layout.positions);
   var edgeGeoms = {};
   project.workflow.edges.forEach(function(e){
     var fromPos = layout.positions[e.fromColumnId], toPos = layout.positions[e.toColumnId];
     if(!fromPos || !toPos) return;
-    edgeGeoms[e.id] = workflowEdgeGeometry(fromPos, toPos);
+    edgeGeoms[e.id] = workflowEdgeGeometry(fromPos, toPos, edgeOffsets[e.id]);
   });
   computeWorkflowEdgeLaneOverrides(Object.keys(edgeGeoms).map(function(id){ return edgeGeoms[id]; }));
 
   var edgesHTML = project.workflow.edges.map(function(e){
     var fromPos = layout.positions[e.fromColumnId], toPos = layout.positions[e.toColumnId];
     if(!fromPos || !toPos) return '';
-    var d = edgePathD(fromPos, toPos, edgeGeoms[e.id] ? edgeGeoms[e.id].midOverride : null);
+    var d = edgePathD(fromPos, toPos, edgeGeoms[e.id] ? edgeGeoms[e.id].midOverride : null, edgeOffsets[e.id]);
     var color = WORKFLOW_EDGE_COLOR[e.type] || WORKFLOW_EDGE_COLOR.allowed;
     var dashAttr = e.type === 'conditional' ? ' stroke-dasharray="5,5"' : '';
     var titleText = e.type === 'conditional' ? describeWorkflowCondition(e.condition) + (e.message ? ' — ' + e.message : '') : e.message;
@@ -499,16 +554,17 @@ function updateConnectedWorkflowEdges(project, columnId){
   if(!layout) return;
   layout.positions[columnId] = {x: project.workflow.nodes[columnId].x, y: project.workflow.nodes[columnId].y};
 
-  // Lane overrides are recomputed across EVERY edge (not just the ones touching the dragged node) —
-  // grouping is keyed by rounded stub coordinates, which can shift for an edge that isn't directly
-  // connected to the dragged node but shares a lane group with one that is; a partial recompute could
-  // leave a stale overlap on an edge this function never otherwise touches. The grouping pass itself
-  // is cheap (O(edge count), no DOM I/O) — only the DOM writes below stay scoped to what's on screen.
+  // Both offset passes are recomputed across EVERY edge (not just the ones touching the dragged
+  // node) — grouping in each is keyed by geometry that can shift for an edge that isn't directly
+  // connected to the dragged node but shares a group with one that is; a partial recompute could
+  // leave a stale overlap on an edge this function never otherwise touches. Both passes are cheap
+  // (O(edge count), no DOM I/O) — only the DOM writes below stay scoped to what's on screen.
+  var offsets = computeWorkflowMultiEdgeOffsets(project.workflow.edges, layout.positions);
   var geoms = {};
   project.workflow.edges.forEach(function(e){
     var fp = layout.positions[e.fromColumnId], tp = layout.positions[e.toColumnId];
     if(!fp || !tp) return;
-    geoms[e.id] = workflowEdgeGeometry(fp, tp);
+    geoms[e.id] = workflowEdgeGeometry(fp, tp, offsets[e.id]);
   });
   computeWorkflowEdgeLaneOverrides(Object.keys(geoms).map(function(id){ return geoms[id]; }));
 
@@ -516,7 +572,7 @@ function updateConnectedWorkflowEdges(project, columnId){
     if(e.fromColumnId !== columnId && e.toColumnId !== columnId) return;
     var fromPos = layout.positions[e.fromColumnId], toPos = layout.positions[e.toColumnId];
     if(!fromPos || !toPos) return;
-    var d = edgePathD(fromPos, toPos, geoms[e.id] ? geoms[e.id].midOverride : null);
+    var d = edgePathD(fromPos, toPos, geoms[e.id] ? geoms[e.id].midOverride : null, offsets[e.id]);
     var group = document.querySelector('.kf-wfedge-group[data-edge-id="' + e.id + '"]');
     if(!group) return;
     var path = group.querySelector('.kf-wfedge');
