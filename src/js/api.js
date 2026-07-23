@@ -246,6 +246,11 @@ export function setOrgUserEmailApi(userId, emailAddress){
 export function deactivateOrgUserApi(userId){
   return apiFetch('/organisations/me/users/' + userId + '/deactivate', {method: 'POST'});
 }
+/* password null/omitted resets to the organisation's configured default (or the system fallback) —
+   see OrganisationService.cs's ResetUserPasswordAsync for the server-side resolution. */
+export function resetOrgUserPasswordApi(userId, password){
+  return apiFetch('/organisations/me/users/' + userId + '/password', {method: 'PUT', body: JSON.stringify({password: password || null})});
+}
 export function setOrgDefaultPasswordApi(password){
   return apiFetch('/organisations/me/default-password', {method: 'PUT', body: JSON.stringify({password: password})});
 }

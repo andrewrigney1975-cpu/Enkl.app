@@ -43,6 +43,14 @@ final class OrganisationsController extends BaseController
         return $ok ? $this->noContent($response) : $this->notFound($response);
     }
 
+    public function resetUserPassword(Request $request, Response $response, array $args): Response
+    {
+        $body = $this->body($request);
+        $password = array_key_exists('password', $body) && $body['password'] !== null ? (string) $body['password'] : null;
+        $ok = $this->service()->resetUserPassword($this->callerOrgId($request), $args['userId'], $password);
+        return $ok ? $this->noContent($response) : $this->notFound($response);
+    }
+
     public function deactivateUser(Request $request, Response $response, array $args): Response
     {
         $ok = $this->service()->deactivateUser($this->callerOrgId($request), $this->callerUserId($request), $args['userId']);

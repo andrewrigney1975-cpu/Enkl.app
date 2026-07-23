@@ -46,6 +46,13 @@ public class OrganisationsController : ControllerBase
         return ok ? NoContent() : NotFound();
     }
 
+    [HttpPut("users/{userId:guid}/password")]
+    public async Task<IActionResult> ResetUserPassword(Guid userId, ResetUserPasswordRequest request)
+    {
+        var ok = await _organisations.ResetUserPasswordAsync(User.OrgId(), userId, request.Password);
+        return ok ? NoContent() : NotFound();
+    }
+
     [HttpPost("users/{userId:guid}/deactivate")]
     public async Task<IActionResult> DeactivateUser(Guid userId)
     {

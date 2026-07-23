@@ -27,7 +27,7 @@ final class OrganisationService
         }
 
         $stmt = $this->db->prepare(
-            'SELECT "Id", "Username", "EmailAddress", "DisplayName", "IsOrgAdmin", "IsActive", "CreatedAt" FROM "Users" WHERE "OrganisationId" = :id'
+            'SELECT "Id", "Username", "EmailAddress", "DisplayName", "IsOrgAdmin", "IsActive", "CreatedAt", "PasswordHash" FROM "Users" WHERE "OrganisationId" = :id'
         );
         $stmt->execute(['id' => $organisationId]);
         $online = $this->onlineUserIds();
@@ -40,6 +40,7 @@ final class OrganisationService
             'isActive' => (bool) $u['IsActive'],
             'createdAt' => $u['CreatedAt'],
             'isOnline' => in_array($u['Id'], $online, true),
+            'hasPassword' => $u['PasswordHash'] !== null,
         ], $stmt->fetchAll());
 
         return [
@@ -171,6 +172,7 @@ final class OrganisationService
             'isOrgAdmin' => false,
             'isActive' => true,
             'createdAt' => gmdate('Y-m-d\TH:i:s.v\Z'),
+            'hasPassword' => true,
         ];
     }
 
@@ -193,6 +195,53 @@ final class OrganisationService
         $stmt = $this->db->prepare('UPDATE "Users" SET "EmailAddress" = :email, "NormalizedEmailAddress" = :normalizedEmail WHERE "Id" = :id');
         $stmt->execute(['email' => $email, 'normalizedEmail' => $normalizedEmail, 'id' => $targetUserId]);
         return true;
+    }
+
+    /**
+     * OrgAdmin-initiated password reset for an existing user — distinct from
+     * setDefaultNewUserPassword (only affects users created *after* the setting changes) and
+     * createUser (creates a brand-new account). A null/blank $password falls back to the org's
+     * configured default via resolveDefaultNewUserPasswordHash() (the same value a freshly-created
+     * implicit user would get). Always sets MustChangePassword and rotates SecurityStamp — MariaDB
+     * port: no gen_random_uuid() function here, generate the replacement value in PHP and bind it,
+     * same as setUserAdmin/deactivateUser above. Rejects (ApiValidationException) for a user whose
+     * PasswordHash is null — an SSO/SCIM-provisioned account has no password to reset.
+     */
+    public function resetUserPassword(string $callerOrganisationId, string $targetUserId, ?string $password): bool
+    {
+        $stmt = $this->db->prepare('SELECT "OrganisationId", "PasswordHash" FROM "Users" WHERE "Id" = :id');
+        $stmt->execute(['id' => $targetUserId]);
+        $row = $stmt->fetch();
+        if ($row === false || $row['OrganisationId'] !== $callerOrganisationId) {
+            return false;
+        }
+
+        if ($row['PasswordHash'] === null) {
+            throw new ApiValidationException('This user signs in via SSO and has no password to reset.');
+        }
+
+        if ($password === null || $password === '') {
+            $hash = $this->resolveDefaultNewUserPasswordHash($callerOrganisationId);
+        } else {
+            if (strlen($password) < 8) {
+                throw new ApiValidationException('Password must be at least 8 characters.');
+            }
+            $hash = PasswordHasher::hash($password);
+        }
+
+        $stmt = $this->db->prepare('UPDATE "Users" SET "PasswordHash" = :hash, "MustChangePassword" = 1, "SecurityStamp" = :stamp WHERE "Id" = :id');
+        $stmt->execute(['hash' => $hash, 'stamp' => Uuid::v4(), 'id' => $targetUserId]);
+        return true;
+    }
+
+    /** Duplicated per-class private helper (this tier's own convention — see mariadb-api/CLAUDE.md /
+     * root CLAUDE.md §7). */
+    private function resolveDefaultNewUserPasswordHash(string $organisationId): string
+    {
+        $stmt = $this->db->prepare('SELECT "DefaultNewUserPasswordHash" FROM "Organisations" WHERE "Id" = :id');
+        $stmt->execute(['id' => $organisationId]);
+        $hash = $stmt->fetchColumn();
+        return $hash !== false && $hash !== null ? $hash : PasswordHasher::hash(PasswordHasher::GLOBAL_DEFAULT_NEW_USER_PASSWORD);
     }
 
     /**

@@ -1,7 +1,7 @@
 "use strict";
 import { toast } from '../ui.js';
 import { escapeHTML, renderBoard, renderAssigneeFilterChips } from '../views/board.js';
-import { getMyOrganisationApi, createOrgUserApi, setOrgUserAdminApi, setOrgUserEmailApi, setOrgDefaultPasswordApi, deactivateOrgUserApi, isOrgAdmin, getCurrentUserId, memberApi } from '../api.js';
+import { getMyOrganisationApi, createOrgUserApi, setOrgUserAdminApi, setOrgUserEmailApi, setOrgDefaultPasswordApi, deactivateOrgUserApi, resetOrgUserPasswordApi, isOrgAdmin, getCurrentUserId, memberApi } from '../api.js';
 import { getCurrentProject } from '../store.js';
 import { isServerAuthoritative, refreshProjectFromServer } from '../features/migration.js';
 import { confirmDialog } from './confirm.js';
@@ -71,9 +71,20 @@ export function renderOrgUsersList(){
         '<label class="kf-orguser-admin-toggle">' +
           '<input type="checkbox"' + (u.isOrgAdmin ? ' checked' : '') + (isInactive ? ' disabled' : '') + '>Admin' +
         '</label>' +
+        (isInactive || !u.hasPassword
+          ? ''
+          : '<button class="kf-btn kf-btn-ghost kf-orguser-reset-password-btn" data-action="reset-password" title="' +
+              (u.hasPassword ? 'Reset this user\'s password' : '') + '">Reset Password</button>') +
         (isInactive || u.id === callerId
           ? ''
-          : '<button class="kf-btn kf-btn-ghost kf-orguser-deactivate-btn" data-action="deactivate" title="Deactivate this user — they will be signed out and can no longer log in">Deactivate</button>');
+          : '<button class="kf-btn kf-btn-ghost kf-orguser-deactivate-btn" data-action="deactivate" title="Deactivate this user — they will be signed out and can no longer log in">Deactivate</button>') +
+        (u.hasPassword
+          ? '<div class="kf-orguser-reset-password-row hidden">' +
+              '<input type="password" class="kf-orguser-reset-password-input" placeholder="New password (blank = org default)" minlength="8">' +
+              '<button class="kf-btn kf-btn-primary" data-action="confirm-reset-password">Set</button>' +
+              '<button class="kf-btn kf-btn-ghost" data-action="cancel-reset-password">Cancel</button>' +
+            '</div>'
+          : '');
       var adminCheckbox = row.querySelector('input[type=checkbox]');
       adminCheckbox.addEventListener('change', function(){
         var nextValue = adminCheckbox.checked;
@@ -109,6 +120,36 @@ export function renderOrgUsersList(){
                 renderOrgUsersList();
               }, function(e){
                 toast('Could not deactivate user: ' + (e.message || 'unknown error'));
+              });
+            }
+          );
+        });
+      }
+      var resetPasswordBtn = row.querySelector('[data-action="reset-password"]');
+      var resetPasswordRow = row.querySelector('.kf-orguser-reset-password-row');
+      if(resetPasswordBtn && resetPasswordRow){
+        resetPasswordBtn.addEventListener('click', function(){
+          resetPasswordRow.classList.remove('hidden');
+          resetPasswordRow.querySelector('input').focus();
+        });
+        resetPasswordRow.querySelector('[data-action="cancel-reset-password"]').addEventListener('click', function(){
+          resetPasswordRow.classList.add('hidden');
+          resetPasswordRow.querySelector('input').value = '';
+        });
+        resetPasswordRow.querySelector('[data-action="confirm-reset-password"]').addEventListener('click', function(){
+          var input = resetPasswordRow.querySelector('input');
+          var password = input.value;
+          if(password && password.length < 8){ toast('Password must be at least 8 characters — or leave it blank to use the org default.'); return; }
+          confirmDialog(
+            'Reset password for ' + u.displayName + '?',
+            'They will be signed out immediately and must set a new password on next login. ' +
+            (password ? 'They will need the password you just entered.' : 'They will need the organisation\'s default password.'),
+            function(){
+              resetOrgUserPasswordApi(u.id, password).then(function(){
+                toast('Password reset for "' + u.displayName + '". They must change it on next login.');
+                renderOrgUsersList();
+              }, function(e){
+                toast('Could not reset password: ' + (e.message || 'unknown error'));
               });
             }
           );

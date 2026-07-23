@@ -34,7 +34,7 @@ public class OrganisationService
         return new OrganisationDetailDto(
             org.Id, org.Name,
             org.DefaultNewUserPasswordHash is not null,
-            org.Users.Select(u => new OrgUserDto(u.Id, u.Username, u.EmailAddress, u.DisplayName, u.IsOrgAdmin, u.IsActive, u.CreatedAt, online.Contains(u.Id))).ToList());
+            org.Users.Select(u => new OrgUserDto(u.Id, u.Username, u.EmailAddress, u.DisplayName, u.IsOrgAdmin, u.IsActive, u.CreatedAt, online.Contains(u.Id), u.PasswordHash is not null)).ToList());
     }
 
     /// <summary>
@@ -90,6 +90,55 @@ public class OrganisationService
     }
 
     /// <summary>
+    /// OrgAdmin-initiated password reset for an existing user — distinct from
+    /// SetDefaultNewUserPasswordAsync (which only affects users created *after* the setting changes)
+    /// and CreateUserAsync (which creates a brand-new account). A null/blank <paramref name="password"/>
+    /// falls back to the org's configured default via ResolveDefaultNewUserPasswordHashAsync (the same
+    /// value a freshly-created implicit user would get), so "reset to default" is just "omit the
+    /// field" rather than a separate action. Always sets MustChangePassword, same as every other path
+    /// that puts a password on someone's behalf — the admin choosing/generating it isn't the same
+    /// person who'll actually use it. Rotates SecurityStamp so any session already open under the old
+    /// password is forced to re-authenticate on its very next request (§4/H2's revocation mechanism),
+    /// exactly like DeactivateUserAsync/SetUserAdminAsync already do for their own credential-adjacent
+    /// changes.
+    ///
+    /// Rejects outright (ApiValidationException, not a silent no-op) for a User whose PasswordHash is
+    /// null — an SSO/SCIM-provisioned account has no password to reset in the first place (see
+    /// User.cs's own comment on why that column is nullable). This isn't a cross-org enumeration
+    /// concern (the caller already has full visibility into their own org's user list, SSO status
+    /// included, via GetOrganisationAsync) — it's just "this action doesn't apply to a user in this
+    /// state," same as DeactivateUserAsync's self-deactivation guard being an explicit error too.
+    /// </summary>
+    public async Task<bool> ResetUserPasswordAsync(Guid callerOrganisationId, Guid targetUserId, string? password)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId);
+        if (user is null || user.OrganisationId != callerOrganisationId) return false;
+
+        if (user.PasswordHash is null)
+        {
+            throw new ApiValidationException("This user signs in via SSO and has no password to reset.");
+        }
+
+        if (string.IsNullOrEmpty(password))
+        {
+            user.PasswordHash = await ResolveDefaultNewUserPasswordHashAsync(callerOrganisationId);
+        }
+        else
+        {
+            if (password.Length < 8)
+            {
+                throw new ApiValidationException("Password must be at least 8 characters.");
+            }
+            user.PasswordHash = PasswordHasher.Hash(password);
+        }
+
+        user.MustChangePassword = true;
+        user.SecurityStamp = Guid.NewGuid();
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    /// <summary>
     /// Explicit account creation by an OrgAdmin, distinct from the implicit account-per-name creation
     /// MemberService/MigrationService do when adding a project member — here the admin sets a real
     /// username and an initial password directly (not the org's configured default/global fallback
@@ -133,7 +182,7 @@ public class OrganisationService
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        return new OrgUserDto(user.Id, user.Username, user.EmailAddress, user.DisplayName, user.IsOrgAdmin, user.IsActive, user.CreatedAt, false);
+        return new OrgUserDto(user.Id, user.Username, user.EmailAddress, user.DisplayName, user.IsOrgAdmin, user.IsActive, user.CreatedAt, false, true);
     }
 
     /// <summary>

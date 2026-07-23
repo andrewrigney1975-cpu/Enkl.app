@@ -2425,6 +2425,7 @@
   .kf-orguser-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
   }
 
@@ -2497,6 +2498,34 @@
   .kf-orguser-deactivate-btn {
     white-space: nowrap;
     color: var(--kf-danger);
+  }
+
+  /* No generic .hidden utility exists in this app's CSS (see CLAUDE.md's own note) — every
+     hidden-toggle element needs its own compound selector. flex-basis:100% drops this onto its own
+     line below the rest of .kf-orguser-row's flex-wrapped contents when revealed. */
+  .kf-orguser-reset-password-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-basis: 100%;
+  }
+  .kf-orguser-reset-password-row.hidden {
+    display: none;
+  }
+
+  .kf-orguser-reset-password-input {
+    flex: 1;
+    min-width: 160px;
+    border: 2px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 8px 10px;
+    color: var(--kf-text);
+    background: var(--kf-input-bg);
+  }
+  .kf-orguser-reset-password-input:focus {
+    outline: none;
+    border-color: var(--kf-blue);
+    background: var(--kf-input-bg-focus);
   }
 
   .kf-member-add-row input {

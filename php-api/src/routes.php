@@ -134,6 +134,7 @@ function registerRoutes(App $app): void
         $group->get('', [OrganisationsController::class, 'getMyOrganisation']);
         $group->put('/users/{userId}/admin', [OrganisationsController::class, 'setUserAdmin']);
         $group->put('/users/{userId}/email', [OrganisationsController::class, 'setUserEmail']);
+        $group->put('/users/{userId}/password', [OrganisationsController::class, 'resetUserPassword']);
         $group->post('/users/{userId}/deactivate', [OrganisationsController::class, 'deactivateUser']);
         $group->post('/users', [OrganisationsController::class, 'createUser']);
         $group->get('/org-teams', [OrganisationsController::class, 'getOrgTeams']);
