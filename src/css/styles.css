@@ -8076,6 +8076,13 @@
   .kf-strategy-compare-picker.hidden {
     display: none;
   }
+  /* #strategyComparePickerWrap (index.html) is the outer wrapper div itself — a separate element
+     from the .kf-strategy-compare-picker div rendered inside it — and needs its own compound
+     selector for the same "no generic .hidden utility class" reason as everywhere else in this
+     stylesheet. */
+  #strategyComparePickerWrap.hidden {
+    display: none;
+  }
   .kf-strategy-compare-item {
     display: flex;
     align-items: center;

@@ -55,12 +55,12 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
   // ".kf-risk-doc-picker-row" class this looked for doesn't exist anymore. Not every row is a plain
   // checkbox toggle either (e.g. "Authentication and Provisioning" links out to SSO/SAML/SCIM config
   // instead), so rows with no <input> are filtered out rather than assumed away. The expected order
-  // below was also stale — Time Tracking, Sub-Tasks, Change Auditing, and Retrospectives were added
-  // to App Settings since this list was written, without updating it.
+  // below was also stale — Time Tracking, Sub-Tasks, Change Auditing, Retrospectives, and Strategy
+  // were added to App Settings since this list was written, without updating it.
   const settingsRows = Array.from(doc.querySelectorAll('#appSettingsOverlay .kf-setting-row'));
   const rowIds = settingsRows.map(r => r.querySelector('input')).filter(Boolean).map(input => input.id);
   log('App Settings order matches the current header button order (Health Dashboard first, then the rest of App Settings’ own categorized order)',
-      rowIds.join(',') === 'settingsShowHealthBtn,settingsShowDocumentsBtn,settingsShowWorkflowBtn,settingsShowTimeTrackingBtn,settingsShowSubTasksBtn,settingsShowChangeAuditingBtn,settingsShowPrinciplesBtn,settingsShowObjectivesBtn,settingsShowRisksBtn,settingsShowDecisionsBtn,settingsShowRetrospectiveBtn,settingsShowTeamsCommitteesBtn',
+      rowIds.join(',') === 'settingsShowHealthBtn,settingsShowDocumentsBtn,settingsShowWorkflowBtn,settingsShowTimeTrackingBtn,settingsShowSubTasksBtn,settingsShowChangeAuditingBtn,settingsShowPrinciplesBtn,settingsShowObjectivesBtn,settingsShowRisksBtn,settingsShowDecisionsBtn,settingsShowRetrospectiveBtn,settingsShowStrategyBtn,settingsShowTeamsCommitteesBtn',
       rowIds.join(','));
 
   console.log('\nHealth button rename/reposition/icon test complete.');
