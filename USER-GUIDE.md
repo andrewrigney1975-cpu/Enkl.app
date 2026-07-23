@@ -360,6 +360,11 @@ only appears for an **Org Admin** — this is Elena's territory, not Marcus's.
   reads their name followed by **"(Inactive)"**, so nobody mistakes old history for something still
   actionable by them. Reassigning their tasks and governance items to someone else is then a manual
   clean-up step Elena works through at her own pace, not something the deactivation does for her.
+  If someone forgets their password (or Elena suspects it's been compromised), the same screen has a
+  **Reset Password** button next to their name — she can either type a specific new password or leave
+  it blank to fall back to the organisation's own configured default. Either way, that person is
+  signed out immediately and must set their own new password the next time they log in. This option
+  doesn't appear for anyone who signs in via SSO — there's no password on file for Elena to reset.
 - **SSO & Provisioning** — **What**: configure SAML single sign-on and SCIM-based automatic user
   provisioning. **Who**: larger organisations that already manage identity centrally and want Enklr
   Task to plug into that rather than keep a separate set of credentials.
@@ -539,6 +544,7 @@ it" tiers, though who's allowed to *initiate* it differs:
 | See how the whole organisation's projects are doing | [Section 9 — Portfolio Dashboard](#9-portfolio--organisation-management) |
 | Add a new person to the organisation | [Section 9 — Manage Users](#9-portfolio--organisation-management) |
 | Offboard someone who's leaving | [Section 9 — Manage Users](#9-portfolio--organisation-management) |
+| Reset a forgotten or compromised password | [Section 9 — Manage Users](#9-portfolio--organisation-management) |
 | Stop rebuilding the same board layout every time | [Section 9 — Manage Templates](#9-portfolio--organisation-management) |
 | Tell the whole organisation something | [Section 9 — Announcements](#9-portfolio--organisation-management) |
 | Warn everyone about planned maintenance or an outage | [Section 9 — Announcements](#9-portfolio--organisation-management) |
