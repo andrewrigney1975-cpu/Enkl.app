@@ -4,6 +4,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY build.js .
 COPY src ./src
+COPY USER-GUIDE.md SYSTEMS-INTEGRATOR-GUIDE.md ./
 RUN mkdir -p dist && node build.js
 
 FROM nginx:alpine

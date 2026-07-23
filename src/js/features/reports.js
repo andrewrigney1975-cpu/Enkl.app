@@ -9,6 +9,8 @@ import { computeOrgChartLayout, ORGCHART_NODE_W, ORGCHART_NODE_H, ORGCHART_GAP_Y
 import { iconSvg } from '../icons.js';
 import { strategyApi } from '../api.js';
 import { buildRadarSvg, SERIES_COLORS } from '../views/strategy-radar.js';
+import { markdownToDocHtml } from './markdown-doc.js';
+import { downloadBlob } from './svg-export.js';
 
 /* =========================================================
    ENTITY REPORTS — a single generic, printable report view shared by Risks/Decisions/Principles/
@@ -150,12 +152,64 @@ export function closeReportOverlay(){
   // Clears openReleaseNotesReportOverlay's own marker class so a later, different report opened
   // against this same shared #reportBody doesn't inherit its page-break CSS scoping.
   document.getElementById('reportBody').classList.remove('kf-release-notes-report');
+  // Reset for the next open — same "only the opener that needs it turns it on" convention as the
+  // marker class above. Only openGuideOverlay ever unhides this; every other report has nothing
+  // meaningful to offer as a raw-document download the way a guide's own source text does.
+  document.getElementById('reportDownloadBtn').classList.add('kf-vis-hidden');
 }
 export function isReportOverlayOpen(){
   return !document.getElementById('reportOverlay').classList.contains('hidden');
 }
 export function printReport(){
   window.print();
+}
+
+/* =========================================================
+   GUIDE VIEWER — USER-GUIDE.md / SYSTEMS-INTEGRATOR-GUIDE.md, rendered read-only and printable,
+   reusing this exact same #reportOverlay/print-CSS machinery (see the module doc comment above) —
+   the whole point of that shared overlay is exactly this: any new "long, printable, read-only"
+   content is another consumer, not a reason to stand up a second overlay. Both guides' raw Markdown
+   text is embedded into the built bundle at build time (build.js reads the two .md files directly and
+   injects them as window.USER_GUIDE_MARKDOWN / window.SYSTEMS_INTEGRATOR_GUIDE_MARKDOWN globals —
+   see that file's own comment) rather than fetched at runtime, keeping this a genuinely offline-
+   capable, single-file app with no server round trip needed to view either guide.
+   ========================================================= */
+
+var GUIDE_CONFIGS = {
+  userGuide: {title: 'User Guide', filename: 'Enklr Task User Guide.html', markdownGlobal: 'USER_GUIDE_MARKDOWN'},
+  systemsIntegratorGuide: {title: 'Systems Integrator Guide', filename: 'Enklr Task Systems Integrator Guide.html', markdownGlobal: 'SYSTEMS_INTEGRATOR_GUIDE_MARKDOWN'}
+};
+
+var _activeGuideConfig = null;
+
+export function openGuideOverlay(which){
+  var config = GUIDE_CONFIGS[which];
+  var markdown = config && window[config.markdownGlobal];
+  if(!config || !markdown) return;
+  _activeGuideConfig = config;
+
+  document.getElementById('reportTitle').textContent = config.title;
+  document.getElementById('reportBody').innerHTML = '<div class="kf-guide-doc">' + markdownToDocHtml(markdown) + '</div>';
+  document.getElementById('reportDownloadBtn').classList.remove('kf-vis-hidden');
+  document.getElementById('reportOverlay').classList.remove('hidden');
+}
+
+/* Downloads a small, self-contained HTML file — the same rendered markup just shown on screen,
+   wrapped in a minimal styled shell — rather than the raw .md source, so a teammate who opens it
+   later (in any browser, no app install needed) sees the same formatted guide, not bare Markdown
+   syntax. Only ever wired to #reportDownloadBtn while a guide is the open report (see
+   closeReportOverlay's own reset), so _activeGuideConfig is always set when this actually runs. */
+export function downloadActiveGuide(){
+  if(!_activeGuideConfig) return;
+  var bodyHtml = document.getElementById('reportBody').innerHTML;
+  var html = '<!doctype html><html><head><meta charset="utf-8">' +
+    '<title>' + escapeHTML(_activeGuideConfig.title) + '</title>' +
+    '<style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:860px;margin:40px auto;padding:0 20px;line-height:1.5;color:#172b4d;}' +
+    'h1,h2,h3,h4{color:#0c2c52;} table{border-collapse:collapse;width:100%;margin:12px 0;} th,td{border:1px solid #ddd;padding:6px 10px;text-align:left;}' +
+    'th{background:#f4f5f7;} pre{background:#f4f5f7;padding:12px;overflow-x:auto;border-radius:4px;} code{background:#f4f5f7;padding:1px 4px;border-radius:3px;}' +
+    'blockquote{border-left:3px solid #ddd;margin:0;padding-left:14px;color:#5e6c84;} hr{border:none;border-top:1px solid #ddd;margin:24px 0;}</style>' +
+    '</head><body>' + bodyHtml + '</body></html>';
+  downloadBlob(new Blob([html], {type: 'text/html'}), _activeGuideConfig.filename);
 }
 
 /* =========================================================

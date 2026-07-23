@@ -50,6 +50,18 @@ async function build() {
   const html = readFileSync(join(__dirname, 'src/index.html'), 'utf8');
   const keywordWorkerSrc = readFileSync(join(__dirname, 'src/js/workers/keyword-worker.js'), 'utf8');
 
+  // Guide Viewer (features/reports.js's openGuideOverlay): the two guide docs' raw Markdown source,
+  // read at build time and embedded as JS string globals so the built single-file app can render
+  // them offline, with no server round trip — same "portable, single-file" philosophy as everything
+  // else in this bundle. embedJsString() uses JSON.stringify (correctly escapes quotes/backslashes/
+  // newlines) and then guards against a literal "</script" substring in the source text breaking out
+  // of the surrounding <script> element early — the HTML tokenizer looks for that exact byte sequence
+  // regardless of it sitting inside a JS string literal, so "\/" (a valid, no-op JS string escape
+  // that still decodes to "/") is inserted to break up the sequence without changing the decoded value.
+  const userGuideMd = readFileSync(join(__dirname, 'USER-GUIDE.md'), 'utf8');
+  const systemsIntegratorGuideMd = readFileSync(join(__dirname, 'SYSTEMS-INTEGRATOR-GUIDE.md'), 'utf8');
+  const embedJsString = (text) => JSON.stringify(text).replace(/<\/script/gi, '<\\/script');
+
   // Minify CSS with esbuild before inlining
   const cssResult = await esbuild.transform(css, { loader: 'css', minify: true });
   const minifiedCss = cssResult.code.trim();
@@ -73,7 +85,7 @@ async function build() {
   // a Blob URL — see src/js/features/document-suggestions.js.
   output = output.replace(
     '<script type="module" src="js/app.js"></script>',
-    () => `<script type="javascript/worker" id="keywordWorkerSource">\n${keywordWorkerSrc}\n  </script>\n  <script>\n${bundledJs}\n  </script>`
+    () => `<script type="javascript/worker" id="keywordWorkerSource">\n${keywordWorkerSrc}\n  </script>\n  <script>\nwindow.USER_GUIDE_MARKDOWN = ${embedJsString(userGuideMd)};\nwindow.SYSTEMS_INTEGRATOR_GUIDE_MARKDOWN = ${embedJsString(systemsIntegratorGuideMd)};\n${bundledJs}\n  </script>`
   );
 
   writeFileSync(join(__dirname, 'dist/index.html'), output, 'utf8');

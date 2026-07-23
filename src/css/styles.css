@@ -5414,6 +5414,89 @@
     margin-bottom: 0;
   }
 
+  /* Guide Viewer (features/reports.js's openGuideOverlay, features/markdown-doc.js's renderer) —
+     USER-GUIDE.md/SYSTEMS-INTEGRATOR-GUIDE.md rendered read-only inside #reportOverlay's shared
+     #reportBody. A separate scoped class from .kf-richtext-content above since this grammar is wider
+     (h1-h6, tables, code blocks, hr) — kept in its own block so it's easy to find/adjust without
+     wading through the richtext rules it doesn't share. */
+  .kf-guide-doc h1, .kf-guide-doc h2, .kf-guide-doc h3, .kf-guide-doc h4, .kf-guide-doc h5, .kf-guide-doc h6 {
+    margin: 20px 0 8px;
+    font-weight: 700;
+    color: var(--kf-text);
+  }
+  .kf-guide-doc h1 { font-size: 24px; }
+  .kf-guide-doc h2 { font-size: 19px; margin-top: 28px; }
+  .kf-guide-doc h3 { font-size: 16px; }
+  .kf-guide-doc h4, .kf-guide-doc h5, .kf-guide-doc h6 { font-size: 14px; }
+
+  .kf-guide-doc p {
+    margin: 0 0 10px;
+    line-height: 1.55;
+    color: var(--kf-text);
+  }
+
+  .kf-guide-doc ul, .kf-guide-doc ol {
+    margin: 0 0 10px;
+    padding-left: 22px;
+    color: var(--kf-text);
+  }
+  .kf-guide-doc li { margin-bottom: 3px; }
+  .kf-guide-doc li ul { margin: 3px 0 3px; }
+
+  .kf-guide-doc blockquote {
+    margin: 0 0 10px;
+    padding: 4px 12px;
+    border-left: 3px solid var(--kf-border-strong);
+    color: var(--kf-text-secondary);
+  }
+
+  .kf-guide-doc hr {
+    border: none;
+    border-top: 1px solid var(--kf-border);
+    margin: 20px 0;
+  }
+
+  .kf-guide-doc a { color: var(--kf-blue); }
+
+  .kf-guide-doc code {
+    background: var(--kf-bg-subtle, var(--kf-bg));
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.9em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  .kf-guide-doc pre {
+    background: var(--kf-bg-subtle, var(--kf-bg));
+    border: 1px solid var(--kf-border);
+    border-radius: var(--kf-radius);
+    padding: 10px 12px;
+    overflow-x: auto;
+    margin: 0 0 10px;
+  }
+  .kf-guide-doc pre code {
+    background: none;
+    padding: 0;
+    white-space: pre;
+  }
+
+  .kf-guide-doc table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0 0 14px;
+    font-size: 13px;
+  }
+  .kf-guide-doc th, .kf-guide-doc td {
+    border: 1px solid var(--kf-border);
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .kf-guide-doc th {
+    background: var(--kf-bg-subtle, var(--kf-bg));
+    font-weight: 600;
+  }
+
   /* Project Management Report (features/reports.js's openProjectManagementReportOverlay) — project
      header, team sections, and section headings wrapping the same per-item entity blocks below. */
   .kf-report-page-title {
