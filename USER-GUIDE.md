@@ -416,15 +416,17 @@ only appears for an **Org Admin** — this is Elena's territory, not Marcus's.
   stays up indefinitely if no end time was set). **Who**: for genuinely disruptive situations — planned
   maintenance, a known outage, "don't create new projects until further notice" — where you want it
   impossible to miss for as long as it's relevant, not just glanced at once and forgotten.
-- **Alert Status button** — **What**: a header button (between Refresh and the theme switcher) showing
-  exactly what that same check-in would tell you right now, on demand, without waiting for a reload or
-  a project switch to trigger it — click it any time to see a quick summary of any active Announcements
-  or Disruption Notices, overdue tasks, at-risk predictions, unscored tasks, and any local projects
-  overdue for a backup. Announcements and Disruption Notices show up here regardless of whether you've
-  already dismissed them from the pop-up — this button always reflects what's currently being
-  communicated, not just what's still waiting for a reaction from you. **Who**: anyone who wants a
-  quick "is anything wrong here" answer mid-session, not just at the moments the app happens to check
-  automatically.
+- **Despatches button** — **What**: a header button (between Refresh and the theme switcher,
+  megaphone icon) that's your personal activity feed — up to the 25 most recent items relevant to you,
+  newest first, refreshing automatically every 30 seconds while you're signed in. It combines: any
+  active Announcements or Disruption Notices, overdue tasks, at-risk predictions, unscored tasks, and
+  local projects overdue for a backup (the same live check-in described above, always current) —
+  together with a running log of task updates and chat messages/mentions, i.e. anything that would
+  otherwise have only ever shown you a brief toast notification. A task entry links straight to that
+  task (by its key); a chat entry opens the relevant conversation. This feed is entirely personal —
+  what you see reflects only activity relevant to you, never anyone else's. **Who**: anyone who wants
+  a quick "what have I missed" answer mid-session, or who wants to jump back to a task/message a toast
+  already flashed past before they could click it.
 
 ---
 
@@ -511,7 +513,7 @@ it" tiers, though who's allowed to *initiate* it differs:
 | Warn everyone about planned maintenance or an outage | [Section 9 — Announcements](#9-portfolio--organisation-management) |
 | Change how the board looks for just me | [Section 10 — My Preferences](#10-making-it-yours--personalisation) |
 | Make sure I don't lose my local-only work | [Section 11 — Export Project](#11-data-backup-and-moving-between-tiers) |
-| See what's currently being communicated, on demand | [Section 11 — Alert Status button](#11-data-backup-and-moving-between-tiers) |
+| See a personal feed of my recent activity/mentions/tasks | [Section 11 — Despatches button](#11-data-backup-and-moving-between-tiers) |
 | Hand a stakeholder a document, not a login | [Section 12 — Reports](#12-reports-and-exporting) |
 | Understand what an Org Admin can do that I can't | [Section 13](#13-roles-and-permissions-in-plain-terms) |
 

@@ -5,6 +5,7 @@ import { refreshProjectFromServer } from './migration.js';
 import { renderBoard } from '../views/board.js';
 import { toastWithAction } from '../ui.js';
 import { handleChatMessageEvent, handleChatReactionEvent } from './chat.js';
+import { pushDespatch } from './despatches.js';
 
 /* Server-Sent Events client for Controllers/EventsController.cs's /api/events/stream — deliberately
    NOT the native EventSource API, since EventSource can't send an Authorization header and this app's
@@ -31,6 +32,14 @@ function handleTaskChangedEvent(payload){
     ' by ' + (payload.changedByDisplayName || 'someone') + '.';
   var project = getCurrentProject();
   var isOpenProject = !!(project && project.serverProjectId && project.serverProjectId === payload.projectId);
+
+  // A deleted task has no live task to link to (its key wouldn't resolve via findTaskByKey), so this
+  // despatch shows the same message but with no click-through target.
+  pushDespatch({
+    icon: 'ty_document',
+    message: message,
+    taskKey: payload.changeType === 'deleted' ? null : payload.taskKey
+  });
 
   if(isOpenProject){
     toastWithAction(message, 'Reload', function(){

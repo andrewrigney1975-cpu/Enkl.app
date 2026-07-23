@@ -26,11 +26,12 @@ import { parseTaskKeyFromHash, findTaskByKey, clearTaskHash } from './features/h
 import { exportProjectJSON, setExportToast } from './features/export.js';
 import { migrateProjectToServer, loginToServer, completeSsoLogin, changePasswordOnServer, isServerLoggedIn, isServerAuthoritative, pullServerProjectsIntoLocal, deleteProjectOnServer, setMigrationToast } from './features/migration.js';
 import { connectEventStream, disconnectEventStream } from './features/live-updates.js';
-import { initChat, resetChatState, openChatPanel, closeChatPanel, isChatPanelOpen } from './features/chat.js';
+import { initChat, resetChatState, openChatPanel, closeChatPanel, isChatPanelOpen, openChannel } from './features/chat.js';
 import { initChatView, toggleChatPanel, chatBackClicked, updateChatBubbleVisibility, isChatFullscreenOpen, openChatFullscreen, toggleChatFullscreen, closeChatFullscreen } from './views/chat.js';
 import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck, setImportToast, setImportRenderAll, setImportResetFilters } from './features/import.js';
-import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder, renderAlertStatusPanel, closeAnnouncementsAlert } from './features/session-alerts.js';
+import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder, closeAnnouncementsAlert } from './features/session-alerts.js';
 import { initAnnouncements, resetAnnouncementState, setAnnouncementDeps, getActiveDisruptions } from './features/announcements.js';
+import { renderDespatchesPanel, setDespatchesDeps, initDespatches, resetDespatchLog } from './features/despatches.js';
 import { escapeHTML } from './utils.js';
 import { setBulkEditDeps, openBulkEditOverlay, closeBulkEditOverlay, isBulkEditOverlayOpen, saveBulkEditChanges } from './features/bulk-edit.js';
 import { getArchivedTasks, openArchivedTasksOverlay, closeArchivedTasksOverlay, isArchivedTasksOverlayOpen, renderArchivedTasksList, reactivateSelectedArchivedTasks, archiveDoneTasksFromModal } from './features/archived-tasks.js';
@@ -90,6 +91,10 @@ setBulkEditDeps({ confirmDialog, exportProjectJSON });
 setThemeDeps({ renderBoard, renderDependencyMap, isDepMapOpen, updatePriorityIcon, renderPriorityFilterChips });
 initChatView();
 setAnnouncementDeps({ onUpdate: renderDisruptionBanner });
+setDespatchesDeps({
+  onUpdate: renderDespatchesPanel,
+  openChat: function(channelId){ openChatPanel(); openChannel(channelId); }
+});
 setMutationsToast(toast);
 setMigrationToast(toast);
 setExportToast(toast);
@@ -502,12 +507,12 @@ function wireEvents(){
     e.stopPropagation();
     toggleExportAsPanel('accountMenuPanel');
   });
-  document.getElementById('alertStatusBtn').addEventListener('click', function(e){
+  document.getElementById('despatchesBtn').addEventListener('click', function(e){
     e.stopPropagation();
-    // Rendered fresh on every open — re-derives from the current project's live task list, so it
-    // never shows stale counts from an earlier open in the same session.
-    renderAlertStatusPanel();
-    toggleExportAsPanel('alertStatusPanel');
+    // Rendered fresh on every open — re-derives from the current project's live task list plus the
+    // in-memory despatch log, so it never shows stale counts from an earlier open in the same session.
+    renderDespatchesPanel();
+    toggleExportAsPanel('despatchesPanel');
   });
   document.getElementById('accountMenuPanel').addEventListener('click', function(e){
     var link = e.target.closest('[data-nav-target]');
@@ -1247,6 +1252,7 @@ function wireEvents(){
       connectEventStream();
       initChat();
       initAnnouncements();
+      initDespatches();
       updateChatBubbleVisibility();
       openChatFullscreenFromQueryParamIfPresent();
       pullServerProjectsIntoLocal().then(function(count){
@@ -1263,7 +1269,9 @@ function wireEvents(){
     closeChatPanel();
     resetChatState();
     resetAnnouncementState();
+    resetDespatchLog();
     renderDisruptionBanner();
+    renderDespatchesPanel();
     updateChatBubbleVisibility();
     // Server-authoritative projects stay exactly as they are — still flagged server-authoritative,
     // still showing their last-synced data — they just can't push/pull further changes until logged
@@ -1851,6 +1859,7 @@ function handleSsoCallbackIfPresent(){
     connectEventStream();
     initChat();
     initAnnouncements();
+    initDespatches();
     updateChatBubbleVisibility();
     openChatFullscreenFromQueryParamIfPresent();
     pullServerProjectsIntoLocal().then(function(count){
@@ -1933,6 +1942,7 @@ function init(){
     connectEventStream();
     initChat();
     initAnnouncements();
+    initDespatches();
     openChatFullscreenFromQueryParamIfPresent();
     pullServerProjectsIntoLocal().then(function(count){
       if(count > 0) renderAll();

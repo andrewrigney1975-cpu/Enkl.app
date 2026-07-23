@@ -3,6 +3,7 @@ import { chatApi, getCurrentUserId, isOrgAdmin } from '../api.js';
 import { isServerLoggedIn } from './migration.js';
 import { toast, toastWithAction } from '../ui.js';
 import { playSendSound, playReceiveSound } from './chat-sounds.js';
+import { pushDespatch } from './despatches.js';
 
 /* Org-wide chat — state + API orchestration only, no DOM here (views/chat.js owns rendering,
    importing everything it needs from this module) — same one-directional-import shape as every
@@ -237,15 +238,29 @@ export function handleChatMessageEvent(payload){
   }
 
   var iAmMentioned = payload.changeType !== 'deleted' && (payload.mentionedUserIds || []).indexOf(getCurrentUserId()) !== -1;
+  var isNewMessage = payload.changeType === 'created';
+  var eventChannel = findChannel(payload.channelId);
+  var mentionMsg = (payload.authorName || 'Someone') + ' mentioned you' + (eventChannel && eventChannel.name ? ' in "' + eventChannel.name + '"' : '') + '.';
+  var newMsgText = (payload.authorName || 'Someone') + ' sent a new message' + (eventChannel && eventChannel.name ? ' in "' + eventChannel.name + '"' : '') + '.';
+
+  // Despatches logs every mention/new-message relevant to this user unconditionally (respecting only
+  // mute, same as task-change despatches have no "already looking at it" suppression either) — a
+  // deliberate decoupling from the toast's own isActiveAndOpen suppression just below: a message in a
+  // channel you already have open still gets logged for later reference, even though a toast for it
+  // would be redundant right now and correctly stays suppressed.
   if(!isMuted && iAmMentioned){
-    var channel = findChannel(payload.channelId);
-    toastWithAction((payload.authorName || 'Someone') + ' mentioned you' + (channel && channel.name ? ' in "' + channel.name + '"' : '') + '.', 'Open', function(){
+    pushDespatch({icon: 'chat', message: mentionMsg, channelId: payload.channelId});
+  } else if(!isMuted && isNewMessage){
+    pushDespatch({icon: 'chat', message: newMsgText, channelId: payload.channelId});
+  }
+
+  if(!isMuted && iAmMentioned){
+    toastWithAction(mentionMsg, 'Open', function(){
       openChatPanel();
       openChannel(payload.channelId);
     });
-  } else if(!isMuted && payload.changeType === 'created' && !isActiveAndOpen){
-    var ch = findChannel(payload.channelId);
-    toastWithAction((payload.authorName || 'Someone') + ' sent a new message' + (ch && ch.name ? ' in "' + ch.name + '"' : '') + '.', 'Open', function(){
+  } else if(!isMuted && isNewMessage && !isActiveAndOpen){
+    toastWithAction(newMsgText, 'Open', function(){
       openChatPanel();
       openChannel(payload.channelId);
     });

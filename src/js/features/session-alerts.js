@@ -307,12 +307,14 @@ export function runBackupForReminder(){
 }
 
 /* =========================================================
-   ALERT STATUS (header button) — a pure, read-only re-derivation of the same four checks above
-   (overdue / overrun / unscored / backup), WITHOUT opening any of their modals or touching
-   backupQueue. Lets "what would I see if I reloaded right now" be answered on demand from the
-   header, rather than only ever appearing once at load/project-switch time. Each individual check
-   above stays exactly as it was (chained modals) — this is a separate, side-effect-free summary
-   using the same predicates, not a replacement for them.
+   DESPATCHES (header button) — summarizeProjectAlerts() is a pure, read-only re-derivation of the
+   same four checks above (overdue / overrun / unscored / backup) plus active announcements, WITHOUT
+   opening any of their modals or touching backupQueue. Lets "what would I see if I reloaded right
+   now" be answered on demand from the header, rather than only ever appearing once at load/project-
+   switch time. Each individual check above stays exactly as it was (chained modals) — this is a
+   separate, side-effect-free summary using the same predicates, not a replacement for them.
+   The actual panel rendering (which also merges in the task/chat activity log) now lives in
+   features/despatches.js — this function is just the "live conditions" half of that merge.
    ========================================================= */
 export function summarizeProjectAlerts(){
   var alerts = [];
@@ -379,19 +381,4 @@ export function summarizeProjectAlerts(){
   }
 
   return alerts;
-}
-
-export function renderAlertStatusPanel(){
-  var panel = document.getElementById('alertStatusPanel');
-  var alerts = summarizeProjectAlerts();
-  if(alerts.length === 0){
-    panel.innerHTML = '<div class="kf-alert-status-empty">No alerts right now.</div>';
-  } else {
-    panel.innerHTML = alerts.map(function(a){
-      return '<div class="kf-alert-status-row"><span class="kf-icon" data-icon="' + a.icon + '" data-size="15"></span><span>' +
-        escapeHTML(a.message) +
-        '</span></div>';
-    }).join('');
-  }
-  hydrateIcons(panel);
 }

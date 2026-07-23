@@ -17,7 +17,7 @@ var _onUpdate = function(){};
 
 /* Dependency injection (same convention as chat.js's setChatDeps) — session-alerts.js/app.js wire in
    their own render function as onUpdate, called after every state change so the disruption banner
-   (if any) and Alert Status panel (if open) reflect it immediately. */
+   (if any) and Despatches panel (if open) reflect it immediately. */
 export function setAnnouncementDeps(deps){
   if(deps.onUpdate) _onUpdate = deps.onUpdate;
 }
@@ -53,7 +53,7 @@ export function getUnacknowledgedAnnouncements(){
   return announcementState.active.filter(function(a){ return a.kind === 'announcement' && !a.acknowledged; });
 }
 
-/* Optimistic — flips the local acknowledged flag immediately (so the digest modal/Alert Status panel
+/* Optimistic — flips the local acknowledged flag immediately (so the digest modal/Despatches panel
    never re-shows an item the user just dismissed within the same session even if the network call is
    still in flight) and fires the request best-effort; a failure here just means the item may
    reappear next session, not a broken UI. */

@@ -4957,18 +4957,22 @@
     margin: 4px 6px;
   }
 
-  /* Alert Status header button (src/index.html) — shows whatever features/session-alerts.js's
-     summarizeProjectAlerts() would surface on a reload, without re-triggering the actual toast/modal
-     chain. Both the wrap and panel reuse the kf-export-as-wrap/kf-export-as-panel classes above (so
-     this button participates in toggleExportAsPanel/closeAllExportAsPanels and the global outside-
-     click handler the exact same way every other header dropdown already does) — only the row
-     styling below is specific to this panel. */
-  .kf-alert-status-panel {
+  /* Despatches header button (src/index.html) — formerly "Alert Status"; now merges
+     features/session-alerts.js's summarizeProjectAlerts()/active announcements with a personalized,
+     capped-at-25 log of task/chat activity (features/despatches.js). Both the wrap and panel reuse
+     the kf-export-as-wrap/kf-export-as-panel classes above (so this button participates in
+     toggleExportAsPanel/closeAllExportAsPanels and the global outside-click handler the exact same
+     way every other header dropdown already does) — only the row styling below is specific to this
+     panel. max-height/overflow-y are new here (the old short summary list never needed them) — up to
+     25 rows needs real scroll sizing rather than an unbounded dropdown. */
+  .kf-despatch-panel {
     min-width: 260px;
     max-width: 320px;
+    max-height: 360px;
+    overflow-y: auto;
   }
 
-  .kf-alert-status-row {
+  .kf-despatch-row {
     display: flex;
     align-items: flex-start;
     gap: 8px;
@@ -4976,15 +4980,22 @@
     font-size: 13px;
     color: var(--kf-text);
     border-radius: 3px;
+    text-decoration: none;
   }
 
-  .kf-alert-status-row .kf-icon {
+  a.kf-despatch-row:hover,
+  .kf-despatch-row-clickable:hover {
+    background: var(--kf-hover-tint);
+    cursor: pointer;
+  }
+
+  .kf-despatch-row .kf-icon {
     flex-shrink: 0;
     margin-top: 1px;
     color: var(--kf-atrisk-fg);
   }
 
-  .kf-alert-status-empty {
+  .kf-despatch-empty {
     padding: 12px 6px;
     font-size: 13px;
     color: var(--kf-text-faint);
