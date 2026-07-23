@@ -418,6 +418,17 @@ export var taskCommentApi = {
   }
 };
 
+/* v4 Phase 1 AI Assistant — see api/Enkl.Api/Controllers/AiAssistantController.cs for the definitive
+   route. Project-scoped (the assistant only ever acts within one project's tasks). alertsSummary is
+   the plain-text output of session-alerts.js's summarizeProjectAlerts(), passed through so the
+   assistant can answer "what alerts are there" without a server-side re-derivation of that logic
+   (see AiAssistantService.cs's own doc comment for why). */
+export var aiAssistantApi = {
+  chat: function(projectId, messages, alertsSummary){
+    return apiFetch('/projects/' + projectId + '/ai-assistant/chat', {method: 'POST', body: JSON.stringify({messages: messages, alertsSummary: alertsSummary})});
+  }
+};
+
 /* Org-wide chat — see api/Enkl.Api/Controllers/ChatController.cs for the definitive route list.
    Not project-scoped (no projectId anywhere here) — channels/messages belong to the caller's own
    organisation, derived server-side from the JWT, same as getMyOrganisationApi below. */

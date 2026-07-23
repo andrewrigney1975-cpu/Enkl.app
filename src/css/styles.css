@@ -1277,6 +1277,98 @@
     transition: none;
   }
 
+  /* v4 Phase 1 AI Assistant — a second floating bubble/panel sitting immediately left of the chat
+     bubble (56px width + 24px gap + 12px breathing room = 92px), same non-blocking "no .kf-overlay
+     backdrop" shape as .kf-chat-bubble/.kf-chat-panel above, deliberately reusing those base classes
+     (kf-ai-assistant-bubble/kf-ai-assistant-panel only override `right`) rather than duplicating the
+     whole rule set. */
+  .kf-ai-assistant-bubble,
+  .kf-ai-assistant-panel {
+    right: 92px;
+  }
+  .kf-ai-assistant-bubble-logo {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .kf-ai-assistant-bubble-logo svg {
+    display: block;
+  }
+  body.kf-task-panel-docked .kf-ai-assistant-bubble,
+  body.kf-task-panel-docked .kf-ai-assistant-panel {
+    right: 792px;
+  }
+  .kf-ai-assistant-panel.hidden {
+    display: none;
+  }
+
+  .kf-ai-assistant-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .kf-ai-assistant-empty {
+    color: var(--kf-text-faint);
+    font-size: 13px;
+    padding: 8px;
+  }
+  .kf-ai-assistant-msg {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: normal;
+  }
+  .kf-ai-assistant-msg-user {
+    align-self: flex-end;
+    background: var(--kf-navy);
+    color: #fff;
+    border-bottom-right-radius: 2px;
+  }
+  .kf-ai-assistant-msg-assistant {
+    align-self: flex-start;
+    background: var(--kf-bg-subtle, var(--kf-bg));
+    border: 1px solid var(--kf-border);
+    color: var(--kf-text);
+    border-bottom-left-radius: 2px;
+  }
+  .kf-ai-assistant-thinking {
+    font-style: italic;
+    color: var(--kf-text-faint);
+  }
+  .kf-ai-assistant-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 4px;
+  }
+  .kf-ai-assistant-action-chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--kf-success-bg, #e3fcef);
+    color: var(--kf-success, #00875a);
+  }
+  .kf-ai-assistant-compose {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px;
+    border-top: 1px solid var(--kf-border);
+  }
+  .kf-ai-assistant-compose input {
+    flex: 1;
+    min-width: 0;
+  }
+  #aiAssistantMicBtn.kf-ai-assistant-mic-active {
+    color: #de350b;
+  }
+
   /* "Open in New Tab" (#chatOpenNewTabBtn) only makes sense from the small windowed panel — once
      already full screen there's nothing left to open a second copy of. */
   .kf-chat-panel.kf-chat-fullscreen #chatOpenNewTabBtn {
@@ -4821,10 +4913,11 @@
     line-height: 1.5;
   }
 
-  /* The three bars inside the welcome-name logo (welcome-name.js's own JS) get a new random height
-     roughly every 150-350ms, independently per bar — this transition is what turns those otherwise
-     instant attribute snaps into a smooth "talking" motion, rather than a jarring flicker. */
-  .kf-welcome-logo-bar {
+  /* Shared by every animated-logo.js consumer (Welcome Name modal, AI Assistant bubble icon) — the
+     bars get a new random height roughly every 150-350ms, independently per bar; this transition is
+     what turns those otherwise instant attribute snaps into a smooth "talking" motion, rather than a
+     jarring flicker. */
+  .kf-animated-logo-bar {
     transition: height 150ms ease-out;
   }
 

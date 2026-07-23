@@ -31,6 +31,9 @@ services:
       # match that literal exactly, not be independently overridable via .env like DB_PASSWORD is.
       ConnectionStrings__PublicQuery: "Host=db;Database=enkl;Username=enkl_public_query;Password=enkl_public_query_dev_password"
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY must be set in .env}
+      # v4 Phase 1 AI Assistant — optional. Left unset (default ""), the feature just throws a clear
+      # error when used rather than failing the whole stack's startup (see AiAssistantService.cs).
+      Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
       App__PublicBaseUrl: ${PUBLIC_BASE_URL:-http://localhost}
       RunMigrationsOnStartup: "true"
       ASPNETCORE_URLS: "http://+:8080"

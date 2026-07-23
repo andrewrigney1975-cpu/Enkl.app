@@ -24,10 +24,12 @@ import { setCostBenefitDeps, cbZoomState, openCostBenefitOverlay, closeCostBenef
 /* ---- Features ---- */
 import { parseTaskKeyFromHash, findTaskByKey, clearTaskHash } from './features/hash-router.js';
 import { exportProjectJSON, setExportToast } from './features/export.js';
-import { migrateProjectToServer, loginToServer, completeSsoLogin, changePasswordOnServer, isServerLoggedIn, isServerAuthoritative, pullServerProjectsIntoLocal, deleteProjectOnServer, setMigrationToast } from './features/migration.js';
+import { migrateProjectToServer, loginToServer, completeSsoLogin, changePasswordOnServer, isServerLoggedIn, isServerAuthoritative, pullServerProjectsIntoLocal, deleteProjectOnServer, setMigrationToast, refreshProjectFromServer } from './features/migration.js';
 import { connectEventStream, disconnectEventStream } from './features/live-updates.js';
 import { initChat, resetChatState, openChatPanel, closeChatPanel, isChatPanelOpen, openChannel } from './features/chat.js';
 import { initChatView, toggleChatPanel, chatBackClicked, updateChatBubbleVisibility, isChatFullscreenOpen, openChatFullscreen, toggleChatFullscreen, closeChatFullscreen } from './views/chat.js';
+import { resetAiAssistantState } from './features/ai-assistant.js';
+import { initAiAssistantView, setAiAssistantBoardRefreshHook } from './views/ai-assistant.js';
 import { importProjectFromFile, pendingImport, closeImportConflictModal, overwriteProjectFromResult, finaliseImport, uniqueProjectKey, setImportSessionAlertsCheck, setImportToast, setImportRenderAll, setImportResetFilters } from './features/import.js';
 import { checkProjectAlerts, closeOverdueAlert, closeOverrunAlert, closeDefaultScoreAlert, closeBackupReminderModal, dismissBackupReminder, runBackupForReminder, closeAnnouncementsAlert } from './features/session-alerts.js';
 import { initAnnouncements, resetAnnouncementState, setAnnouncementDeps, getActiveDisruptions } from './features/announcements.js';
@@ -91,6 +93,13 @@ setBulkEditDeps({ confirmDialog, exportProjectJSON });
 // theme until something else happens to trigger its own re-render (e.g. a hard refresh).
 setThemeDeps({ renderBoard, renderDependencyMap, isDepMapOpen, updatePriorityIcon, renderPriorityFilterChips });
 initChatView();
+initAiAssistantView();
+// Best-effort — after a create_task/update_task tool call, pull the fresh server state and re-render
+// the board, same refresh shape as live-updates.js's own task-changed handler.
+setAiAssistantBoardRefreshHook(function(){
+  var project = getCurrentProject();
+  if(project) refreshProjectFromServer(project.id).then(renderBoard);
+});
 setAnnouncementDeps({ onUpdate: renderDisruptionBanner });
 setDespatchesDeps({
   onUpdate: function(){ renderDespatchesPanel(); updateDespatchesBadge(); },
@@ -141,6 +150,10 @@ function wireEvents(){
     state.db.currentProjectId = e.target.value;
     saveDB();
     resetFilters();
+    // A leftover AI assistant transcript from the previous project would be actively misleading in
+    // the new one (it talks about that project's own tasks/columns) — same reasoning as chat's own
+    // per-org reset, just triggered per-project-switch instead of per-login.
+    resetAiAssistantState();
     renderAll();
     checkProjectAlerts();
   });
@@ -1301,6 +1314,7 @@ function wireEvents(){
     disconnectEventStream();
     closeChatPanel();
     resetChatState();
+    resetAiAssistantState();
     resetAnnouncementState();
     resetDespatchLog();
     renderDisruptionBanner();

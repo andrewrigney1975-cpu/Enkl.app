@@ -16,6 +16,7 @@ import { isServerAuthoritative, isServerLoggedIn, moveTaskToColumnOnServer, refr
 import { updateProjectSettingsApi, isOrgAdmin, isProjectAdmin, getOrgName, isApiReachable, pollApiReachability } from '../api.js';
 import { renderPriorityFilterChips, renderTeamFilterChips, renderAssigneeFilterChips, renderTaskTypeFilterChips, renderStatusFilterChips, taskMatchesFilters, updateSearchClearButtonVisibility, clearBoardSearch, updateSearchHashtagIntellisense, closeSearchHashtagPanel, isSearchHashtagPanelOpen, acceptSearchHashtagOption, onSearchInputKeydown, updateArchivedSearchMatchesPanel } from './board-filters.js';
 import { fitBoardForTaskModal, restoreBoardAfterTaskModal, refitBoardForOpenTaskModal } from './board-layout.js';
+import { updateAiAssistantBubbleVisibility } from './ai-assistant.js';
 
 // Re-exported for the many modals that already do `import { escapeHTML } from '../views/board.js'`
 // — the actual implementation now lives in utils.js (the shared, quote-escaping version) so it
@@ -201,6 +202,7 @@ export function applyHeaderButtonVisibility(){
   document.getElementById('navApiEndpointsBtn').classList.toggle('kf-vis-hidden', !canViewApiEndpoints);
 
   renderTeamFilterChips();
+  updateAiAssistantBubbleVisibility();
 }
 
 export function openAppSettingsOverlay(){

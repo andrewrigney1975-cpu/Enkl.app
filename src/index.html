@@ -267,6 +267,21 @@
       </div>
       <div class="kf-chat-panel-body" id="chatPanelBody"></div>
     </div>
+    <button class="kf-chat-bubble kf-ai-assistant-bubble kf-vis-hidden" id="aiAssistantBubbleBtn" title="AI Assistant" aria-label="Open AI assistant">
+      <span class="kf-ai-assistant-bubble-logo" id="aiAssistantBubbleLogo"></span>
+    </button>
+    <div class="kf-chat-panel kf-ai-assistant-panel hidden" id="aiAssistantPanel">
+      <div class="kf-chat-panel-header">
+        <div class="kf-chat-panel-title">AI Assistant</div>
+        <button class="kf-btn kf-btn-ghost" id="aiAssistantCloseBtn" aria-label="Minimise AI assistant" title="Minimise"><span class="kf-icon" data-icon="chevronDown" data-size="16"></span></button>
+      </div>
+      <div class="kf-ai-assistant-messages" id="aiAssistantMessages"></div>
+      <div class="kf-ai-assistant-compose">
+        <button type="button" class="kf-btn kf-btn-ghost kf-vis-hidden" id="aiAssistantMicBtn" title="Voice input" aria-label="Voice input"><span class="kf-icon" data-icon="mic" data-size="16"></span></button>
+        <input type="text" id="aiAssistantInput" placeholder="Ask me to create a task, or &quot;what's most critical?&quot;" maxlength="2000">
+        <button type="button" class="kf-btn kf-btn-primary" id="aiAssistantSendBtn">Send</button>
+      </div>
+    </div>
   </div>
     </div>
   </div>

@@ -11,6 +11,7 @@ use Enkl\Api\Auth\RateLimitMiddleware;
 use Enkl\Api\Auth\RequireAuthMiddleware;
 use Enkl\Api\Auth\ScimAuthMiddleware;
 use Enkl\Api\Auth\SessionValidationMiddleware;
+use Enkl\Api\Controllers\AiAssistantController;
 use Enkl\Api\Controllers\AnnouncementsController;
 use Enkl\Api\Controllers\AuthController;
 use Enkl\Api\Controllers\ChatController;
@@ -321,6 +322,17 @@ function registerRoutes(App $app): void
         })->add(ProjectAdminMiddleware::class);
 
         registerEntityRoutes($group, '/tasks', TasksController::class, 'taskId');
+        // v4 Phase 1 AI Assistant — a single chat endpoint, ProjectMember-gated same as every other
+        // route in this group (see AiAssistantController.cs's own doc comment for why no extra gate).
+        // Rate-limited per-caller (hashed bearer token, same shape as publicQuery above) since each
+        // request can fan out to several Claude API calls internally (AiAssistantService's own
+        // tool-use loop) — a real per-request cost multiplier the rest of this API doesn't have.
+        $group->post('/ai-assistant/chat', [AiAssistantController::class, 'chat'])
+            ->add(new RateLimitMiddleware('ai-assistant', 15, function ($request) {
+                $authHeader = $request->getHeaderLine('Authorization');
+                $token = stripos($authHeader, 'bearer ') === 0 ? trim(substr($authHeader, 7)) : '';
+                return $token !== '' ? hash('sha256', $token) : 'unknown';
+            }));
         // Comments are nested under a specific task (not a flat per-project entity, so they don't fit
         // registerEntityRoutes' single-{idParam} shape) — POST/PUT/DELETE mirror
         // TaskCommentsController.cs's route exactly.

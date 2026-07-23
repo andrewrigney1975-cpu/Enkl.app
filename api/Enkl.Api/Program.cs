@@ -119,6 +119,15 @@ builder.Services.AddScoped<DecisionService>();
 builder.Services.AddScoped<MemberService>();
 builder.Services.AddScoped<TemplateService>();
 builder.Services.AddScoped<ToDoService>();
+builder.Services.AddScoped<AiAssistantService>();
+// v4 Phase 1 AI Assistant: BaseAddress only — the API key is added per-request from config inside
+// AiAssistantService (not baked in here) so a missing/placeholder key surfaces as a clear runtime
+// error from that service rather than a silently-broken default header.
+builder.Services.AddHttpClient("Anthropic", client =>
+{
+    client.BaseAddress = new Uri("https://api.anthropic.com/");
+    client.Timeout = TimeSpan.FromSeconds(60);
+});
 // ARCHITECTURE-REVIEW.md finding 2.5: registers every AbstractValidator<T> in Validators/ (scans
 // this same assembly, so no per-validator AddScoped<IValidator<T>, ...> line is needed as more get
 // added).
@@ -223,6 +232,30 @@ builder.Services.AddRateLimiter(options =>
         return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
         {
             PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 4,
+            QueueLimit = 0
+        });
+    });
+    // v4 Phase 1 AI Assistant: each request can internally fan out to several Claude API calls
+    // (AiAssistantService's own tool-use loop, up to MaxToolLoopIterations), so this endpoint has a
+    // real per-request cost multiplier the rest of the API doesn't. Partitioned like "public-query"
+    // above — by a hash of the raw bearer token, not parsed JWT claims — because app.UseRateLimiter()
+    // runs BEFORE app.UseAuthentication() in this pipeline (see below), so httpContext.User has no
+    // claims yet at the point this partition function evaluates; hashing the presented token is the
+    // same "per-caller, not per-IP" bucketing public-query already established for exactly this
+    // ordering constraint. A given user's token is stable for its lifetime, so this is effectively
+    // per-user for as long as that token is valid.
+    options.AddPolicy("ai-assistant", httpContext =>
+    {
+        var authHeader = httpContext.Request.Headers.Authorization.ToString();
+        const string prefix = "Bearer ";
+        var partitionKey = authHeader.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && authHeader.Length > prefix.Length
+            ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(authHeader[prefix.Length..])))
+            : httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 15,
             Window = TimeSpan.FromMinutes(1),
             SegmentsPerWindow = 4,
             QueueLimit = 0
