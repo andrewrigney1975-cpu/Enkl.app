@@ -41,7 +41,7 @@ public class OrganisationApiKeyService
             _db.OrganisationApiKeys.Add(key);
         }
 
-        var rawKey = "enkl_key_" + Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+        var rawKey = "enklr_key_" + Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
             .Replace('+', '-').Replace('/', '_').TrimEnd('=');
         key.KeyHash = PasswordHasher.Hash(rawKey);
         key.GeneratedAt = DateTime.UtcNow;

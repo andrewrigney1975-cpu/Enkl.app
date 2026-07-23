@@ -736,8 +736,10 @@
       <div class="kf-field">
         <label>Public API key</label>
         <p class="kf-sso-hint">Authenticates 3rd-party requests to any Saved Query with "Expose via API" turned on (Advanced Query tab). One key per organisation — generating a new one immediately invalidates the last.</p>
-        <button class="kf-btn kf-btn-secondary" id="ssoGenerateApiKeyBtn">Generate new API key</button>
-        <button class="kf-btn kf-btn-secondary" id="ssoRevokeApiKeyBtn" style="margin-left:8px;">Revoke</button>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="kf-btn kf-btn-secondary" id="ssoGenerateApiKeyBtn">Generate new API key</button>
+          <button class="kf-btn kf-btn-danger" id="ssoRevokeApiKeyBtn">Revoke</button>
+        </div>
         <p id="ssoApiKeyStatus" class="kf-sso-hint"></p>
         <div id="ssoApiKeyReveal" class="kf-sso-token-reveal hidden">
           <input type="text" id="ssoApiKeyOutput" readonly>

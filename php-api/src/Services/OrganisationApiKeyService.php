@@ -38,7 +38,7 @@ final class OrganisationApiKeyService
         $stmt->execute(['id' => $organisationId]);
         $exists = $stmt->fetch() !== false;
 
-        $rawKey = 'enkl_key_' . rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $rawKey = 'enklr_key_' . rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
         $hash = PasswordHasher::hash($rawKey);
 
         if ($exists) {

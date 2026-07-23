@@ -91,7 +91,7 @@ public class PublicQueryTests
         Assert.Equal(HttpStatusCode.NotFound, noKeyResponse.StatusCode);
 
         var wrongKeyClient = _fixture.Factory.CreateClient();
-        wrongKeyClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "enkl_key_definitely-wrong");
+        wrongKeyClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "enklr_key_definitely-wrong");
         var wrongKeyResponse = await wrongKeyClient.GetAsync($"/api/public/v1/queries/{savedQueryId}/results");
         Assert.Equal(HttpStatusCode.NotFound, wrongKeyResponse.StatusCode);
     }

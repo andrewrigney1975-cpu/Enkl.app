@@ -64,7 +64,7 @@ final class PublicQueryTest extends TestCase
         $noKey = Http::get('/api/public/v1/queries/' . $seeded['savedQueryId'] . '/results');
         self::assertSame(404, $noKey['status']);
 
-        $wrongKey = Http::get('/api/public/v1/queries/' . $seeded['savedQueryId'] . '/results', 'enkl_key_definitely-wrong');
+        $wrongKey = Http::get('/api/public/v1/queries/' . $seeded['savedQueryId'] . '/results', 'enklr_key_definitely-wrong');
         self::assertSame(404, $wrongKey['status']);
     }
 

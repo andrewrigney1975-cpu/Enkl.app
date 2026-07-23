@@ -184,7 +184,7 @@ Equivalent API call (useful for scripting key rotation):
 POST /api/organisations/me/api-key
 Authorization: Bearer <org admin's own JWT>
 
-→ { "key": "enkl_key_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }
+→ { "key": "enklr_key_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }
 ```
 
 Only what's stored server-side survives generation: a bcrypt hash of the key (same hashing scheme
@@ -265,7 +265,7 @@ must first be migrated to a real organisation before any of its saved queries ca
 
 ```
 GET /api/public/v1/queries/{savedQueryId}/results
-Authorization: Bearer enkl_key_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Authorization: Bearer enklr_key_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 Successful response:
