@@ -16,8 +16,15 @@ export var aiAssistantState = {
   isOpen: false,
   messages: [], // {role: 'user'|'assistant', content: string}
   sending: false,
-  actions: [] // most recent turn's [{type, taskId, taskKey, title}], for a "did something" confirmation chip
+  actions: [], // most recent turn's [{type, taskId, taskKey, title}], for a "did something" confirmation chip
+  // Optimistic default (true) so the bubble doesn't flash-then-hide before the first availability
+  // fetch resolves - the chat endpoint itself independently re-checks entitlement on every real call
+  // regardless, so a briefly-optimistic icon never exposes anything the server wouldn't already block.
+  orgEntitled: true
 };
+
+var AVAILABILITY_POLL_INTERVAL_MS = 60000;
+var _availabilityTimer = null;
 
 var _onUpdate = function(){};
 var _onTaskMutated = function(){};
@@ -34,7 +41,36 @@ function notify(){ _onUpdate(); }
 
 export function isAiAssistantAvailable(){
   var project = getCurrentProject();
-  return !!(project && isServerAuthoritative(project));
+  return !!(project && isServerAuthoritative(project) && aiAssistantState.orgEntitled);
+}
+
+/* Vendor Portal entitlement check (root CLAUDE.md §9's entitlement section) - the chat endpoint
+   itself re-checks this server-side on every call regardless, so this fetch/poll only ever decides
+   whether to SHOW the bubble, never whether a call is actually allowed to proceed. */
+export function refreshAiAssistantAvailability(){
+  var project = getCurrentProject();
+  if(!project || !isServerAuthoritative(project)){
+    aiAssistantState.orgEntitled = true; // no server project to check - the synchronous gate above already hides the bubble
+    return Promise.resolve();
+  }
+  return aiAssistantApi.availability(project.serverProjectId)
+    .then(function(result){
+      aiAssistantState.orgEntitled = !!(result && result.enabled);
+      notify();
+    })
+    .catch(function(){
+      // Best-effort - a transient availability-check failure shouldn't hide the bubble.
+    });
+}
+
+/* Idempotent (safe to call from every render, e.g. applyHeaderButtonVisibility) - re-fetches
+   immediately, then every AVAILABILITY_POLL_INTERVAL_MS, so a mid-session Vendor Portal revocation
+   hides the bubble without requiring a page reload (same PRESENCE_POLL_INTERVAL_MS-style pattern as
+   features/chat.js's presence poll). */
+export function startAiAssistantAvailabilityPolling(){
+  if(_availabilityTimer) return;
+  refreshAiAssistantAvailability();
+  _availabilityTimer = setInterval(refreshAiAssistantAvailability, AVAILABILITY_POLL_INTERVAL_MS);
 }
 
 export function isAiAssistantPanelOpen(){ return aiAssistantState.isOpen; }
@@ -55,7 +91,11 @@ export function resetAiAssistantState(){
   aiAssistantState.messages = [];
   aiAssistantState.sending = false;
   aiAssistantState.actions = [];
+  aiAssistantState.orgEntitled = true;
   notify();
+  // Fresh answer for whatever project comes next (or none, on logout) rather than waiting up to
+  // AVAILABILITY_POLL_INTERVAL_MS for the next scheduled tick.
+  refreshAiAssistantAvailability();
 }
 
 export function sendAiAssistantMessage(text){

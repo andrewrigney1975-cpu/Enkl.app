@@ -6,6 +6,7 @@ using Enkl.Api.Data;
 using Enkl.Api.Domain.Entities;
 using Enkl.Api.Dtos;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Enkl.Api.Services;
 
@@ -45,10 +46,54 @@ public class AiAssistantService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Reads Vendor Portal's own `vendor_feature_entitlements` table (org_id, feature_key, enabled) —
+    /// a table this tier does not own/migrate, since Vendor Portal is the one that creates and writes
+    /// it (same "vendor owns its own tables, main app just reads them" split as vendor_licenses/
+    /// vendor_contracts). Fails OPEN (treats the org as entitled) if the table doesn't exist at all —
+    /// Vendor Portal only ever runs against the Hosted/SaaS deployment model
+    /// (SYSTEMS-INTEGRATOR-GUIDE.md §2); a Local or Self-hosted deployment never has Vendor Portal
+    /// running against its database, so this table simply won't exist there, and that must never take
+    /// AI Assistant away from those deployments.
+    /// </summary>
+    public async Task<bool> IsOrgEntitledAsync(Guid orgId, string featureKey)
+    {
+        try
+        {
+            var rows = await _db.Database
+                .SqlQueryRaw<bool>(
+                    "SELECT enabled FROM vendor_feature_entitlements WHERE org_id = {0} AND feature_key = {1}",
+                    orgId, featureKey)
+                .ToListAsync();
+            // No row for this (org, feature) = not entitled - see the migration's row-presence
+            // semantics (root CLAUDE.md §9's entitlement section).
+            return rows.Count > 0 && rows[0];
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+        {
+            return true;
+        }
+    }
+
+    /// <summary>Project-scoped convenience wrapper around <see cref="IsOrgEntitledAsync"/> for the
+    /// availability endpoint - null means the project itself wasn't found (404), not an entitlement
+    /// answer either way.</summary>
+    public async Task<bool?> IsProjectOrgEntitledAsync(Guid projectId, string featureKey)
+    {
+        var orgId = await _db.Projects.AsNoTracking().Where(p => p.Id == projectId).Select(p => (Guid?)p.OrganisationId).FirstOrDefaultAsync();
+        if (orgId is null) return null;
+        return await IsOrgEntitledAsync(orgId.Value, featureKey);
+    }
+
     public async Task<AiAssistantChatResponse?> ChatAsync(Guid projectId, AiAssistantChatRequest request)
     {
         var project = await _db.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.Id == projectId);
         if (project is null) return null;
+
+        if (!await IsOrgEntitledAsync(project.OrganisationId, "ai_assistant"))
+        {
+            throw new AiAssistantNotEntitledException();
+        }
 
         var apiKey = _config["Anthropic:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
@@ -465,3 +510,10 @@ public class AiAssistantService
         }
     };
 }
+
+/// <summary>Thrown by AiAssistantService.ChatAsync when the calling org's Vendor Portal entitlement
+/// for "ai_assistant" is off - caught in AiAssistantController and mapped to 403, distinct from the
+/// null/404 "project not found" case (root CLAUDE.md §4's no-enumeration-oracle rule still applies
+/// between those two, but a caller who is genuinely a project member of a real, entitlement-revoked
+/// project needs an actionable 403, not a misleading 404).</summary>
+public class AiAssistantNotEntitledException : Exception { }

@@ -1,7 +1,7 @@
 "use strict";
 import {
   aiAssistantState, isAiAssistantPanelOpen, openAiAssistantPanel, closeAiAssistantPanel,
-  isAiAssistantAvailable, sendAiAssistantMessage, setAiAssistantDeps
+  isAiAssistantAvailable, sendAiAssistantMessage, setAiAssistantDeps, startAiAssistantAvailabilityPolling
 } from '../features/ai-assistant.js';
 import { escapeHTML } from '../utils.js';
 import { hydrateIcons } from '../icons.js';
@@ -19,7 +19,15 @@ var _recognizing = false;
 var AI_ASSISTANT_BUBBLE_LOGO_ID_PREFIX = 'aiAssistantBubbleLogo';
 
 export function initAiAssistantView(){
-  setAiAssistantDeps({onUpdate: renderAiAssistantPanel, onTaskMutated: notifyTaskMutated});
+  // onUpdate must also re-check bubble visibility, not just re-render the panel body - the
+  // availability poll's async fetch (features/ai-assistant.js) calls notify() once its result comes
+  // back, and that's the only signal that an entitlement change actually happened; without this, the
+  // bubble would only ever reflect a stale orgEntitled value until some unrelated render happened to
+  // call applyHeaderButtonVisibility() again.
+  setAiAssistantDeps({
+    onUpdate: function(){ renderAiAssistantPanel(); updateAiAssistantBubbleVisibility(); },
+    onTaskMutated: notifyTaskMutated
+  });
 
   // The same "talking" 3-bar mark as the Welcome Name modal's logo (features/animated-logo.js),
   // shrunk to fit the bubble — runs continuously rather than only while a modal is open, since the
@@ -112,6 +120,10 @@ function toggleVoiceInput(SpeechRecognitionCtor, micBtn, input){
 }
 
 export function updateAiAssistantBubbleVisibility(){
+  // Idempotent - safe to call on every render (this function already is). Kicks off an immediate
+  // fetch plus the recurring poll the first time it's called, so a mid-session entitlement
+  // revocation is caught within AVAILABILITY_POLL_INTERVAL_MS without a page reload.
+  startAiAssistantAvailabilityPolling();
   var available = isAiAssistantAvailable();
   var btn = document.getElementById('aiAssistantBubbleBtn');
   if(btn) btn.classList.toggle('kf-vis-hidden', !available);

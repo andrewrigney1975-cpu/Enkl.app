@@ -164,4 +164,16 @@ export const scenarios = [
       return { results };
     },
   },
+
+  {
+    name: 'ai-assistant-availability-fail-open',
+    async run(ctx) {
+      // None of this harness's three throwaway DBs has Vendor Portal's own vendor_feature_entitlements
+      // table (Vendor Portal owns/creates it, not any of these tiers - root CLAUDE.md §9's entitlement
+      // section) — so this doubles as a real fail-open proof on all three tiers: `enabled: true` here
+      // means the "table doesn't exist" catch path was actually exercised and worked, not skipped.
+      const results = await requestAllTiers(ctx, (t) => t.client.get(`/api/projects/${t.projectId}/ai-assistant/availability`));
+      return { results, exactFields: ['enabled'] };
+    },
+  },
 ];
