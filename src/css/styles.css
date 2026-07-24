@@ -5493,6 +5493,17 @@
     white-space: pre;
   }
 
+  /* Hand-rolled inline diagrams (markdown-doc.js's ```svg fence) - centered, capped so a wide
+     network-topology box diagram never overflows the modal, and wrapped in its own scroll container
+     so a diagram wider than its cap still scrolls horizontally instead of clipping (same
+     overflow-x:auto convention as .kf-guide-doc pre above, just centered instead of left-aligned). */
+  .kf-guide-doc svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto 14px;
+  }
+
   .kf-guide-doc table {
     border-collapse: collapse;
     width: 100%;

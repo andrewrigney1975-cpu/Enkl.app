@@ -281,28 +281,36 @@ The reference network topology places exactly one component in a network positio
 outside the deployment: the web/reverse-proxy tier. Everything else — the application server and the
 database — is reachable only from within the deployment's own private network segment.
 
-```
-                    ┌────────────────────────────────┐
-   HTTPS            │   TLS-terminating layer          │   public network / DMZ
-  (browser) ───────► │   (load balancer / ingress /     │
-                    │    reverse proxy)                 │
-                    └────────────────┬───────────────────┘
-                                     │ plain HTTP, private network segment only
-                             ┌───────▼────────┐
-                             │  Web / static    │   the only component with any
-                             │  asset + reverse │   public-facing listener
-                             │  proxy tier      │
-                             └───────┬────────┘
-                                     │ private network segment only, no public listener
-                             ┌───────▼────────┐
-                             │  Application     │
-                             │  server (API)    │
-                             └───────┬────────┘
-                                     │ private network segment only, no public listener
-                             ┌───────▼────────┐
-                             │  Relational      │
-                             │  database        │
-                             └────────────────┘
+```svg
+<svg viewBox="0 0 620 450" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Network segmentation diagram: a browser reaches a TLS-terminating layer over HTTPS in the public network/DMZ; from there, plain HTTP within the private network segment only reaches the web/reverse-proxy tier, then the application server, then the database.">
+  <defs>
+    <marker id="netArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" style="fill: var(--kf-blue)"/>
+    </marker>
+  </defs>
+  <text x="10" y="34" font-size="13" style="fill: var(--kf-text)">HTTPS</text>
+  <text x="10" y="50" font-size="12" style="fill: var(--kf-text-secondary)">(browser)</text>
+  <line x1="90" y1="42" x2="170" y2="42" stroke-width="2" style="stroke: var(--kf-blue)" marker-end="url(#netArrow)"/>
+  <rect x="175" y="10" width="330" height="64" rx="6" fill="none" stroke-width="1.5" style="stroke: var(--kf-border)"/>
+  <text x="340" y="36" font-size="13" font-weight="600" text-anchor="middle" style="fill: var(--kf-text)">TLS-terminating layer</text>
+  <text x="340" y="54" font-size="11.5" text-anchor="middle" style="fill: var(--kf-text-secondary)">(load balancer / ingress / reverse proxy)</text>
+  <text x="520" y="46" font-size="11" font-style="italic" style="fill: var(--kf-text-secondary)">public network / DMZ</text>
+  <line x1="340" y1="74" x2="340" y2="130" stroke-width="2" style="stroke: var(--kf-blue)" marker-end="url(#netArrow)"/>
+  <text x="350" y="106" font-size="11" style="fill: var(--kf-text-secondary)">plain HTTP, private network segment only</text>
+  <rect x="175" y="136" width="330" height="64" rx="6" fill="none" stroke-width="1.5" style="stroke: var(--kf-border)"/>
+  <text x="340" y="162" font-size="13" font-weight="600" text-anchor="middle" style="fill: var(--kf-text)">Web / static asset + reverse proxy tier</text>
+  <text x="340" y="180" font-size="11.5" text-anchor="middle" style="fill: var(--kf-text-secondary)">the only component with any public-facing listener</text>
+  <line x1="340" y1="200" x2="340" y2="256" stroke-width="2" style="stroke: var(--kf-blue)" marker-end="url(#netArrow)"/>
+  <text x="350" y="228" font-size="11" style="fill: var(--kf-text-secondary)">private network segment only,</text>
+  <text x="350" y="242" font-size="11" style="fill: var(--kf-text-secondary)">no public listener</text>
+  <rect x="175" y="262" width="330" height="54" rx="6" fill="none" stroke-width="1.5" style="stroke: var(--kf-border)"/>
+  <text x="340" y="294" font-size="13" font-weight="600" text-anchor="middle" style="fill: var(--kf-text)">Application server (API)</text>
+  <line x1="340" y1="316" x2="340" y2="372" stroke-width="2" style="stroke: var(--kf-blue)" marker-end="url(#netArrow)"/>
+  <text x="350" y="344" font-size="11" style="fill: var(--kf-text-secondary)">private network segment only,</text>
+  <text x="350" y="358" font-size="11" style="fill: var(--kf-text-secondary)">no public listener</text>
+  <rect x="175" y="378" width="330" height="54" rx="6" fill="none" stroke-width="1.5" style="stroke: var(--kf-border)"/>
+  <text x="340" y="410" font-size="13" font-weight="600" text-anchor="middle" style="fill: var(--kf-text)">Relational database</text>
+</svg>
 ```
 
 **Mandatory network segmentation rules**, enforced at the infrastructure layer (security groups,
@@ -508,27 +516,33 @@ placeholders.**
 
 ### 12.1 Target architecture
 
-```
-                          Route 53 (customer's own domain)
-                                  │
-                          ACM certificate (443)
-                                  │
-                    ┌─────────────▼──────────────┐
-                    │   Application Load Balancer │   public subnets
-                    │   443 → target group "web"  │
-                    └─────────────┬──────────────┘
-                                  │ plain HTTP, private subnets only
-                    ┌─────────────▼──────────────┐
-                    │   ECS Fargate service        │
-                    │   one task, two containers:  │
-                    │   web (nginx) → api (Kestrel) │  same task = same
-                    │                               │  network namespace
-                    └─────────────┬───────────────┘
-                                  │ port 5432, private subnets only
-                    ┌─────────────▼──────────────┐
-                    │   RDS for PostgreSQL 16      │
-                    │   Multi-AZ, no RDS Proxy      │
-                    └──────────────────────────────┘
+```svg
+<svg viewBox="0 0 620 410" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AWS target architecture diagram: Route 53 and an ACM certificate reach an Application Load Balancer in public subnets, which forwards plain HTTP within private subnets to an ECS Fargate service running web and api containers in one task, which reaches RDS for PostgreSQL over port 5432, also private-subnets only.">
+  <defs>
+    <marker id="awsArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" style="fill: var(--kf-blue)"/>
+    </marker>
+  </defs>
+  <text x="310" y="24" font-size="13" font-weight="600" text-anchor="middle" style="fill: var(--kf-text)">Route 53 (customer's own domain)</text>
+  <line x1="310" y1="32" x2="310" y2="66" stroke-width="2" style="stroke: var(--kf-blue)" marker-end="url(#awsArrow)"/>
+  <text x="320" y="54" font-size="11" style="fill: var(--kf-text-secondary)">ACM certificate (443)</text>
+  <rect x="130" y="72" width="360" height="60" rx="6" fill="none" stroke-width="1.5" style="stroke: var(--kf-border)"/>
+  <text x="310" y="98" font-size="13" font-weight="600" text-anchor="middle" style="fill: var(--kf-text)">Application Load Balancer</text>
+  <text x="310" y="116" font-size="11.5" text-anchor="middle" style="fill: var(--kf-text-secondary)">443 &#8594; target group &quot;web&quot;</text>
+  <text x="500" y="106" font-size="11" font-style="italic" style="fill: var(--kf-text-secondary)">public subnets</text>
+  <line x1="310" y1="132" x2="310" y2="186" stroke-width="2" style="stroke: var(--kf-blue)" marker-end="url(#awsArrow)"/>
+  <text x="320" y="164" font-size="11" style="fill: var(--kf-text-secondary)">plain HTTP, private subnets only</text>
+  <rect x="110" y="192" width="400" height="80" rx="6" fill="none" stroke-width="1.5" style="stroke: var(--kf-border)"/>
+  <text x="310" y="216" font-size="13" font-weight="600" text-anchor="middle" style="fill: var(--kf-text)">ECS Fargate service</text>
+  <text x="310" y="234" font-size="11.5" text-anchor="middle" style="fill: var(--kf-text-secondary)">one task, two containers:</text>
+  <text x="310" y="250" font-size="11.5" text-anchor="middle" style="fill: var(--kf-text-secondary)">web (nginx) &#8594; api (Kestrel)</text>
+  <text x="310" y="266" font-size="10.5" font-style="italic" text-anchor="middle" style="fill: var(--kf-text-secondary)">same task = same network namespace</text>
+  <line x1="310" y1="272" x2="310" y2="326" stroke-width="2" style="stroke: var(--kf-blue)" marker-end="url(#awsArrow)"/>
+  <text x="320" y="304" font-size="11" style="fill: var(--kf-text-secondary)">port 5432, private subnets only</text>
+  <rect x="130" y="332" width="360" height="60" rx="6" fill="none" stroke-width="1.5" style="stroke: var(--kf-border)"/>
+  <text x="310" y="358" font-size="13" font-weight="600" text-anchor="middle" style="fill: var(--kf-text)">RDS for PostgreSQL 16</text>
+  <text x="310" y="376" font-size="11.5" text-anchor="middle" style="fill: var(--kf-text-secondary)">Multi-AZ, no RDS Proxy</text>
+</svg>
 ```
 
 **Design rationale — one ECS task, two sidecar containers, not two ECS services**: this maps 1:1

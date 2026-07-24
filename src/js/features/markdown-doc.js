@@ -22,7 +22,16 @@ import { escapeHTML } from '../utils.js';
    Markdown-syntax matching runs, so every tag in the output is one this parser explicitly generated
    from recognized syntax; a link's href gets its own scheme allowlist since escaping doesn't cover
    attribute-value injection. No third-party Markdown library — same "hand-roll everything" rule as
-   the rest of this app (root CLAUDE.md's charting-library principle, applied here too). */
+   the rest of this app (root CLAUDE.md's charting-library principle, applied here too).
+
+   ONE DELIBERATE EXCEPTION to "escape everything": a ```svg fenced block emits its content as REAL,
+   unescaped SVG markup (diagrams — root CLAUDE.md's own no-charting-library convention, hand-rolled
+   inline SVG same as every chart in the app) instead of a <pre><code> listing. This is safe only
+   because these two guide documents are authored content shipped in this repo, not user-supplied
+   input — the same trust boundary as any other string literal in this codebase. Extraction happens
+   BEFORE the whole-input escape pass (a block-level placeholder swap, not the inline NUL/link scheme
+   below) so the raw markup survives verbatim; every other fenced-block type is still fully escaped
+   and rendered as inert text exactly as before. */
 
 var SAFE_URL_RE = /^(https?:\/\/|mailto:|\/|#)/i;
 
@@ -39,6 +48,9 @@ function applyBoldItalic(text){
 // prose or with each other — same technique as rich-text/markdown.js's NUL/SOH placeholders.
 var NUL = String.fromCharCode(0);
 var LINK_PLACEHOLDER_RE = new RegExp(NUL + '(\\d+)' + NUL, 'g');
+var SOH = String.fromCharCode(1);
+var SVG_FENCE_RE = /```svg[ \t]*\r?\n([\s\S]*?)\r?\n```/g;
+var SVG_PLACEHOLDER_RE = new RegExp('^' + SOH + '(\\d+)' + SOH + '$');
 
 function inlineToHtml(text){
   var links = [];
@@ -84,13 +96,29 @@ function splitTableRow(line){
 /** Parses a Markdown string into safe, printable HTML — see the module doc comment for grammar
     coverage and the escape-then-generate sanitization strategy. */
 export function markdownToDocHtml(markdown){
-  var lines = escapeHTML(markdown || '').split(/\r?\n/);
+  var svgBlocks = [];
+  var withSvgPlaceholders = (markdown || '').replace(SVG_FENCE_RE, function(match, svgContent){
+    svgBlocks.push(svgContent);
+    return SOH + (svgBlocks.length - 1) + SOH;
+  });
+
+  var lines = escapeHTML(withSvgPlaceholders).split(/\r?\n/);
   var out = [];
   var i = 0;
 
   while(i < lines.length){
     var line = lines[i];
     if(line.trim() === ''){ i++; continue; }
+
+    // A ```svg block, already extracted above and swapped for a one-line placeholder before escaping
+    // - emit its ORIGINAL, unescaped content verbatim (see the module doc comment's "one deliberate
+    // exception" note) rather than treating it like any other paragraph/code content.
+    var svgPlaceholderMatch = SVG_PLACEHOLDER_RE.exec(line.trim());
+    if(svgPlaceholderMatch){
+      out.push(svgBlocks[Number(svgPlaceholderMatch[1])]);
+      i++;
+      continue;
+    }
 
     // Fenced code block — content is left completely unprocessed (no inline formatting), joined by
     // real newlines inside <pre> so whitespace-sensitive content (ASCII diagrams, sample output)
