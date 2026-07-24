@@ -7,6 +7,7 @@ namespace Enkl\Api\Services;
 use Enkl\Api\Config\Config;
 use Enkl\Api\Support\Log;
 use PDO;
+use PDOException;
 
 /**
  * Ported from php-api/src/Services/AiAssistantService.php (itself ported from Services/
@@ -24,6 +25,45 @@ final class AiAssistantService
     {
     }
 
+    /**
+     * Reads Vendor Portal's own `vendor_feature_entitlements` table — a table this tier does not own
+     * or migrate (Vendor Portal creates/writes it, same split as vendor_licenses/vendor_contracts on
+     * the Postgres/php-api tier). Fails OPEN (treats the org as entitled) if the table doesn't exist -
+     * Vendor Portal's own DB pool only ever speaks Postgres today (see its server/db.js), so on THIS
+     * tier the table will realistically never exist at all; a Local or Self-hosted deployment never
+     * has Vendor Portal running against its database either way (SYSTEMS-INTEGRATOR-GUIDE.md §2), so
+     * failing open here is correct in both cases, not just a fallback for the common one.
+     */
+    public function isOrgEntitled(string $orgId, string $featureKey): bool
+    {
+        try {
+            $stmt = $this->db->prepare('SELECT "enabled" FROM vendor_feature_entitlements WHERE org_id = :orgId AND feature_key = :featureKey');
+            $stmt->execute(['orgId' => $orgId, 'featureKey' => $featureKey]);
+            $row = $stmt->fetch();
+            // No row for this (org, feature) = not entitled - see the migration's row-presence
+            // semantics (root CLAUDE.md §9's entitlement section).
+            return $row !== false && (bool) $row['enabled'];
+        } catch (PDOException $e) {
+            if ($e->getCode() === '42S02') {
+                return true;
+            }
+            throw $e;
+        }
+    }
+
+    /** Project-scoped convenience wrapper for the availability endpoint - null means the project
+     * itself wasn't found (404), not an entitlement answer either way. */
+    public function isProjectOrgEntitled(string $projectId, string $featureKey): ?bool
+    {
+        $stmt = $this->db->prepare('SELECT "OrganisationId" FROM "Projects" WHERE "Id" = :id');
+        $stmt->execute(['id' => $projectId]);
+        $orgId = $stmt->fetchColumn();
+        if ($orgId === false) {
+            return null;
+        }
+        return $this->isOrgEntitled($orgId, $featureKey);
+    }
+
     /** @return array{reply: string, actions: array<int, array<string, mixed>>}|null */
     public function chat(string $projectId, array $request): ?array
     {
@@ -32,6 +72,10 @@ final class AiAssistantService
         $project = $stmt->fetch();
         if ($project === false) {
             return null;
+        }
+
+        if (!$this->isOrgEntitled($project['OrganisationId'], 'ai_assistant')) {
+            throw new AiAssistantNotEntitledException();
         }
 
         $apiKey = Config::get('ANTHROPIC_API_KEY', '');
@@ -568,4 +612,11 @@ final class AiAssistantService
 
         return $decoded;
     }
+}
+
+/** Thrown by AiAssistantService::chat() when the calling org's Vendor Portal entitlement for
+ * "ai_assistant" is off - caught in AiAssistantController and mapped to 403, distinct from the
+ * null/404 "project not found" case. */
+final class AiAssistantNotEntitledException extends \RuntimeException
+{
 }

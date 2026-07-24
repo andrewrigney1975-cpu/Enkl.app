@@ -29,7 +29,26 @@ public class AiAssistantController : ControllerBase
     [HttpPost("chat")]
     public async Task<IActionResult> Chat(Guid projectId, AiAssistantChatRequest request)
     {
-        var result = await _assistant.ChatAsync(projectId, request);
-        return result is null ? NotFound() : Ok(result);
+        try
+        {
+            var result = await _assistant.ChatAsync(projectId, request);
+            return result is null ? NotFound() : Ok(result);
+        }
+        catch (AiAssistantNotEntitledException)
+        {
+            return Forbid();
+        }
+    }
+
+    /// <summary>Lets the frontend decide whether to show the AI Assistant bubble at all, without
+    /// exposing a full chat round-trip just to find out. Polled periodically (features/ai-assistant.js)
+    /// rather than fetched once, since a Vendor Portal admin can revoke entitlement mid-session - the
+    /// chat endpoint above independently re-checks on every call regardless of what this returns, so
+    /// this is a UI convenience only, never the actual enforcement point.</summary>
+    [HttpGet("availability")]
+    public async Task<IActionResult> Availability(Guid projectId)
+    {
+        var enabled = await _assistant.IsProjectOrgEntitledAsync(projectId, "ai_assistant");
+        return enabled is null ? NotFound() : Ok(new { enabled = enabled.Value });
     }
 }

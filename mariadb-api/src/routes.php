@@ -333,6 +333,8 @@ function registerRoutes(App $app): void
                 $token = stripos($authHeader, 'bearer ') === 0 ? trim(substr($authHeader, 7)) : '';
                 return $token !== '' ? hash('sha256', $token) : 'unknown';
             }));
+        // Unrated - a plain read, polled periodically by the frontend to decide bubble visibility.
+        $group->get('/ai-assistant/availability', [AiAssistantController::class, 'availability']);
         // Comments are nested under a specific task (not a flat per-project entity, so they don't fit
         // registerEntityRoutes' single-{idParam} shape) — POST/PUT/DELETE mirror
         // TaskCommentsController.cs's route exactly.

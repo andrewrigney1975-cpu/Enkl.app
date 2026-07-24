@@ -431,6 +431,12 @@ export var taskCommentApi = {
 export var aiAssistantApi = {
   chat: function(projectId, messages, alertsSummary){
     return apiFetch('/projects/' + projectId + '/ai-assistant/chat', {method: 'POST', body: JSON.stringify({messages: messages, alertsSummary: alertsSummary})});
+  },
+  // Polled periodically (features/ai-assistant.js) to decide bubble visibility - a UI convenience
+  // only, never the real enforcement point (chat above independently re-checks entitlement server-side
+  // on every call regardless of what this returns).
+  availability: function(projectId){
+    return apiFetch('/projects/' + projectId + '/ai-assistant/availability', {method: 'GET'});
   }
 };
 
